@@ -43,6 +43,33 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
+            // Prevent duplicate RSVP: if an attendance record already exists for this member+event, update it instead
+            var existing = await _context.EventAttendances.FirstOrDefaultAsync(a => a.FamilyEventId == request.FamilyEventId && a.MemberId == memberId);
+            if (existing != null)
+            {
+                existing.Rsvp = request.Rsvp;
+                existing.ArrivalTime = request.ArrivalTime;
+                existing.DepartureTime = request.DepartureTime;
+                existing.GuestCount = request.GuestCount;
+                existing.Notes = request.Notes;
+
+                await _context.SaveChangesAsync();
+
+                var updatedResp = new Models.Responses.AttendanceResponse
+                {
+                    Id = existing.Id,
+                    FamilyEventId = existing.FamilyEventId,
+                    MemberId = existing.MemberId,
+                    Rsvp = (int)existing.Rsvp,
+                    ArrivalTime = existing.ArrivalTime,
+                    DepartureTime = existing.DepartureTime,
+                    GuestCount = existing.GuestCount,
+                    Notes = existing.Notes
+                };
+
+                return Ok(updatedResp);
+            }
+
             var attendance = new EventAttendance
             {
                 Id = Guid.NewGuid(),

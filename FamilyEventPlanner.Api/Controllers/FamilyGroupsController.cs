@@ -17,16 +17,48 @@ namespace FamilyEventPlanner.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CreateGroup([FromBody] FamilyGroup group)
+        public async Task<IActionResult> CreateGroup([FromBody] CreateFamilyGroupRequest request)
         {
-            group.Id = Guid.NewGuid();
-            group.CreatedAt = DateTime.UtcNow;
-            group.InviteCode = GenerateInviteCode();
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // generate a unique invite code (retry a few times on collision)
+            string inviteCode = null;
+            for (int i = 0; i < 5; i++)
+            {
+                var candidate = GenerateInviteCode();
+                var exists = await _context.FamilyGroups.AnyAsync(g => g.InviteCode == candidate);
+                if (!exists)
+                {
+                    inviteCode = candidate;
+                    break;
+                }
+            }
+
+            if (inviteCode == null)
+                return StatusCode(500, new { message = "Could not generate unique invite code. Try again." });
+
+            var group = new FamilyGroup
+            {
+                Id = Guid.NewGuid(),
+                Name = request.Name,
+                InviteCode = inviteCode,
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.FamilyGroups.Add(group);
             await _context.SaveChangesAsync();
 
-            return Ok(group);
+            return CreatedAtAction(nameof(GetGroup), new { id = group.Id }, group);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetGroup(Guid id)
+        {
+            var g = await _context.FamilyGroups.FindAsync(id);
+            if (g == null)
+                return NotFound();
+            return Ok(g);
         }
 
         [HttpGet]

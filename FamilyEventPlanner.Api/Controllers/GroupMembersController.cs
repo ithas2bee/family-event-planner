@@ -19,6 +19,8 @@ namespace FamilyEventPlanner.Api.Controllers
         [HttpPost("join")]
         public async Task<IActionResult> JoinGroup([FromBody] JoinGroupRequest request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             var group = await _context.FamilyGroups
                 .FirstOrDefaultAsync(g => g.InviteCode == request.InviteCode);
 
@@ -49,12 +51,21 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.GroupMembers.Add(member);
             await _context.SaveChangesAsync();
 
-            return Ok(member);
+            return CreatedAtAction(nameof(GetMembers), new { groupId = member.FamilyGroupId }, member);
         }
 
+        [Microsoft.AspNetCore.Authorization.Authorize]
         [HttpGet("{groupId}")]
         public async Task<IActionResult> GetMembers(Guid groupId)
         {
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == groupId);
+            if (!isMember)
+                return Forbid();
+
             var members = await _context.GroupMembers
                 .Where(m => m.FamilyGroupId == groupId)
                 .ToListAsync();

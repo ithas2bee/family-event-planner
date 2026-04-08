@@ -73,6 +73,15 @@ namespace FamilyEventPlanner.Api.Data
 
             modelBuilder.Entity<Photo>()
                 .Property<Guid>("UploadedById");
+
+            // Unique constraints to enforce business rules at DB level
+            modelBuilder.Entity<FamilyGroup>()
+                .HasIndex(g => g.InviteCode)
+                .IsUnique();
+
+            modelBuilder.Entity<EventAttendance>()
+                .HasIndex(a => new { a.FamilyEventId, a.MemberId })
+                .IsUnique();
         }
     }
 }
