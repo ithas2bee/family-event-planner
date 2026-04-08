@@ -1,5 +1,10 @@
 using FamilyEventPlanner.Api.Data;
+using System;
+using System.Linq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using FamilyEventPlanner.Api.Models;
+using FamilyEventPlanner.Api.Models.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +12,7 @@ namespace FamilyEventPlanner.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class EventsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -18,6 +24,10 @@ namespace FamilyEventPlanner.Api.Controllers
 
         // POST: api/events
         [HttpPost]
+        /// <summary>
+        /// Create a new family event. Authenticated member becomes the creator.
+        /// </summary>
+        [HttpPost]
         public async Task<IActionResult> CreateEvent([FromBody] CreateEventRequest request)
         {
             if (!ModelState.IsValid)
@@ -27,8 +37,12 @@ namespace FamilyEventPlanner.Api.Controllers
             if (group == null)
                 return NotFound(new { message = "Family group not found." });
 
-            // Verify the creator is a member of the family group
-            var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == request.CreatedByMemberId && m.FamilyGroupId == request.FamilyGroupId);
+            // Get authenticated member id from claims
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == request.FamilyGroupId);
             if (!isMember)
                 return Forbid();
 
@@ -43,7 +57,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Location = request.Location,
                 DressCode = request.DressCode,
                 Notes = request.Notes,
-                CreatedByMemberId = request.CreatedByMemberId,
+                CreatedByMemberId = memberId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -68,21 +82,29 @@ namespace FamilyEventPlanner.Api.Controllers
             return CreatedAtAction(nameof(GetEvent), new { id = ev.Id }, response);
         }
 
-        // GET: api/events/group/{familyGroupId}?memberId={memberId}
+        // GET: api/events/group/{familyGroupId}
         [HttpGet("group/{familyGroupId}")]
-        public async Task<IActionResult> GetEventsForGroup(Guid familyGroupId, [FromQuery] Guid memberId)
+        public async Task<IActionResult> GetEventsForGroup(Guid familyGroupId, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 20)
         {
             var group = await _context.FamilyGroups.FindAsync(familyGroupId);
             if (group == null)
                 return NotFound(new { message = "Family group not found." });
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
 
             var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == familyGroupId);
             if (!isMember)
                 return Forbid();
 
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
             var events = await _context.FamilyEvents
                 .Where(e => e.FamilyGroupId == familyGroupId)
                 .OrderByDescending(e => e.StartDate)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .Select(e => new EventResponse
                 {
                     Id = e.Id,
@@ -101,14 +123,17 @@ namespace FamilyEventPlanner.Api.Controllers
 
             return Ok(events);
         }
-
-        // GET: api/events/{id}?memberId={memberId}
+        // GET: api/events/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetEvent(Guid id, [FromQuery] Guid memberId)
+        public async Task<IActionResult> GetEvent(Guid id)
         {
             var ev = await _context.FamilyEvents.FindAsync(id);
             if (ev == null)
                 return NotFound(new { message = "Event not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
 
             var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == ev.FamilyGroupId);
             if (!isMember)
@@ -131,10 +156,9 @@ namespace FamilyEventPlanner.Api.Controllers
 
             return Ok(response);
         }
-
-        // PUT: api/events/{id}?memberId={memberId}
+        // PUT: api/events/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateEvent(Guid id, [FromQuery] Guid memberId, [FromBody] UpdateEventRequest request)
+        public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -142,6 +166,10 @@ namespace FamilyEventPlanner.Api.Controllers
             var ev = await _context.FamilyEvents.FindAsync(id);
             if (ev == null)
                 return NotFound(new { message = "Event not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
 
             var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == ev.FamilyGroupId);
             if (!isMember)
@@ -162,15 +190,19 @@ namespace FamilyEventPlanner.Api.Controllers
             return NoContent();
         }
 
-        // DELETE: api/events/{id}?memberId={memberId}
+        // DELETE: api/events/{id}
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteEvent(Guid id, [FromQuery] Guid memberId)
+        public async Task<IActionResult> DeleteEvent(Guid id)
         {
             var ev = await _context.FamilyEvents.FindAsync(id);
             if (ev == null)
                 return NotFound(new { message = "Event not found." });
 
             // Only allow deletion by event creator or a group admin
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
             var member = await _context.GroupMembers.FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == ev.FamilyGroupId);
             if (member == null)
                 return Forbid();

@@ -22,7 +22,7 @@ namespace FamilyEventPlanner.Api.Models
         public string? DressCode { get; set; }
         public string? Notes { get; set; }
 
-        [Required]
-        public Guid CreatedByMemberId { get; set; }
+        // CreatedByMemberId is set from the authenticated member; not accepted from client when using header auth
+        public Guid? CreatedByMemberId { get; set; }
     }
 }

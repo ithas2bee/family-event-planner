@@ -55,7 +55,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("FamilyGroupId");
 
-                    b.ToTable("Announcements");
+                    b.ToTable("Announcements", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.EventAssignment", b =>
@@ -93,7 +93,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("FamilyEventId");
 
-                    b.ToTable("EventAssignments");
+                    b.ToTable("EventAssignments", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.EventAttendance", b =>
@@ -129,7 +129,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("MemberId");
 
-                    b.ToTable("EventAttendances");
+                    b.ToTable("EventAttendances", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.FamilyEvent", b =>
@@ -176,7 +176,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("FamilyGroupId");
 
-                    b.ToTable("FamilyEvents");
+                    b.ToTable("FamilyEvents", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.FamilyGroup", b =>
@@ -197,7 +197,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("FamilyGroups");
+                    b.ToTable("FamilyGroups", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.GroupMember", b =>
@@ -227,7 +227,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("FamilyGroupId");
 
-                    b.ToTable("GroupMembers");
+                    b.ToTable("GroupMembers", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Notification", b =>
@@ -260,7 +260,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("MemberId");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Photo", b =>
@@ -297,7 +297,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("UploadedById");
 
-                    b.ToTable("Photos");
+                    b.ToTable("Photos", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Poll", b =>
@@ -331,7 +331,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("FamilyGroupId");
 
-                    b.ToTable("Polls");
+                    b.ToTable("Polls", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.PollOption", b =>
@@ -352,7 +352,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("PollId");
 
-                    b.ToTable("PollOptions");
+                    b.ToTable("PollOptions", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.PollVote", b =>
@@ -376,7 +376,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasIndex("PollOptionId");
 
-                    b.ToTable("PollVotes");
+                    b.ToTable("PollVotes", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.User", b =>
@@ -400,7 +400,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Announcement", b =>
