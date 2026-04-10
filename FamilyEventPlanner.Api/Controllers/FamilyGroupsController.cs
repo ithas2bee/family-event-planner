@@ -61,12 +61,9 @@ namespace FamilyEventPlanner.Api.Controllers
             return Ok(g);
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetGroups()
-        {
-            var groups = await _context.FamilyGroups.ToListAsync();
-            return Ok(groups);
-        }
+        // Note: Removed public GetGroups() endpoint.
+        // Returning all groups without authentication is a security risk.
+        // To add back: require [Authorize] and only return groups where caller is a member.
 
         private string GenerateInviteCode()
         {

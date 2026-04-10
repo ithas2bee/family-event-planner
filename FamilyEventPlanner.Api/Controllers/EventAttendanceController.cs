@@ -2,7 +2,6 @@ using FamilyEventPlanner.Api.Data;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

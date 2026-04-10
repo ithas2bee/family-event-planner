@@ -23,7 +23,6 @@ namespace FamilyEventPlanner.Api.Controllers
         }
 
         // POST: api/events
-        [HttpPost]
         /// <summary>
         /// Create a new family event. Authenticated member becomes the creator.
         /// </summary>
