@@ -9,6 +9,18 @@ namespace FamilyEventPlanner.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowExpo",
+                    policy =>
+                    {
+                        policy
+                            .AllowAnyOrigin()
+                            .AllowAnyHeader()
+                            .AllowAnyMethod();
+                    });
+            });
+
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -64,8 +76,12 @@ namespace FamilyEventPlanner.Api
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpsRedirection();
+            // TEMPORARILY DISABLED FOR EXPO MOBILE DEV
+            // Expo running on HTTP cannot follow HTTPS redirects properly
+            // Re-enable for production with proper SSL certificates
+            // app.UseHttpsRedirection();
 
+            app.UseCors("AllowExpo");
             app.UseAuthentication();
             app.UseAuthorization();
 
