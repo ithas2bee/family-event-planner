@@ -25,26 +25,63 @@ namespace FamilyEventPlanner.Api.Auth
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            // TEMPORARY DEBUG LOGGING - Remove in production
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] HandleAuthenticateAsync called at {DateTime.UtcNow}");
+            
             // Expect header X-Member-Id with GUID value
             if (!Request.Headers.TryGetValue("X-Member-Id", out var memberIdValues))
+            {
+                System.Diagnostics.Debug.WriteLine("[AUTH HANDLER] X-Member-Id header not found in request");
                 return AuthenticateResult.NoResult();
+            }
 
             var memberIdRaw = memberIdValues.FirstOrDefault();
-            if (string.IsNullOrEmpty(memberIdRaw) || !Guid.TryParse(memberIdRaw, out var memberId))
-                return AuthenticateResult.Fail("Invalid member id header.");
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Raw X-Member-Id header value: '{memberIdRaw}'");
+            
+            if (string.IsNullOrEmpty(memberIdRaw))
+            {
+                System.Diagnostics.Debug.WriteLine("[AUTH HANDLER] X-Member-Id header is empty or null");
+                return AuthenticateResult.Fail("X-Member-Id header is empty.");
+            }
+
+            if (!Guid.TryParse(memberIdRaw, out var memberId))
+            {
+                System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Failed to parse '{memberIdRaw}' as GUID");
+                return AuthenticateResult.Fail("Invalid member id header - not a valid GUID.");
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Successfully parsed GUID: {memberId}");
 
             // Validate member exists using scoped DbContext
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Querying GroupMembers table for Id = {memberId}");
             var member = await db.GroupMembers.FirstOrDefaultAsync(m => m.Id == memberId);
+            
             if (member == null)
-                return AuthenticateResult.Fail("Member not found.");
+            {
+                System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] No GroupMember found with Id: {memberId}");
+                return AuthenticateResult.Fail($"Member not found in GroupMembers table (Id: {memberId}).");
+            }
 
-            var claims = new[] { new Claim("memberId", member.Id.ToString()), new Claim(ClaimTypes.Name, member.Name ?? string.Empty) };
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Found GroupMember: Id={member.Id}, Name={member.Name}, GroupId={member.FamilyGroupId}");
+
+            // Create claims with the authenticated member's information
+            var claims = new[] 
+            { 
+                new Claim("memberId", member.Id.ToString()),
+                new Claim(ClaimTypes.Name, member.Name ?? string.Empty),
+                new Claim("groupId", member.FamilyGroupId.ToString())
+            };
+            
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Created claims: memberId={member.Id}, name={member.Name}, groupId={member.FamilyGroupId}");
+            
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Authentication successful for member: {member.Id}");
             return AuthenticateResult.Success(ticket);
         }
     }
