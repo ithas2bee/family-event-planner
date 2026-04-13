@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { clearSession } from '@/services/sessionService';
 
 export default function FamilyHomeScreen() {
   const params = useLocalSearchParams();
@@ -10,6 +11,11 @@ export default function FamilyHomeScreen() {
   const memberName = String(params.memberName ?? '');
   const groupId = String(params.groupId ?? '');
   const memberId = String(params.memberId ?? '');
+
+  const handleLogout = async () => {
+    await clearSession();
+    router.replace('/(tabs)');
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -31,7 +37,11 @@ export default function FamilyHomeScreen() {
           </ThemedText>
         </Pressable>
 
-        <Pressable style={styles.navButton}>
+        <Pressable
+          style={styles.navButton}
+          onPress={() =>
+            router.push({ pathname: '/events', params: { groupId, memberId } })
+          }>
           <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
             Events
           </ThemedText>
@@ -50,6 +60,12 @@ export default function FamilyHomeScreen() {
           }>
           <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
             Members
+          </ThemedText>
+        </Pressable>
+
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <ThemedText type="defaultSemiBold" style={styles.logoutButtonText}>
+            Logout
           </ThemedText>
         </Pressable>
       </View>
@@ -84,6 +100,16 @@ const styles = StyleSheet.create({
   },
   navButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+  },
+  logoutButton: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#BCC3CC',
+  },
+  logoutButtonText: {
     fontSize: 16,
   },
 });

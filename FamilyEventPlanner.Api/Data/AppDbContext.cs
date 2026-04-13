@@ -79,9 +79,13 @@ namespace FamilyEventPlanner.Api.Data
                 .HasIndex(g => g.InviteCode)
                 .IsUnique();
 
-            modelBuilder.Entity<EventAttendance>()
-                .HasIndex(a => new { a.FamilyEventId, a.MemberId })
-                .IsUnique();
+            // GroupMember.UserId is now required (not nullable)
+            modelBuilder.Entity<GroupMember>()
+                .HasOne(gm => gm.User)
+                .WithMany()
+                .HasForeignKey(gm => gm.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
         }
     }
 }

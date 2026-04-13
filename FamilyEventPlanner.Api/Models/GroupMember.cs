@@ -7,14 +7,12 @@ namespace FamilyEventPlanner.Api.Models
         public Guid Id { get; set; }
 
         public Guid FamilyGroupId { get; set; }
-
         public FamilyGroup FamilyGroup { get; set; }
 
+        // UserId is now required (not nullable)
         [Required]
-        public string Name { get; set; }
-
-        [Required]
-        public string Email { get; set; }
+        public Guid UserId { get; set; }
+        public User User { get; set; }
 
         public bool IsAdmin { get; set; }
 

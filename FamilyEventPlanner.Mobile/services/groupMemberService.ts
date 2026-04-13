@@ -15,8 +15,7 @@ const API_BASE_URL = 'http://10.0.0.115:5249';
 // The JSON body sent to POST /api/groupmembers/join
 export type JoinGroupRequest = {
   inviteCode: string;
-  name: string;
-  email: string;
+  userId: string;
 };
 
 // The JSON shape returned by the backend on success.

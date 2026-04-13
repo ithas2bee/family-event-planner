@@ -8,9 +8,6 @@ namespace FamilyEventPlanner.Api.Models
         public string InviteCode { get; set; }
 
         [Required]
-        public string Name { get; set; }
-
-        [Required, EmailAddress]
-        public string Email { get; set; }
+        public Guid UserId { get; set; }
     }
 }
