@@ -1,16 +1,62 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { clearSession } from '@/services/sessionService';
+import { getGroupMemberByUser } from '@/services/groupMemberService';
+import { clearSession, loadSession, setMemberInfo } from '@/services/sessionService';
 
 export default function FamilyHomeScreen() {
   const params = useLocalSearchParams();
   const groupName = String(params.groupName ?? '');
-  const memberName = String(params.memberName ?? '');
+  const initialMemberName = String(params.memberName ?? '');
   const groupId = String(params.groupId ?? '');
-  const memberId = String(params.memberId ?? '');
+  const initialMemberId = String(params.memberId ?? '');
+
+  const [memberName, setMemberName] = useState(initialMemberName);
+  const [memberId, setMemberId] = useState(initialMemberId);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function resolveMember() {
+      if (!groupId) return;
+
+      const session = await loadSession();
+      if (!session) {
+        router.replace('/auth');
+        return;
+      }
+
+      // If we already have a memberId from params/session, keep it
+      if (memberId) {
+        if (!memberName && session.displayName) setMemberName(session.displayName);
+        return;
+      }
+
+      try {
+        const res = await getGroupMemberByUser(groupId, session.userId);
+        if (cancelled) return;
+
+        if (res?.memberId) {
+          setMemberId(res.memberId);
+          setMemberName(res.displayName ?? session.displayName ?? '');
+          // persist globally
+          await setMemberInfo(res.memberId, res.displayName ?? session.displayName ?? '', res.groupId);
+        }
+      } catch (err) {
+        // resolving member failed � keep showing fallback text.
+        console.warn('Failed to resolve member for group:', err);
+      }
+    }
+
+    resolveMember();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId]);
 
   const handleLogout = async () => {
     await clearSession();
@@ -31,7 +77,11 @@ export default function FamilyHomeScreen() {
       </View>
 
       <View style={styles.buttonGroup}>
-        <Pressable style={styles.navButton}>
+        <Pressable
+          style={styles.navButton}
+          onPress={() =>
+            router.push({ pathname: '/announcements', params: { groupId, memberId } })
+          }>
           <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
             Announcements
           </ThemedText>
@@ -47,7 +97,11 @@ export default function FamilyHomeScreen() {
           </ThemedText>
         </Pressable>
 
-        <Pressable style={styles.navButton}>
+        <Pressable
+          style={styles.navButton}
+          onPress={() =>
+            router.push({ pathname: '/polls', params: { groupId, memberId } })
+          }>
           <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
             Polls
           </ThemedText>

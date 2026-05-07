@@ -1,53 +1,49 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { saveSession } from '@/services/sessionService';
-import { registerUser } from '@/services/userService';
+import { createAnnouncement } from '@/services/announcementService';
 
-export default function CreateAccountScreen() {
-  const [displayName, setDisplayName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function CreateAnnouncementScreen() {
+  const { groupId } = useLocalSearchParams<{ groupId: string }>();
+  const groupIdValue = String(groupId ?? '');
+
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit =
-    displayName.trim().length > 0 && email.trim().length > 0 && password.trim().length > 0;
+  const canSubmit = title.trim().length > 0 && body.trim().length > 0 && groupIdValue.length > 0;
 
-  async function handleCreateAccount() {
+  async function handleCreateAnnouncement() {
     setError(null);
     setLoading(true);
-    console.log('[CreateAccount] Submit pressed', {
-      email: email.trim(),
-      displayName: displayName.trim(),
-    });
 
     try {
-      const user = await registerUser({
-        displayName: displayName.trim(),
-        email: email.trim(),
-        password,
+      if (groupIdValue.length === 0) {
+        throw new Error('Group not found.');
+      }
+
+      await createAnnouncement({
+        familyGroupId: groupIdValue,
+        title: title.trim(),
+        body: body.trim(),
+        expiresAt: expiresAt.trim() || undefined,
       });
 
-      console.log('[CreateAccount] Register success', user);
-
-      await saveSession({
-        userId: user.userId,
-        displayName: user.displayName,
-        email: user.email,
-        authToken: user.authToken ?? null,
+      router.replace({
+        pathname: '/announcements',
+        params: {
+          groupId: groupIdValue,
+          refreshToken: Date.now().toString(),
+        },
       });
-
-      router.replace('/my-groups');
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Unable to create account.';
-      console.log('[CreateAccount] Register failed', { errorMessage });
-      setError(errorMessage);
+      setError(err instanceof Error ? err.message : 'Unable to create announcement.');
     } finally {
-      console.log('[CreateAccount] Finished request, clearing loading state');
       setLoading(false);
     }
   }
@@ -55,18 +51,18 @@ export default function CreateAccountScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Create Account
+        Create Announcement
       </ThemedText>
 
       <ThemedView style={styles.fieldGroup}>
         <ThemedText type="defaultSemiBold" style={styles.label}>
-          Display Name
+          Title
         </ThemedText>
         <TextInput
           style={styles.input}
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="Enter your name"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Enter announcement title"
           autoCapitalize="words"
           autoCorrect={false}
         />
@@ -74,29 +70,26 @@ export default function CreateAccountScreen() {
 
       <ThemedView style={styles.fieldGroup}>
         <ThemedText type="defaultSemiBold" style={styles.label}>
-          Email
+          Body
         </ThemedText>
         <TextInput
           style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="Enter your email"
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoCorrect={false}
+          value={body}
+          onChangeText={setBody}
+          placeholder="Enter announcement body"
+          multiline
         />
       </ThemedView>
 
       <ThemedView style={styles.fieldGroup}>
         <ThemedText type="defaultSemiBold" style={styles.label}>
-          Password
+          Expires At
         </ThemedText>
         <TextInput
           style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="Create a password"
-          secureTextEntry
+          value={expiresAt}
+          onChangeText={setExpiresAt}
+          placeholder="Optional expiration date"
           autoCapitalize="none"
           autoCorrect={false}
         />
@@ -104,22 +97,15 @@ export default function CreateAccountScreen() {
 
       <Pressable
         style={[styles.primaryButton, (!canSubmit || loading) && styles.buttonDisabled]}
-        onPress={handleCreateAccount}
-        disabled={!canSubmit || loading}
-      >
+        onPress={handleCreateAnnouncement}
+        disabled={!canSubmit || loading}>
         {loading ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
           <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-            Create Account
+            Create Announcement
           </ThemedText>
         )}
-      </Pressable>
-
-      <Pressable style={styles.secondaryButton} onPress={() => router.replace('/login')}>
-        <ThemedText type="defaultSemiBold" style={styles.secondaryButtonText}>
-          Back to Login
-        </ThemedText>
       </Pressable>
 
       {error !== null ? <ThemedText style={styles.feedbackError}>{error}</ThemedText> : null}
@@ -131,13 +117,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    justifyContent: 'center',
     gap: 14,
   },
   title: {
     textAlign: 'center',
-    fontSize: 30,
-    marginBottom: 4,
+    fontSize: 28,
+    marginBottom: 8,
   },
   fieldGroup: {
     gap: 6,
@@ -163,17 +148,6 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
-  },
-  secondaryButton: {
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#0A7EA4',
-  },
-  secondaryButtonText: {
-    color: '#0A7EA4',
     fontSize: 16,
   },
   buttonDisabled: {

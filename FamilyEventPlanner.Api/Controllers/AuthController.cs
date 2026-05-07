@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
 using FamilyEventPlanner.Api.Models.Auth;
+using FamilyEventPlanner.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,9 +13,12 @@ namespace FamilyEventPlanner.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
-        public AuthController(AppDbContext context)
+        private readonly ITokenService _tokenService;
+
+        public AuthController(AppDbContext context, ITokenService tokenService)
         {
             _context = context;
+            _tokenService = tokenService;
         }
 
         [HttpPost("register")]
@@ -33,7 +37,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 if (exists)
                 {
                     System.Diagnostics.Debug.WriteLine($"[REGISTER] Email already registered: {request.Email}");
-                    return BadRequest("Email already registered.");
+                    return Conflict(new { message = "An account with this email already exists." });
                 }
 
                 var user = new User
@@ -48,11 +52,14 @@ namespace FamilyEventPlanner.Api.Controllers
                 await _context.SaveChangesAsync();
                 System.Diagnostics.Debug.WriteLine($"[REGISTER] User created: {user.Id}");
 
-                return Created("/api/users/" + user.Id, new
+                var token = _tokenService.GenerateToken(user.Id, user.Email, user.DisplayName);
+
+                return CreatedAtAction(nameof(Register), new
                 {
-                    id = user.Id,
+                    userId = user.Id,
                     email = user.Email,
-                    displayName = user.DisplayName
+                    displayName = user.DisplayName,
+                    authToken = token
                 });
             }
             catch (Exception ex)
@@ -70,16 +77,27 @@ namespace FamilyEventPlanner.Api.Controllers
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
             if (user == null)
-                return Unauthorized("Invalid email or password.");
+            {
+                System.Diagnostics.Debug.WriteLine($"[LOGIN] User not found for email: {request.Email}");
+                return Unauthorized(new { message = "Invalid email or password." });
+            }
 
             if (user.PasswordHash != request.Password)
-                return Unauthorized("Invalid email or password.");
+            {
+                System.Diagnostics.Debug.WriteLine($"[LOGIN] Invalid password for user: {request.Email}");
+                return Unauthorized(new { message = "Invalid email or password." });
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[LOGIN] User authenticated: {user.Id}");
+
+            var token = _tokenService.GenerateToken(user.Id, user.Email, user.DisplayName);
 
             return Ok(new
             {
-                id = user.Id,
+                userId = user.Id,
                 email = user.Email,
-                displayName = user.DisplayName
+                displayName = user.DisplayName,
+                authToken = token
             });
         }
     }

@@ -15,6 +15,7 @@ export type AuthUserResponse = {
   userId: string;
   displayName: string;
   email: string;
+  authToken?: string;
 };
 
 function mapAuthError(status: number, fallback: string): string {
@@ -115,12 +116,14 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
     id?: string;
     displayName?: string;
     email?: string;
+    authToken?: string;
   };
 
   return {
     userId: String(payloadObject.userId ?? payloadObject.id ?? ''),
     displayName: String(payloadObject.displayName ?? ''),
     email: String(payloadObject.email ?? ''),
+    authToken: payloadObject.authToken,
   };
 }
 

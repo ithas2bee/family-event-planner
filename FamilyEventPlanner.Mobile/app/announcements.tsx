@@ -4,9 +4,18 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getEventsByGroup, type Event } from '@/services/eventService';
+import { getAnnouncementsByGroup, type Announcement } from '@/services/announcementService';
 
-export default function EventsScreen() {
+function toBodyPreview(body: string): string {
+  const trimmed = body.trim();
+  if (trimmed.length <= 120) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, 117)}...`;
+}
+
+export default function AnnouncementsScreen() {
   const { groupId, refreshToken } = useLocalSearchParams<{
     groupId: string;
     memberId: string;
@@ -15,14 +24,14 @@ export default function EventsScreen() {
   const groupIdValue = String(groupId ?? '');
   const refreshTokenValue = String(refreshToken ?? '');
 
-  const [events, setEvents] = useState<Event[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadEvents() {
+    async function loadAnnouncements() {
       if (groupIdValue.length === 0) {
         setError('Group not found.');
         setLoading(false);
@@ -30,9 +39,9 @@ export default function EventsScreen() {
       }
 
       try {
-        const data = await getEventsByGroup(groupIdValue);
+        const data = await getAnnouncementsByGroup(groupIdValue);
         if (!cancelled) {
-          setEvents(data);
+          setAnnouncements(data);
           setError(null);
         }
       } catch (err: unknown) {
@@ -46,7 +55,7 @@ export default function EventsScreen() {
       }
     }
 
-    loadEvents();
+    loadAnnouncements();
 
     return () => {
       cancelled = true;
@@ -56,49 +65,47 @@ export default function EventsScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Family Events
+        Announcements
       </ThemedText>
 
       <Pressable
         style={styles.primaryButton}
         onPress={() =>
           router.push({
-            pathname: '/create-event',
+            pathname: '/create-announcement',
             params: { groupId: groupIdValue },
           })
         }>
         <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-          Create Event
+          Create Announcement
         </ThemedText>
       </Pressable>
 
-      {loading && <ThemedText style={styles.feedback}>Loading events...</ThemedText>}
+      {loading && <ThemedText style={styles.feedback}>Loading announcements...</ThemedText>}
 
-      {!loading && error !== null && (
-        <ThemedText style={styles.feedbackError}>{error}</ThemedText>
-      )}
+      {!loading && error !== null && <ThemedText style={styles.feedbackError}>{error}</ThemedText>}
 
       {!loading && error === null && (
         <FlatList
-          data={events}
+          data={announcements}
           keyExtractor={(item, index) => String(item.id ?? index)}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           renderItem={({ item }) => {
-            const title = item.title || 'Untitled Event';
-            const startDate = item.startDate || '';
+            const title = item.title || 'Untitled Announcement';
+            const bodyPreview = toBodyPreview(item.body || '');
             const creatorName = item.creatorDisplayName || 'Unknown Member';
+            const createdAt = item.createdAt || '';
 
             return (
-              <View style={styles.eventRow}>
+              <View style={styles.announcementRow}>
                 <ThemedText type="defaultSemiBold">{title}</ThemedText>
-                <ThemedText>{startDate}</ThemedText>
+                <ThemedText>{bodyPreview}</ThemedText>
                 <ThemedText>{creatorName}</ThemedText>
+                <ThemedText>{createdAt}</ThemedText>
               </View>
             );
           }}
-          ListEmptyComponent={
-            <ThemedText style={styles.feedback}>No events yet</ThemedText>
-          }
+          ListEmptyComponent={<ThemedText style={styles.feedback}>No announcements yet</ThemedText>}
         />
       )}
     </ThemedView>
@@ -126,7 +133,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
   },
-  eventRow: {
+  announcementRow: {
     paddingVertical: 12,
     gap: 2,
   },

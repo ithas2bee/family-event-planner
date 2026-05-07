@@ -22,6 +22,11 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            // Verify user exists
+            var user = await _context.Users.FindAsync(request.UserId);
+            if (user == null)
+                return BadRequest(new { message = "User not found." });
+
             // generate a unique invite code (retry a few times on collision)
             string inviteCode = null;
             for (int i = 0; i < 5; i++)
@@ -47,9 +52,57 @@ namespace FamilyEventPlanner.Api.Controllers
             };
 
             _context.FamilyGroups.Add(group);
+
+            // Add creator as admin member
+            var creatorMember = new GroupMember
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = group.Id,
+                UserId = request.UserId,
+                IsAdmin = true,
+                JoinedAt = DateTime.UtcNow
+            };
+
+            _context.GroupMembers.Add(creatorMember);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetGroup), new { id = group.Id }, group);
+            System.Diagnostics.Debug.WriteLine($"[CREATE GROUP] Group {group.Id} created by user {request.UserId} as admin member {creatorMember.Id}");
+
+            // Return group info plus memberId for immediate navigation
+            var response = new
+            {
+                groupId = group.Id,
+                groupName = group.Name,
+                inviteCode = group.InviteCode,
+                createdAt = group.CreatedAt,
+                memberId = creatorMember.Id,
+                isAdmin = creatorMember.IsAdmin
+            };
+
+            return CreatedAtAction(nameof(GetGroup), new { id = group.Id }, response);
+        }
+
+        [HttpGet("my/{userId}")]
+        public async Task<IActionResult> GetMyGroups(Guid userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            var groups = await _context.GroupMembers
+                .Where(m => m.UserId == userId)
+                .Include(m => m.FamilyGroup)
+                .Select(m => new
+                {
+                    groupId = m.FamilyGroupId,
+                    groupName = m.FamilyGroup.Name,
+                    isAdmin = m.IsAdmin,
+                    memberId = m.Id,
+                    joinedAt = m.JoinedAt
+                })
+                .ToListAsync();
+
+            return Ok(groups);
         }
 
         [HttpGet("{id}")]

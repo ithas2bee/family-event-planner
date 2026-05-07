@@ -58,3 +58,28 @@ export async function loadSession(): Promise<AppSession | null> {
 export async function clearSession(): Promise<void> {
   await deleteSessionValue();
 }
+
+// -----------------------------
+// Member helpers
+// -----------------------------
+
+export async function setMemberInfo(memberId: string | undefined, displayName?: string, groupId?: string): Promise<void> {
+  const session = (await loadSession()) ?? null;
+  if (!session) return;
+
+  if (memberId !== undefined) session.memberId = memberId;
+  if (displayName !== undefined) session.memberName = displayName;
+  if (groupId !== undefined) session.groupId = groupId;
+
+  await saveSession(session);
+}
+
+export async function getMemberId(): Promise<string | null> {
+  const session = await loadSession();
+  return session?.memberId ?? null;
+}
+
+export async function getMemberDisplayName(): Promise<string | null> {
+  const session = await loadSession();
+  return session?.memberName ?? null;
+}

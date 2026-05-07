@@ -2,17 +2,17 @@ using FamilyEventPlanner.Api.Data;
 using System;
 using System.Linq;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 using FamilyEventPlanner.Api.Models;
 using FamilyEventPlanner.Api.Models.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using FamilyEventPlanner.Api.Data;
 
 namespace FamilyEventPlanner.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
     public class EventsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -36,13 +36,17 @@ namespace FamilyEventPlanner.Api.Controllers
             if (group == null)
                 return NotFound(new { message = "Family group not found." });
 
-            // Get authenticated member id from claims
+            // Get authenticated member id from claims (MemberId auth)
             var memberIdClaim = User.FindFirst("memberId")?.Value;
             if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
                 return Forbid();
 
-            var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == request.FamilyGroupId);
-            if (!isMember)
+            // Validate authenticated member belongs to this group and load User
+            var member = await _context.GroupMembers
+                .Include(m => m.User)
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == request.FamilyGroupId);
+
+            if (member == null)
                 return Forbid();
 
             var ev = new FamilyEvent
@@ -63,6 +67,8 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.FamilyEvents.Add(ev);
             await _context.SaveChangesAsync();
 
+            System.Diagnostics.Debug.WriteLine($"[CREATE EVENT] Event {ev.Id} created by member {memberId} in group {request.FamilyGroupId}");
+
             var response = new EventResponse
             {
                 Id = ev.Id,
@@ -75,6 +81,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 DressCode = ev.DressCode,
                 Notes = ev.Notes,
                 CreatedByMemberId = ev.CreatedByMemberId,
+                CreatorDisplayName = member.User?.DisplayName,
                 CreatedAt = ev.CreatedAt
             };
 
@@ -88,6 +95,8 @@ namespace FamilyEventPlanner.Api.Controllers
             var group = await _context.FamilyGroups.FindAsync(familyGroupId);
             if (group == null)
                 return NotFound(new { message = "Family group not found." });
+
+            // Validate authenticated member is a member of this group
             var memberIdClaim = User.FindFirst("memberId")?.Value;
             if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
                 return Forbid();
@@ -96,12 +105,15 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
+            System.Diagnostics.Debug.WriteLine($"[GET EVENTS] Fetching events for group {familyGroupId}, requested by member {memberId}");
+
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
+            // Join with GroupMembers and Users to get creator display name
             var events = await _context.FamilyEvents
                 .Where(e => e.FamilyGroupId == familyGroupId)
-                .OrderByDescending(e => e.StartDate)
+                .OrderBy(e => e.StartDate)  // ? Changed to ascending (earliest first)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .Select(e => new EventResponse
@@ -116,9 +128,17 @@ namespace FamilyEventPlanner.Api.Controllers
                     DressCode = e.DressCode,
                     Notes = e.Notes,
                     CreatedByMemberId = e.CreatedByMemberId,
+                    CreatorDisplayName = e.CreatedByMemberId != null
+                        ? _context.GroupMembers
+                            .Where(m => m.Id == e.CreatedByMemberId)
+                            .Select(m => m.User.DisplayName)
+                            .FirstOrDefault()
+                        : null,
                     CreatedAt = e.CreatedAt
                 })
                 .ToListAsync();
+
+            System.Diagnostics.Debug.WriteLine($"[GET EVENTS] Returning {events.Count} events for group {familyGroupId}");
 
             return Ok(events);
         }
@@ -130,6 +150,7 @@ namespace FamilyEventPlanner.Api.Controllers
             if (ev == null)
                 return NotFound(new { message = "Event not found." });
 
+            // Validate authenticated member is a member of this group
             var memberIdClaim = User.FindFirst("memberId")?.Value;
             if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
                 return Forbid();
@@ -137,6 +158,16 @@ namespace FamilyEventPlanner.Api.Controllers
             var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == ev.FamilyGroupId);
             if (!isMember)
                 return Forbid();
+
+            // Get creator display name
+            string creatorDisplayName = null;
+            if (ev.CreatedByMemberId != null)
+            {
+                var creator = await _context.GroupMembers
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.Id == ev.CreatedByMemberId);
+                creatorDisplayName = creator?.User?.DisplayName;
+            }
 
             var response = new EventResponse
             {
@@ -150,6 +181,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 DressCode = ev.DressCode,
                 Notes = ev.Notes,
                 CreatedByMemberId = ev.CreatedByMemberId,
+                CreatorDisplayName = creatorDisplayName,
                 CreatedAt = ev.CreatedAt
             };
 
@@ -166,6 +198,7 @@ namespace FamilyEventPlanner.Api.Controllers
             if (ev == null)
                 return NotFound(new { message = "Event not found." });
 
+            // Validate authenticated member is a member of this group
             var memberIdClaim = User.FindFirst("memberId")?.Value;
             if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
                 return Forbid();

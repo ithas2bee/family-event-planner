@@ -113,9 +113,9 @@ export async function joinFamilyGroup(request: JoinGroupRequest): Promise<JoinGr
 }
 
 export type GroupMember = {
-  id?: number;
-  name?: string;
-  email?: string;
+  memberId?: string;
+  userId?: string;
+  displayName?: string;
   isAdmin?: boolean;
 };
 
@@ -148,6 +148,56 @@ export async function getGroupMembers(groupId: string, memberId: string): Promis
     throw new Error(`Failed to load members (error ${response.status}).`);
   }
 
-  const data: GroupMember[] = await response.json();
+  const rawBody = await response.text();
+  console.log('[Members] response status', response.status);
+  console.log('[Members] response text', rawBody);
+
+  let parsedBody: unknown = [];
+  if (rawBody.length > 0) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      parsedBody = [];
+    }
+  }
+
+  console.log('[Members] parsed response', parsedBody);
+
+  const data = Array.isArray(parsedBody) ? (parsedBody as GroupMember[]) : [];
+  return data;
+}
+
+export type GetMemberByUserResponse = {
+  memberId?: string;
+  displayName?: string;
+  groupId?: string;
+};
+
+export async function getGroupMemberByUser(groupId: string, userId: string): Promise<GetMemberByUserResponse> {
+  let response: Response;
+  const url = `${API_BASE_URL}/api/groupmembers/by-user/${groupId}/${userId}`;
+
+  try {
+    response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('You are not a member of this group.');
+    }
+    if (response.status >= 500) {
+      throw new Error('The server is unavailable. Please try again later.');
+    }
+    throw new Error(`Failed to resolve member (error ${response.status}).`);
+  }
+
+  const data: GetMemberByUserResponse = await response.json();
   return data;
 }

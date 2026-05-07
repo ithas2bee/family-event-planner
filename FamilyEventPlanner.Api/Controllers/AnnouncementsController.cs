@@ -12,7 +12,7 @@ namespace FamilyEventPlanner.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Microsoft.AspNetCore.Authorization.Authorize]
+    [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
     public class AnnouncementsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -37,8 +37,12 @@ namespace FamilyEventPlanner.Api.Controllers
             if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
                 return Forbid();
 
-            var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == request.FamilyGroupId);
-            if (!isMember)
+            // Load member with User to get display name
+            var member = await _context.GroupMembers
+                .Include(m => m.User)
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == request.FamilyGroupId);
+
+            if (member == null)
                 return Forbid();
 
             var ann = new Announcement
@@ -55,6 +59,8 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.Announcements.Add(ann);
             await _context.SaveChangesAsync();
 
+            System.Diagnostics.Debug.WriteLine($"[CREATE ANNOUNCEMENT] Announcement {ann.Id} created by member {memberId} in group {request.FamilyGroupId}");
+
             var resp = new AnnouncementResponse
             {
                 Id = ann.Id,
@@ -62,6 +68,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Title = ann.Title,
                 Body = ann.Body,
                 CreatedByMemberId = ann.CreatedByMemberId,
+                CreatorDisplayName = member.User?.DisplayName,
                 CreatedAt = ann.CreatedAt,
                 ExpiresAt = ann.ExpiresAt
             };
@@ -84,9 +91,12 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
+            System.Diagnostics.Debug.WriteLine($"[GET ANNOUNCEMENTS] Fetching announcements for group {familyGroupId}, requested by member {memberId}");
+
             pageNumber = Math.Max(1, pageNumber);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
+            // Join with GroupMembers and Users to get creator display name
             var list = await _context.Announcements
                 .Where(a => a.FamilyGroupId == familyGroupId)
                 .OrderByDescending(a => a.CreatedAt)
@@ -99,10 +109,18 @@ namespace FamilyEventPlanner.Api.Controllers
                     Title = a.Title,
                     Body = a.Body,
                     CreatedByMemberId = a.CreatedByMemberId,
+                    CreatorDisplayName = a.CreatedByMemberId != null
+                        ? _context.GroupMembers
+                            .Where(m => m.Id == a.CreatedByMemberId)
+                            .Select(m => m.User.DisplayName)
+                            .FirstOrDefault()
+                        : null,
                     CreatedAt = a.CreatedAt,
                     ExpiresAt = a.ExpiresAt
                 })
                 .ToListAsync();
+
+            System.Diagnostics.Debug.WriteLine($"[GET ANNOUNCEMENTS] Returning {list.Count} announcements for group {familyGroupId}");
 
             return Ok(list);
         }
@@ -122,6 +140,16 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
+            // Get creator display name
+            string creatorDisplayName = null;
+            if (ann.CreatedByMemberId != null)
+            {
+                var creator = await _context.GroupMembers
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.Id == ann.CreatedByMemberId);
+                creatorDisplayName = creator?.User?.DisplayName;
+            }
+
             var resp = new AnnouncementResponse
             {
                 Id = ann.Id,
@@ -129,6 +157,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Title = ann.Title,
                 Body = ann.Body,
                 CreatedByMemberId = ann.CreatedByMemberId,
+                CreatorDisplayName = creatorDisplayName,
                 CreatedAt = ann.CreatedAt,
                 ExpiresAt = ann.ExpiresAt
             };

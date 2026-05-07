@@ -3,33 +3,25 @@ const API_BASE_URL = 'http://10.0.0.115:5249';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
 
-export type Event = {
+export type Announcement = {
   id: string;
   familyGroupId: string;
   title: string;
-  description?: string;
-  startDate: string;
-  endDate?: string;
-  location?: string;
-  dressCode?: string;
-  notes?: string;
+  body: string;
   createdByMemberId?: string;
   creatorDisplayName?: string;
   createdAt: string;
+  expiresAt?: string;
 };
 
-export type CreateEventRequest = {
+export type CreateAnnouncementRequest = {
   familyGroupId: string;
   title: string;
-  description?: string;
-  startDate: string;
-  endDate?: string;
-  location?: string;
-  dressCode?: string;
-  notes?: string;
+  body: string;
+  expiresAt?: string;
 };
 
-async function getEventHeaders(): Promise<Record<string, string>> {
+async function getAnnouncementHeaders(): Promise<Record<string, string>> {
   const headers = await getAuthHeaders();
   const session = await loadSession();
 
@@ -80,44 +72,36 @@ function extractServerMessage(payload: unknown): string {
   return '';
 }
 
-function mapEvent(payload: unknown): Event {
-  const event = (payload ?? {}) as {
+function mapAnnouncement(payload: unknown): Announcement {
+  const announcement = (payload ?? {}) as {
     id?: string;
     familyGroupId?: string;
     title?: string;
-    description?: string;
-    startDate?: string;
-    endDate?: string;
-    location?: string;
-    dressCode?: string;
-    notes?: string;
+    body?: string;
     createdByMemberId?: string;
     creatorDisplayName?: string;
     createdAt?: string;
+    expiresAt?: string;
   };
 
   return {
-    id: String(event.id ?? ''),
-    familyGroupId: String(event.familyGroupId ?? ''),
-    title: String(event.title ?? ''),
-    description: event.description,
-    startDate: String(event.startDate ?? ''),
-    endDate: event.endDate,
-    location: event.location,
-    dressCode: event.dressCode,
-    notes: event.notes,
-    createdByMemberId: event.createdByMemberId,
-    creatorDisplayName: event.creatorDisplayName,
-    createdAt: String(event.createdAt ?? ''),
+    id: String(announcement.id ?? ''),
+    familyGroupId: String(announcement.familyGroupId ?? ''),
+    title: String(announcement.title ?? ''),
+    body: String(announcement.body ?? ''),
+    createdByMemberId: announcement.createdByMemberId,
+    creatorDisplayName: announcement.creatorDisplayName,
+    createdAt: String(announcement.createdAt ?? ''),
+    expiresAt: announcement.expiresAt,
   };
 }
 
-export async function getEventsByGroup(groupId: string): Promise<Event[]> {
+export async function getAnnouncementsByGroup(groupId: string): Promise<Announcement[]> {
   let response: Response;
-  const headers = await getEventHeaders();
+  const headers = await getAnnouncementHeaders();
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/events/group/${groupId}`, {
+    response = await fetch(`${API_BASE_URL}/api/announcements/group/${groupId}`, {
       method: 'GET',
       headers,
     });
@@ -145,15 +129,17 @@ export async function getEventsByGroup(groupId: string): Promise<Event[]> {
     return [];
   }
 
-  return parsedBody.map(mapEvent);
+  return parsedBody
+    .map(mapAnnouncement)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-export async function createEvent(request: CreateEventRequest): Promise<Event> {
+export async function createAnnouncement(request: CreateAnnouncementRequest): Promise<Announcement> {
   let response: Response;
-  const headers = await getEventHeaders();
+  const headers = await getAnnouncementHeaders();
 
   try {
-    response = await fetch(`${API_BASE_URL}/api/events`, {
+    response = await fetch(`${API_BASE_URL}/api/announcements`, {
       method: 'POST',
       headers,
       body: JSON.stringify(request),
@@ -182,5 +168,5 @@ export async function createEvent(request: CreateEventRequest): Promise<Event> {
     throw new Error('The server returned an unexpected response.');
   }
 
-  return mapEvent(parsedBody);
+  return mapAnnouncement(parsedBody);
 }

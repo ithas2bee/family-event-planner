@@ -28,7 +28,7 @@ export default function LoginScreen() {
         userId: user.userId,
         displayName: user.displayName,
         email: user.email,
-        authToken: null,
+        authToken: user.authToken ?? null,
       });
 
       router.replace('/my-groups');

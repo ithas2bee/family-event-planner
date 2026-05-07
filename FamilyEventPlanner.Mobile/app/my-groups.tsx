@@ -1,16 +1,120 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { clearSession, loadSession, type AppSession } from '@/services/sessionService';
 
+const API_BASE_URL = 'http://10.0.0.115:5249';
+
+type MyGroup = {
+  groupId: string;
+  groupName: string;
+};
+
+function mapGroups(raw: unknown): MyGroup[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((item) => {
+      const entry = item as {
+        groupId?: string;
+        id?: string;
+        familyGroupId?: string;
+        groupName?: string;
+        name?: string;
+      };
+
+      const groupId = String(entry.groupId ?? entry.familyGroupId ?? entry.id ?? '').trim();
+      const groupName = String(entry.groupName ?? entry.name ?? '').trim();
+
+      if (!groupId) return null;
+
+      return {
+        groupId,
+        groupName: groupName || 'Unnamed Group',
+      };
+    })
+    .filter((group): group is MyGroup => group !== null);
+}
+
 export default function MyGroupsScreen() {
   const [session, setSession] = useState<AppSession | null>(null);
+  const [groups, setGroups] = useState<MyGroup[]>([]);
+  const [loadingGroups, setLoadingGroups] = useState(true);
+  const [groupsError, setGroupsError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSession().then(setSession);
+    let cancelled = false;
+
+    async function loadGroups() {
+      setLoadingGroups(true);
+      setGroupsError(null);
+
+      const existingSession = await loadSession();
+      if (!existingSession) {
+        if (!cancelled) {
+          router.replace('/auth');
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setSession(existingSession);
+      }
+
+      let response: Response;
+      const url = `${API_BASE_URL}/api/familygroups/my/${existingSession.userId}`;
+      console.log('[MyGroups] fetching', url);
+
+      try {
+        response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+      } catch {
+        if (!cancelled) {
+          setGroupsError('Could not reach the server. Check your network connection.');
+          setLoadingGroups(false);
+        }
+        return;
+      }
+
+      console.log('[MyGroups] response status', response.status);
+
+      if (!response.ok) {
+        if (!cancelled) {
+          setGroupsError(`Failed to load groups (error ${response.status}).`);
+          setLoadingGroups(false);
+        }
+        return;
+      }
+
+      try {
+        const rawData = (await response.json()) as unknown;
+        console.log('[MyGroups] raw response', rawData);
+        if (!cancelled) {
+          const mapped = mapGroups(rawData);
+          console.log('[MyGroups] mapped groups count', mapped.length);
+          setGroups(mapped);
+          setLoadingGroups(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setGroupsError('Failed to read group data from the server.');
+          setLoadingGroups(false);
+        }
+      }
+    }
+
+    loadGroups();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleJoinGroup = useCallback(() => {
@@ -18,7 +122,7 @@ export default function MyGroupsScreen() {
   }, []);
 
   const handleCreateGroup = useCallback(() => {
-    Alert.alert('Coming Soon', 'Create Group is not yet available.');
+    router.push('/create-group');
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -43,28 +147,33 @@ export default function MyGroupsScreen() {
           Your Groups
         </ThemedText>
 
-        {session?.groupName ? (
-          <Pressable
-            style={styles.groupCard}
-            onPress={() =>
-              router.push({
-                pathname: '/family-home',
-                params: {
-                  groupId: session.groupId,
-                  memberId: session.memberId,
-                  groupName: session.groupName,
-                  memberName: session.memberName,
-                },
-              })
-            }
-          >
-            <ThemedText type="defaultSemiBold" style={styles.groupCardName}>
-              {session.groupName}
-            </ThemedText>
-            <ThemedText style={styles.groupCardSub}>
-              Tap to open
-            </ThemedText>
-          </Pressable>
+        {loadingGroups ? (
+          <ThemedText style={styles.emptyText}>Loading...</ThemedText>
+        ) : groupsError ? (
+          <ThemedText style={styles.errorText}>{groupsError}</ThemedText>
+        ) : groups.length > 0 ? (
+          groups.map((group) => (
+            <Pressable
+              key={group.groupId}
+              style={styles.groupCard}
+              onPress={() =>
+                router.push({
+                  pathname: '/family-home',
+                  params: {
+                    groupId: group.groupId,
+                    groupName: group.groupName,
+                  },
+                })
+              }
+            >
+              <ThemedText type="defaultSemiBold" style={styles.groupCardName}>
+                {group.groupName}
+              </ThemedText>
+              <ThemedText style={styles.groupCardSub}>
+                Tap to open
+              </ThemedText>
+            </Pressable>
+          ))
         ) : (
           <ThemedText style={styles.emptyText}>
             You have not joined any groups yet.
@@ -132,6 +241,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     opacity: 0.6,
+  },
+  errorText: {
+    color: '#C0392B',
+    fontSize: 14,
   },
   actions: {
     gap: 12,
