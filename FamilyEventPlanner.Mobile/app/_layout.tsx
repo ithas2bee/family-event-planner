@@ -31,6 +31,7 @@ export default function RootLayout() {
         <Stack.Screen name="events" options={{ title: 'Family Events' }} />
         <Stack.Screen name="polls" options={{ title: 'Polls' }} />
         <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
+        <Stack.Screen name="activity" options={{ title: 'Activity Feed' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

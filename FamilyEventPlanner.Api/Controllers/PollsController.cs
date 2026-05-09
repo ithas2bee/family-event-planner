@@ -79,6 +79,19 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.Polls.Add(poll);
             await _context.SaveChangesAsync();
 
+            _context.ActivityFeed.Add(new ActivityFeed
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = poll.FamilyGroupId,
+                ActorMemberId = memberId,
+                ActivityType = "PollCreated",
+                RelatedEntityId = poll.Id,
+                RelatedEntityType = "Poll",
+                MetadataJson = $"{{\"question\":\"{poll.Question}\"}}",
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
             System.Diagnostics.Debug.WriteLine($"[CREATE POLL] Poll {poll.Id} created by member {memberId} in group {request.FamilyGroupId}");
 
             var resp = new PollResponse
@@ -255,6 +268,19 @@ namespace FamilyEventPlanner.Api.Controllers
             };
 
             _context.PollVotes.Add(vote);
+            await _context.SaveChangesAsync();
+
+            _context.ActivityFeed.Add(new ActivityFeed
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = option.Poll.FamilyGroupId,
+                ActorMemberId = memberId,
+                ActivityType = "PollVoted",
+                RelatedEntityId = option.PollId,
+                RelatedEntityType = "Poll",
+                MetadataJson = $"{{\"question\":\"{option.Poll.Question}\"}}",
+                CreatedAtUtc = DateTime.UtcNow
+            });
             await _context.SaveChangesAsync();
 
             return Ok(new { vote.Id, vote.PollOptionId, vote.MemberId, vote.CreatedAt });

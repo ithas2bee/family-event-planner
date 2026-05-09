@@ -61,6 +61,19 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.GroupMembers.Add(member);
             await _context.SaveChangesAsync();
 
+            _context.ActivityFeed.Add(new ActivityFeed
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = group.Id,
+                ActorMemberId = member.Id,
+                ActivityType = "MemberJoined",
+                RelatedEntityId = null,
+                RelatedEntityType = null,
+                MetadataJson = $"{{\"displayName\":\"{user.DisplayName}\"}}",
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
             // Return camelCase JSON response for React frontend
             var response = new
             {

@@ -110,6 +110,16 @@ export default function FamilyHomeScreen() {
         <Pressable
           style={styles.navButton}
           onPress={() =>
+            router.push({ pathname: '/activity', params: { groupId, memberId } })
+          }>
+          <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
+            Activity
+          </ThemedText>
+        </Pressable>
+
+        <Pressable
+          style={styles.navButton}
+          onPress={() =>
             router.push({ pathname: '/members', params: { groupId, memberId } })
           }>
           <ThemedText type="defaultSemiBold" style={styles.navButtonText}>

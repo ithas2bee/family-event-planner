@@ -67,6 +67,19 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.FamilyEvents.Add(ev);
             await _context.SaveChangesAsync();
 
+            _context.ActivityFeed.Add(new ActivityFeed
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = ev.FamilyGroupId,
+                ActorMemberId = memberId,
+                ActivityType = "EventCreated",
+                RelatedEntityId = ev.Id,
+                RelatedEntityType = "Event",
+                MetadataJson = $"{{\"title\":\"{ev.Title}\"}}",
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
             System.Diagnostics.Debug.WriteLine($"[CREATE EVENT] Event {ev.Id} created by member {memberId} in group {request.FamilyGroupId}");
 
             var response = new EventResponse

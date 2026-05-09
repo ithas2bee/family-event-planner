@@ -32,6 +32,9 @@ namespace FamilyEventPlanner.Api.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<User> Users { get; set; }
 
+        // Activity feed
+        public DbSet<ActivityFeed> ActivityFeed { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -65,6 +68,12 @@ namespace FamilyEventPlanner.Api.Data
                 .HasOne(n => n.Member)
                 .WithMany()
                 .HasForeignKey(n => n.MemberId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<ActivityFeed>()
+                .HasOne(a => a.ActorMember)
+                .WithMany()
+                .HasForeignKey(a => a.ActorMemberId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // Align naming conventions for foreign keys if necessary

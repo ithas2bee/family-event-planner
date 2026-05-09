@@ -59,6 +59,19 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.Announcements.Add(ann);
             await _context.SaveChangesAsync();
 
+            _context.ActivityFeed.Add(new ActivityFeed
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = ann.FamilyGroupId,
+                ActorMemberId = memberId,
+                ActivityType = "AnnouncementCreated",
+                RelatedEntityId = ann.Id,
+                RelatedEntityType = "Announcement",
+                MetadataJson = $"{{\"title\":\"{ann.Title}\"}}",
+                CreatedAtUtc = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
             System.Diagnostics.Debug.WriteLine($"[CREATE ANNOUNCEMENT] Announcement {ann.Id} created by member {memberId} in group {request.FamilyGroupId}");
 
             var resp = new AnnouncementResponse
