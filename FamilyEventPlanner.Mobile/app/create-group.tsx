@@ -4,11 +4,13 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-nativ
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { loadSession, saveSession } from '@/services/sessionService';
 
 const API_BASE_URL = 'http://10.0.0.115:5249';
 
 export default function CreateGroupScreen() {
+  const { setActiveGroup } = useActiveGroupContext();
   const [groupName, setGroupName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -76,8 +78,15 @@ export default function CreateGroupScreen() {
         isAdmin: parsed.isAdmin ?? true,
       });
 
+      await setActiveGroup({
+        groupId,
+        groupName: resolvedGroupName,
+        memberId,
+        memberName: session.displayName,
+      });
+
       router.replace({
-        pathname: '/family-home',
+        pathname: '/(tabs)/family-home',
         params: { groupId, groupName: resolvedGroupName, memberId, memberName: session.displayName },
       });
     } catch (err: unknown) {

@@ -4,11 +4,13 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-nativ
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createAnnouncement } from '@/services/announcementService';
 
 export default function CreateAnnouncementScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const groupIdValue = String(groupId ?? '');
+  const { groupId: contextGroupId } = useActiveGroupContext();
+  const groupIdValue = String(groupId ?? contextGroupId ?? '');
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -35,7 +37,7 @@ export default function CreateAnnouncementScreen() {
       });
 
       router.replace({
-        pathname: '/announcements',
+        pathname: '/(tabs)/(main)/announcements',
         params: {
           groupId: groupIdValue,
           refreshToken: Date.now().toString(),

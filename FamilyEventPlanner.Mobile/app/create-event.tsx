@@ -4,11 +4,13 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-nativ
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createEvent } from '@/services/eventService';
 
 export default function CreateEventScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
-  const groupIdValue = String(groupId ?? '');
+  const { groupId: contextGroupId } = useActiveGroupContext();
+  const groupIdValue = String(groupId ?? contextGroupId ?? '');
 
   const [title, setTitle] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -43,7 +45,7 @@ export default function CreateEventScreen() {
       });
 
       router.replace({
-        pathname: '/events',
+        pathname: '/(tabs)/(main)/events',
         params: {
           groupId: groupIdValue,
           refreshToken: Date.now().toString(),

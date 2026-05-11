@@ -4,6 +4,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getActivityByGroup, type ActivityFeedItem } from '@/services/activityService';
 
 type ActivityMetadata = {
@@ -70,18 +71,48 @@ function getNotificationText(item: ActivityFeedItem): string {
 
 export default function ActivityScreen() {
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
-  const groupIdValue = String(groupId ?? '');
-  const memberIdValue = String(memberId ?? '');
+  const {
+    groupId: contextGroupId,
+    memberId: contextMemberId,
+    setActiveGroup,
+    isReady,
+    isResolvingMember,
+  } = useActiveGroupContext();
+  const groupIdValue = String(groupId ?? contextGroupId ?? '');
+  const memberIdValue = String(memberId ?? contextMemberId ?? '');
 
   const [activities, setActivities] = useState<ActivityFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const update: { groupId?: string; memberId?: string } = {};
+    if (groupId) {
+      update.groupId = String(groupId);
+    }
+    if (memberId) {
+      update.memberId = String(memberId);
+    }
+
+    if (Object.keys(update).length === 0) {
+      return;
+    }
+
+    void setActiveGroup(update);
+  }, [groupId, memberId, setActiveGroup]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadActivity() {
+      setLoading(true);
+      setError(null);
+
       if (groupIdValue.length === 0 || memberIdValue.length === 0) {
+        if (!isReady || isResolvingMember) {
+          return;
+        }
+
         setError('Group not found.');
         setLoading(false);
         return;
@@ -109,7 +140,7 @@ export default function ActivityScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, memberIdValue]);
+  }, [groupIdValue, memberIdValue, isReady, isResolvingMember]);
 
   return (
     <ThemedView style={styles.container}>

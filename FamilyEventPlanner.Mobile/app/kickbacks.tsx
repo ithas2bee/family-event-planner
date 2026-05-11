@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import {
     getKickbacksByGroup,
     respondToKickback,
@@ -30,8 +31,15 @@ export default function KickbacksScreen() {
     memberId: string;
     refreshToken?: string;
   }>();
-  const groupIdValue = String(groupId ?? '');
-  const memberIdValue = String(memberId ?? '');
+  const {
+    groupId: contextGroupId,
+    memberId: contextMemberId,
+    setActiveGroup,
+    isReady,
+    isResolvingMember,
+  } = useActiveGroupContext();
+  const groupIdValue = String(groupId ?? contextGroupId ?? '');
+  const memberIdValue = String(memberId ?? contextMemberId ?? '');
   const refreshTokenValue = String(refreshToken ?? '');
 
   const [kickbacks, setKickbacks] = useState<Kickback[]>([]);
@@ -40,10 +48,33 @@ export default function KickbacksScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const update: { groupId?: string; memberId?: string } = {};
+    if (groupId) {
+      update.groupId = String(groupId);
+    }
+    if (memberId) {
+      update.memberId = String(memberId);
+    }
+
+    if (Object.keys(update).length === 0) {
+      return;
+    }
+
+    void setActiveGroup(update);
+  }, [groupId, memberId, setActiveGroup]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadKickbacks() {
+      setLoading(true);
+      setError(null);
+
       if (groupIdValue.length === 0 || memberIdValue.length === 0) {
+        if (!isReady || isResolvingMember) {
+          return;
+        }
+
         setError('Group not found.');
         setLoading(false);
         return;
@@ -71,7 +102,7 @@ export default function KickbacksScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, memberIdValue, refreshTokenValue]);
+  }, [groupIdValue, memberIdValue, refreshTokenValue, isReady, isResolvingMember]);
 
   async function handleResponse(kickbackId: string, responseType: KickbackResponseType) {
     if (responseLoadingKickbackId !== null) {

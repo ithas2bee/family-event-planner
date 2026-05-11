@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-nativ
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { saveSession } from '@/services/sessionService';
+import { loadSession, saveSession } from '@/services/sessionService';
 import { loginUser } from '@/services/userService';
 
 export default function LoginScreen() {
@@ -19,19 +19,32 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
+      const existingSession = await loadSession();
+
       const user = await loginUser({
         email: email.trim(),
         password,
       });
 
+      const canRestoreActiveSelection = existingSession?.userId === user.userId;
+
       await saveSession({
         userId: user.userId,
         displayName: user.displayName,
         email: user.email,
+        groupId: canRestoreActiveSelection ? existingSession?.groupId : undefined,
+        groupName: canRestoreActiveSelection ? existingSession?.groupName : undefined,
+        memberId: canRestoreActiveSelection ? existingSession?.memberId : undefined,
+        memberName: canRestoreActiveSelection ? existingSession?.memberName : undefined,
         authToken: user.authToken ?? null,
       });
 
-      router.replace('/my-groups');
+      if (canRestoreActiveSelection && existingSession?.groupId) {
+        router.replace('/(tabs)/(main)/family-home');
+        return;
+      }
+
+      router.replace('/(tabs)/(main)/my-groups');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to login.');
     } finally {

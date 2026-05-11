@@ -41,7 +41,7 @@ export default function CreateAccountScreen() {
         authToken: user.authToken ?? null,
       });
 
-      router.replace('/my-groups');
+      router.replace('/(tabs)/(main)/my-groups');
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Unable to create account.';
       console.log('[CreateAccount] Register failed', { errorMessage });

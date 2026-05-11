@@ -162,7 +162,7 @@ export default function MyGroupsScreen() {
       });
 
       router.push({
-        pathname: '/(tabs)/family-home',
+        pathname: '/(tabs)/(main)/family-home',
         params: {
           groupId: group.groupId,
           groupName: group.groupName,

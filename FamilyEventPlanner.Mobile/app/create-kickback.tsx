@@ -4,6 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View }
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createKickback } from '@/services/kickbackService';
 
 const vibeOptions = ['BBQ', 'Game On', 'Drinks', 'Bonfire', 'Chill', 'Pool', 'Music', 'Food'];
@@ -30,8 +31,9 @@ function resolveExpiresAtUtc(duration: DurationOption): string {
 
 export default function CreateKickbackScreen() {
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
-  const groupIdValue = String(groupId ?? '');
-  const memberIdValue = String(memberId ?? '');
+  const { groupId: contextGroupId, memberId: contextMemberId } = useActiveGroupContext();
+  const groupIdValue = String(groupId ?? contextGroupId ?? '');
+  const memberIdValue = String(memberId ?? contextMemberId ?? '');
 
   const [selectedVibe, setSelectedVibe] = useState('');
   const [note, setNote] = useState('');
@@ -58,7 +60,7 @@ export default function CreateKickbackScreen() {
       });
 
       router.replace({
-        pathname: '/kickbacks',
+        pathname: '/(tabs)/(main)/kickbacks',
         params: {
           groupId: groupIdValue,
           memberId: memberIdValue,

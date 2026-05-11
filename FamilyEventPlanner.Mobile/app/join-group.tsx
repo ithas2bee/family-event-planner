@@ -4,10 +4,12 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-nativ
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { joinFamilyGroup } from '@/services/groupMemberService';
 import { loadSession, saveSession, type AppSession } from '@/services/sessionService';
 
 export default function JoinGroupScreen() {
+  const { setActiveGroup } = useActiveGroupContext();
   const [session, setSession] = useState<AppSession | null>(null);
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,8 +59,15 @@ export default function JoinGroupScreen() {
         authToken: null,
       });
 
+      await setActiveGroup({
+        groupId,
+        groupName,
+        memberId,
+        memberName,
+      });
+
       router.replace({
-        pathname: '/family-home',
+        pathname: '/(tabs)/family-home',
         params: { groupId, memberId, groupName, memberName },
       });
     } catch (err: unknown) {
