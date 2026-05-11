@@ -6,5 +6,8 @@ namespace FamilyEventPlanner.Api.Models
     {
         [Required, MaxLength(200)]
         public string Name { get; set; }
+
+        [Required]
+        public Guid UserId { get; set; }
     }
 }

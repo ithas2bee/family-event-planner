@@ -32,6 +32,13 @@ namespace FamilyEventPlanner.Api.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<User> Users { get; set; }
 
+        // Activity feed
+        public DbSet<ActivityFeed> ActivityFeed { get; set; }
+
+        // Kickbacks
+        public DbSet<Kickback> Kickbacks { get; set; }
+        public DbSet<KickbackResponse> KickbackResponses { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -67,6 +74,24 @@ namespace FamilyEventPlanner.Api.Data
                 .HasForeignKey(n => n.MemberId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<ActivityFeed>()
+                .HasOne(a => a.ActorMember)
+                .WithMany()
+                .HasForeignKey(a => a.ActorMemberId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Kickback>()
+                .HasOne(k => k.CreatedByMember)
+                .WithMany()
+                .HasForeignKey(k => k.CreatedByMemberId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<KickbackResponse>()
+                .HasOne(kr => kr.Member)
+                .WithMany()
+                .HasForeignKey(kr => kr.MemberId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             // Align naming conventions for foreign keys if necessary
             modelBuilder.Entity<EventAssignment>()
                 .Property<Guid?>("AssignedToId");
@@ -79,9 +104,13 @@ namespace FamilyEventPlanner.Api.Data
                 .HasIndex(g => g.InviteCode)
                 .IsUnique();
 
-            modelBuilder.Entity<EventAttendance>()
-                .HasIndex(a => new { a.FamilyEventId, a.MemberId })
-                .IsUnique();
+            // GroupMember.UserId is now required (not nullable)
+            modelBuilder.Entity<GroupMember>()
+                .HasOne(gm => gm.User)
+                .WithMany()
+                .HasForeignKey(gm => gm.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .IsRequired();
         }
     }
 }

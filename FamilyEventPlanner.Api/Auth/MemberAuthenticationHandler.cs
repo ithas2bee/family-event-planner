@@ -57,7 +57,7 @@ namespace FamilyEventPlanner.Api.Auth
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             
             System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Querying GroupMembers table for Id = {memberId}");
-            var member = await db.GroupMembers.FirstOrDefaultAsync(m => m.Id == memberId);
+            var member = await db.GroupMembers.Include(m => m.User).FirstOrDefaultAsync(m => m.Id == memberId);
             
             if (member == null)
             {
@@ -65,17 +65,17 @@ namespace FamilyEventPlanner.Api.Auth
                 return AuthenticateResult.Fail($"Member not found in GroupMembers table (Id: {memberId}).");
             }
 
-            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Found GroupMember: Id={member.Id}, Name={member.Name}, GroupId={member.FamilyGroupId}");
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Found GroupMember: Id={member.Id}, DisplayName={member.User?.DisplayName}, GroupId={member.FamilyGroupId}");
 
             // Create claims with the authenticated member's information
             var claims = new[] 
             { 
                 new Claim("memberId", member.Id.ToString()),
-                new Claim(ClaimTypes.Name, member.Name ?? string.Empty),
+                new Claim(ClaimTypes.Name, member.User?.DisplayName ?? string.Empty),
                 new Claim("groupId", member.FamilyGroupId.ToString())
             };
             
-            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Created claims: memberId={member.Id}, name={member.Name}, groupId={member.FamilyGroupId}");
+            System.Diagnostics.Debug.WriteLine($"[AUTH HANDLER] Created claims: memberId={member.Id}, displayName={member.User?.DisplayName}, groupId={member.FamilyGroupId}");
             
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);

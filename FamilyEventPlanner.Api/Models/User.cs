@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FamilyEventPlanner.Api.Models
 {
-    // Minimal user placeholder for planned auth integration.
+    // User is the main account identity.
     public class User
     {
         public Guid Id { get; set; }
@@ -11,11 +11,14 @@ namespace FamilyEventPlanner.Api.Models
         [Required, EmailAddress]
         public string Email { get; set; }
 
-        // Store password hash when you implement authentication.
         public string? PasswordHash { get; set; }
 
         public string? DisplayName { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        public string? GoogleId { get; set; }
+        public string? FacebookId { get; set; }
+        public DateTime? LastLoginAt { get; set; }
     }
 }

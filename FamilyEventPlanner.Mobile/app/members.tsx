@@ -19,6 +19,7 @@ export default function MembersScreen() {
     async function loadMembers() {
       try {
         const data = await getGroupMembers(groupIdValue, memberIdValue);
+        console.log('[MembersScreen] received members', data);
         setMembers(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
@@ -45,12 +46,12 @@ export default function MembersScreen() {
       {!loading && error === null && (
         <FlatList
           data={members}
-          keyExtractor={(item, index) => String(item.id ?? index)}
+          keyExtractor={(item, index) => String(item.memberId ?? index)}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           renderItem={({ item }) => (
             <View style={styles.memberRow}>
               <ThemedText type="defaultSemiBold">
-                {item.name ?? 'Unknown'}
+                {item.displayName ?? 'Unknown'}
                 {item.isAdmin ? ' (Admin)' : ''}
               </ThemedText>
             </View>

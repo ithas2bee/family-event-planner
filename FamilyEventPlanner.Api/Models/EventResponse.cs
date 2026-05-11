@@ -14,6 +14,7 @@ namespace FamilyEventPlanner.Api.Models
         public string? DressCode { get; set; }
         public string? Notes { get; set; }
         public Guid? CreatedByMemberId { get; set; }
+        public string? CreatorDisplayName { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }
