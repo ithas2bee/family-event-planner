@@ -31,7 +31,9 @@ export default function RootLayout() {
         <Stack.Screen name="events" options={{ title: 'Family Events' }} />
         <Stack.Screen name="polls" options={{ title: 'Polls' }} />
         <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
-        <Stack.Screen name="activity" options={{ title: 'Activity Feed' }} />
+        <Stack.Screen name="activity" options={{ title: 'Notifications' }} />
+        <Stack.Screen name="kickbacks" options={{ title: 'Kickbacks' }} />
+        <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

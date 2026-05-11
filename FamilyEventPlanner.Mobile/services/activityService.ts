@@ -8,6 +8,7 @@ export type ActivityFeedItem = {
   familyGroupId: string;
   actorMemberId?: string;
   actorDisplayName?: string;
+  message?: string;
   activityType: string;
   relatedEntityId?: string;
   relatedEntityType?: string;
@@ -72,6 +73,7 @@ function mapActivity(payload: unknown): ActivityFeedItem {
     familyGroupId?: string;
     actorMemberId?: string;
     actorDisplayName?: string;
+    message?: string;
     activityType?: string;
     relatedEntityId?: string;
     relatedEntityType?: string;
@@ -85,6 +87,7 @@ function mapActivity(payload: unknown): ActivityFeedItem {
     actorMemberId: activity.actorMemberId != null ? String(activity.actorMemberId) : undefined,
     actorDisplayName:
       activity.actorDisplayName != null ? String(activity.actorDisplayName) : undefined,
+    message: activity.message != null ? String(activity.message) : undefined,
     activityType: String(activity.activityType ?? ''),
     relatedEntityId:
       activity.relatedEntityId != null ? String(activity.relatedEntityId) : undefined,

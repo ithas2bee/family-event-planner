@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models.Responses;
+using FamilyEventPlanner.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -56,9 +57,15 @@ namespace FamilyEventPlanner.Api.Controllers
                     RelatedEntityId = a.RelatedEntityId,
                     RelatedEntityType = a.RelatedEntityType,
                     MetadataJson = a.MetadataJson,
+                    Message = string.Empty,
                     CreatedAtUtc = a.CreatedAtUtc
                 })
                 .ToListAsync();
+
+            foreach (var activity in activities)
+            {
+                activity.Message = ActivityFeedMessageFormatter.Format(activity);
+            }
 
             System.Diagnostics.Debug.WriteLine($"[GET ACTIVITY] Returning {activities.Count} activities for group {groupId}");
 

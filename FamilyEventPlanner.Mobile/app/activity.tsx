@@ -59,6 +59,15 @@ function toSentence(item: ActivityFeedItem): string {
   return `${actor} did ${item.activityType || 'an activity'}`;
 }
 
+function getNotificationText(item: ActivityFeedItem): string {
+  const backendMessage = item.message?.trim();
+  if (backendMessage && backendMessage.length > 0) {
+    return backendMessage;
+  }
+
+  return toSentence(item);
+}
+
 export default function ActivityScreen() {
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
   const groupIdValue = String(groupId ?? '');
@@ -105,10 +114,10 @@ export default function ActivityScreen() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Activity Feed
+        Notifications
       </ThemedText>
 
-      {loading && <ThemedText style={styles.feedback}>Loading activity...</ThemedText>}
+      {loading && <ThemedText style={styles.feedback}>Loading notifications...</ThemedText>}
 
       {!loading && error !== null && <ThemedText style={styles.feedbackError}>{error}</ThemedText>}
 
@@ -119,11 +128,11 @@ export default function ActivityScreen() {
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           renderItem={({ item }) => (
             <View style={styles.activityRow}>
-              <ThemedText>{toSentence(item)}</ThemedText>
+              <ThemedText>{getNotificationText(item)}</ThemedText>
               <ThemedText style={styles.timestamp}>{item.createdAtUtc || ''}</ThemedText>
             </View>
           )}
-          ListEmptyComponent={<ThemedText style={styles.feedback}>No activity yet</ThemedText>}
+          ListEmptyComponent={<ThemedText style={styles.feedback}>No notifications yet</ThemedText>}
         />
       )}
     </ThemedView>

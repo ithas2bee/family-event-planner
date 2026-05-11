@@ -35,6 +35,10 @@ namespace FamilyEventPlanner.Api.Data
         // Activity feed
         public DbSet<ActivityFeed> ActivityFeed { get; set; }
 
+        // Kickbacks
+        public DbSet<Kickback> Kickbacks { get; set; }
+        public DbSet<KickbackResponse> KickbackResponses { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -74,6 +78,18 @@ namespace FamilyEventPlanner.Api.Data
                 .HasOne(a => a.ActorMember)
                 .WithMany()
                 .HasForeignKey(a => a.ActorMemberId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<Kickback>()
+                .HasOne(k => k.CreatedByMember)
+                .WithMany()
+                .HasForeignKey(k => k.CreatedByMemberId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<KickbackResponse>()
+                .HasOne(kr => kr.Member)
+                .WithMany()
+                .HasForeignKey(kr => kr.MemberId)
                 .OnDelete(DeleteBehavior.NoAction);
 
             // Align naming conventions for foreign keys if necessary
