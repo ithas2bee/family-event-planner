@@ -1,12 +1,60 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
-import { getGroupMemberByUser } from '@/services/groupMemberService';
+import { getAnnouncementsByGroup } from '@/services/announcementService';
+import { getEventsByGroup } from '@/services/eventService';
+import { getGroupMemberByUser, getGroupMembers } from '@/services/groupMemberService';
+import { getKickbacksByGroup } from '@/services/kickbackService';
+import { getPollsByGroup } from '@/services/pollService';
 import { clearSession, loadSession, setMemberInfo } from '@/services/sessionService';
+
+const API_BASE_URL = 'http://10.0.0.115:5249';
+const PREVIEW_LIMIT = 5;
+
+type MyGroupPreview = {
+  groupId: string;
+  groupName: string;
+};
+
+function mapGroups(raw: unknown): MyGroupPreview[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((item) => {
+      const entry = item as {
+        groupId?: string;
+        id?: string;
+        familyGroupId?: string;
+        groupName?: string;
+        name?: string;
+      };
+
+      const id = String(entry.groupId ?? entry.familyGroupId ?? entry.id ?? '').trim();
+      const name = String(entry.groupName ?? entry.name ?? '').trim();
+      if (!id) {
+        return null;
+      }
+
+      return {
+        groupId: id,
+        groupName: name || 'Unnamed Group',
+      };
+    })
+    .filter((group): group is MyGroupPreview => group !== null);
+}
+
+function toBodyPreview(text: string, maxLength = 72): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, maxLength - 3)}...`;
+}
 
 export default function FamilyHomeScreen() {
   const {
@@ -25,6 +73,14 @@ export default function FamilyHomeScreen() {
 
   const [memberName, setMemberName] = useState(initialMemberName);
   const [memberId, setMemberId] = useState(initialMemberId);
+
+  const [myGroupsPreview, setMyGroupsPreview] = useState<DashboardCardItem[]>([]);
+  const [membersPreview, setMembersPreview] = useState<DashboardCardItem[]>([]);
+  const [announcementsPreview, setAnnouncementsPreview] = useState<DashboardCardItem[]>([]);
+  const [pollsPreview, setPollsPreview] = useState<DashboardCardItem[]>([]);
+  const [kickbacksPreview, setKickbacksPreview] = useState<DashboardCardItem[]>([]);
+  const [eventsPreview, setEventsPreview] = useState<DashboardCardItem[]>([]);
+  const [loadingPreviews, setLoadingPreviews] = useState(false);
 
   useEffect(() => {
     const update: { groupId?: string; groupName?: string; memberId?: string; memberName?: string } = {};
@@ -87,12 +143,128 @@ export default function FamilyHomeScreen() {
       }
     }
 
-    resolveMember();
+    void resolveMember();
 
     return () => {
       cancelled = true;
     };
   }, [groupId, memberId, memberName, setActiveGroup]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDashboardPreviews() {
+      if (!groupId) {
+        return;
+      }
+
+      setLoadingPreviews(true);
+
+      const session = await loadSession();
+      if (!session) {
+        if (!cancelled) {
+          setLoadingPreviews(false);
+        }
+        return;
+      }
+
+      const groupsPromise = fetch(`${API_BASE_URL}/api/familygroups/my/${session.userId}`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+        },
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            return [] as MyGroupPreview[];
+          }
+
+          const raw = (await response.json()) as unknown;
+          return mapGroups(raw);
+        })
+        .catch(() => [] as MyGroupPreview[]);
+
+      const membersPromise = memberId
+        ? getGroupMembers(groupId, memberId).catch(() => [])
+        : Promise.resolve([] as Array<{ memberId?: string; displayName?: string; isAdmin?: boolean }>);
+
+      const [groupsData, membersData, announcementsData, pollsData, kickbacksData, eventsData] =
+        await Promise.all([
+          groupsPromise,
+          membersPromise,
+          getAnnouncementsByGroup(groupId).catch(() => []),
+          getPollsByGroup(groupId).catch(() => []),
+          getKickbacksByGroup(groupId).catch(() => []),
+          getEventsByGroup(groupId).catch(() => []),
+        ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      setMyGroupsPreview(
+        groupsData.slice(0, PREVIEW_LIMIT).map((group) => ({
+          id: group.groupId,
+          title: group.groupName,
+          subtitle: group.groupId === groupId ? 'Active group' : 'Available group',
+          meta: group.groupId,
+        }))
+      );
+
+      setMembersPreview(
+        membersData.slice(0, PREVIEW_LIMIT).map((member, index) => ({
+          id: String(member.memberId ?? index),
+          title: String(member.displayName ?? 'Unknown Member'),
+          subtitle: member.isAdmin ? 'Admin' : 'Member',
+          meta: String(member.memberId ?? ''),
+        }))
+      );
+
+      setAnnouncementsPreview(
+        announcementsData.slice(0, PREVIEW_LIMIT).map((announcement) => ({
+          id: announcement.id,
+          title: announcement.title || 'Untitled Announcement',
+          subtitle: toBodyPreview(announcement.body),
+          meta: announcement.creatorDisplayName || 'Unknown Member',
+        }))
+      );
+
+      setPollsPreview(
+        pollsData.slice(0, PREVIEW_LIMIT).map((poll) => ({
+          id: poll.id,
+          title: poll.question || 'Untitled Poll',
+          subtitle: `${poll.options.length} option${poll.options.length === 1 ? '' : 's'}`,
+          meta: poll.creatorDisplayName || 'Unknown Member',
+        }))
+      );
+
+      setKickbacksPreview(
+        kickbacksData.slice(0, PREVIEW_LIMIT).map((kickback) => ({
+          id: kickback.id,
+          title: kickback.vibe || 'Kickback',
+          subtitle: toBodyPreview(kickback.note ?? 'No note yet.'),
+          meta: `${kickback.pullingUpCount} pulling up | ${kickback.maybeCount} maybe`,
+        }))
+      );
+
+      setEventsPreview(
+        eventsData.slice(0, PREVIEW_LIMIT).map((event) => ({
+          id: event.id,
+          title: event.title || 'Untitled Event',
+          subtitle: event.location || 'No location set',
+          meta: event.startDate,
+        }))
+      );
+
+      setLoadingPreviews(false);
+    }
+
+    void loadDashboardPreviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId, memberId]);
 
   const handleLogout = async () => {
     await clearSession();
@@ -102,64 +274,72 @@ export default function FamilyHomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.title}>
-        Family Home
-      </ThemedText>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ThemedText type="title" style={styles.title}>
+          Family Home
+        </ThemedText>
 
-      <View style={styles.infoGroup}>
-        <ThemedText type="defaultSemiBold">Welcome to {groupName || 'Unknown Group'}</ThemedText>
-        <ThemedText>Hello, {memberName || 'Unknown Member'}</ThemedText>
-        <ThemedText>Group ID: {groupId || 'Unknown'}</ThemedText>
-        <ThemedText>Member ID: {memberId || 'Unknown'}</ThemedText>
-      </View>
+        <View style={styles.infoGroup}>
+          <ThemedText type="defaultSemiBold">Welcome to {groupName || 'Unknown Group'}</ThemedText>
+          <ThemedText>Hello, {memberName || 'Unknown Member'}</ThemedText>
+          <ThemedText>Group ID: {groupId || 'Unknown'}</ThemedText>
+          <ThemedText>Member ID: {memberId || 'Unknown'}</ThemedText>
+        </View>
 
-      <View style={styles.buttonGroup}>
-        <Pressable
-          style={styles.navButton}
-          onPress={() => router.push('/(tabs)/(main)/announcements')}>
-            <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
-            Announcements
-          </ThemedText>
-        </Pressable>
+        <DashboardSection
+          title="My Groups"
+          items={myGroupsPreview}
+          loading={loadingPreviews}
+          emptyText="No groups to preview yet."
+          onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
+        />
 
-        <Pressable
-          style={styles.navButton}
-          onPress={() => router.push('/(tabs)/(main)/events')}>
-          <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
-            Events
-          </ThemedText>
-        </Pressable>
+        <DashboardSection
+          title="Members"
+          items={membersPreview}
+          loading={loadingPreviews}
+          emptyText="No members to preview yet."
+          onViewAll={() => router.push('/(tabs)/(main)/members')}
+        />
 
-        <Pressable
-          style={styles.navButton}
-            onPress={() => router.push('/(tabs)/(main)/polls')}>
-          <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
-            Polls
-          </ThemedText>
-        </Pressable>
+        <DashboardSection
+          title="Announcements"
+          items={announcementsPreview}
+          loading={loadingPreviews}
+          emptyText="No announcements to preview yet."
+          onViewAll={() => router.push('/(tabs)/(main)/announcements')}
+        />
 
-        <Pressable
-          style={styles.navButton}
-          onPress={() => router.push('/(tabs)/(main)/kickbacks')}>
-          <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
-            Kickbacks
-          </ThemedText>
-        </Pressable>
+        <DashboardSection
+          title="Polls"
+          items={pollsPreview}
+          loading={loadingPreviews}
+          emptyText="No polls to preview yet."
+          onViewAll={() => router.push('/(tabs)/(main)/polls')}
+        />
 
-        <Pressable
-          style={styles.navButton}
-            onPress={() => router.push('/(tabs)/(main)/members')}>
-          <ThemedText type="defaultSemiBold" style={styles.navButtonText}>
-            Members
-          </ThemedText>
-        </Pressable>
+        <DashboardSection
+          title="Kickbacks"
+          items={kickbacksPreview}
+          loading={loadingPreviews}
+          emptyText="No kickbacks to preview yet."
+          onViewAll={() => router.push('/(tabs)/(main)/kickbacks')}
+        />
+
+        <DashboardSection
+          title="Events"
+          items={eventsPreview}
+          loading={loadingPreviews}
+          emptyText="No events to preview yet."
+          onViewAll={() => router.push('/(tabs)/(main)/events')}
+        />
 
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <ThemedText type="defaultSemiBold" style={styles.logoutButtonText}>
             Logout
           </ThemedText>
         </Pressable>
-      </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -167,31 +347,20 @@ export default function FamilyHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    gap: 20,
     padding: 20,
-    justifyContent: 'center',
-    gap: 24,
+    paddingBottom: 28,
   },
   title: {
-    textAlign: 'center',
+    textAlign: 'left',
     fontSize: 30,
     lineHeight: 34,
   },
   infoGroup: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 4,
-  },
-  buttonGroup: {
-    gap: 12,
-  },
-  navButton: {
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: '#0A7EA4',
-  },
-  navButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
   },
   logoutButton: {
     borderRadius: 10,
