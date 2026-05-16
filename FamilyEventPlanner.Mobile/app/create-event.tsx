@@ -1,8 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createEvent } from '@/services/eventService';
 import { EventHeroSection } from '@/components/events/EventHeroSection';
@@ -10,6 +9,11 @@ import { EventDetailsCard } from '@/components/events/EventDetailsCard';
 import { EventDateModal } from '@/components/events/EventDateModal';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
+import { ScreenContainer } from '@/components/ui/screen-container';
+import { GlassCard } from '@/components/ui/glass-card';
+import { ImmersiveButton } from '@/components/ui/immersive-button';
+import { FormInput } from '@/components/ui/form-input';
+import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 
 export default function CreateEventScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
@@ -86,55 +90,55 @@ export default function CreateEventScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={{ flex: 1, backgroundColor: '#101018' }} contentContainerStyle={{ flexGrow: 1 }}>
-        <EventHeroSection title={title || 'Create Event'}>
-          <TextInput
-            style={styles.heroInput}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Event Title"
-            placeholderTextColor="#ccc"
-            autoCapitalize="words"
-            autoCorrect={false}
-            maxLength={60}
-          />
-        </EventHeroSection>
-        <View style={{ height: 12 }} />
-        <EventDetailsCard
-          title={title}
-          date={startDate ? new Date(startDate).toLocaleString() : ''}
-          location={location}
-          onPressDate={() => setDateModalVisible(true)}
-          onPressLocation={() => setLocationModalVisible(true)}
-          onPressSettings={() => setSettingsModalVisible(true)}
+    <ScreenContainer withKeyboardAvoid withScroll>
+      <EventHeroSection title={title || 'Create Event'}>
+        <FormInput
+          variant="hero"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Event Title"
+          autoCapitalize="words"
+          autoCorrect={false}
+          maxLength={60}
         />
-        <View style={styles.cardSection}>
-          <ThemedText type="defaultSemiBold" style={styles.label}>Description</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Optional description"
-            multiline
-            maxLength={200}
-          />
-        </View>
-        <Pressable
-          style={[styles.primaryButton, (!canSubmit || loading) && styles.buttonDisabled]}
-          onPress={handleCreateEvent}
+      </EventHeroSection>
+      <View style={styles.spacer} />
+      <EventDetailsCard
+        title={title}
+        date={startDate ? new Date(startDate).toLocaleString() : ''}
+        location={location}
+        onPressDate={() => setDateModalVisible(true)}
+        onPressLocation={() => setLocationModalVisible(true)}
+        onPressSettings={() => setSettingsModalVisible(true)}
+        showSettings={true}
+      />
+      <GlassCard style={styles.sectionCard}>
+        <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+          Description
+        </ThemedText>
+        <FormInput
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Optional description (max 200 characters)"
+          multiline
+          maxLength={200}
+        />
+      </GlassCard>
+
+      <View style={styles.buttonContainer}>
+        <ImmersiveButton
+          variant="primary"
+          size="large"
           disabled={!canSubmit || loading}
+          onPress={handleCreateEvent}
         >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-              Create Event
-            </ThemedText>
-          )}
-        </Pressable>
-        {error !== null ? <ThemedText style={styles.feedbackError}>{error}</ThemedText> : null}
-      </ScrollView>
+          {loading ? 'Creating...' : 'Create Event'}
+        </ImmersiveButton>
+      </View>
+
+      {error !== null && (
+        <ThemedText style={styles.errorMessage}>{error}</ThemedText>
+      )}
       <EventDateModal
         visible={dateModalVisible}
         date={dateObj}
@@ -155,66 +159,32 @@ export default function CreateEventScreen() {
         onChange={handleSettingsChange}
         onClose={() => setSettingsModalVisible(false)}
       />
-    </KeyboardAvoidingView>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  heroInput: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: '600',
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    marginTop: 12,
-    marginBottom: 8,
+  spacer: {
+    height: Spacing.md,
+  },
+  sectionCard: {
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.lg,
+  },
+  sectionTitle: {
+    color: Colors.text.primary,
+    fontSize: Typography.sizes.base,
+    marginBottom: Spacing.md,
+  },
+  buttonContainer: {
+    marginHorizontal: Spacing.lg,
+    marginVertical: Spacing.xl,
+  },
+  errorMessage: {
+    color: Colors.error,
     textAlign: 'center',
-  },
-  cardSection: {
-    backgroundColor: 'rgba(30,30,40,0.92)',
-    borderRadius: 20,
-    padding: 18,
-    marginHorizontal: 16,
-    marginTop: 18,
-    marginBottom: 8,
-  },
-  label: {
-    color: '#fff',
-    fontSize: 15,
-    marginBottom: 2,
-  },
-  input: {
-    backgroundColor: '#18181f',
-    color: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    width: '100%',
-    marginBottom: 8,
-    fontSize: 16,
-  },
-  primaryButton: {
-    marginTop: 18,
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    backgroundColor: '#0A7EA4',
-    marginHorizontal: 32,
-    marginBottom: 24,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  feedbackError: {
-    color: '#C0392B',
-    textAlign: 'center',
-    fontSize: 15,
-    marginTop: 10,
+    fontSize: Typography.sizes.sm,
+    marginTop: Spacing.lg,
+    marginHorizontal: Spacing.lg,
   },
 });

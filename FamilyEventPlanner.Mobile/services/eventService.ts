@@ -29,6 +29,16 @@ export type CreateEventRequest = {
   notes?: string;
 };
 
+export type UpdateEventRequest = {
+  title?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  location?: string;
+  dressCode?: string;
+  notes?: string;
+};
+
 async function getEventHeaders(): Promise<Record<string, string>> {
   const headers = await getAuthHeaders();
   const session = await loadSession();
@@ -180,6 +190,78 @@ export async function createEvent(request: CreateEventRequest): Promise<Event> {
 
   if (!parsedBody || typeof parsedBody !== 'object') {
     throw new Error('The server returned an unexpected response.');
+  }
+
+
+  return mapEvent(parsedBody);
+}
+
+export async function getEventById(eventId: string): Promise<Event> {
+  let response: Response;
+  const headers = await getEventHeaders();
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/events/${eventId}`, {
+      method: 'GET',
+      headers,
+    });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  const rawBody = await response.text();
+
+  let parsedBody: unknown = null;
+  if (rawBody.length > 0) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      parsedBody = rawBody;
+    }
+  }
+
+  if (!response.ok) {
+    const serverMessage = extractServerMessage(parsedBody);
+    throw new Error(resolveErrorMessage(response.status, serverMessage));
+  }
+
+  if (!parsedBody || typeof parsedBody !== 'object') {
+    throw new Error('The server returned an unexpected response.');
+  }
+
+  return mapEvent(parsedBody);
+}
+
+export async function updateEvent(eventId: string, updates: UpdateEventRequest): Promise<Event> {
+  const headers = await getEventHeaders();
+  headers['Content-Type'] = 'application/json';
+
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/events/${eventId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(updates),
+    });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  const rawBody = await response.text();
+
+  let parsedBody: unknown = {};
+  if (rawBody.length > 0) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      throw new Error('Invalid server response.');
+    }
+  }
+
+  if (!response.ok) {
+    const serverMessage = extractServerMessage(parsedBody);
+    throw new Error(resolveErrorMessage(response.status, serverMessage));
   }
 
   return mapEvent(parsedBody);

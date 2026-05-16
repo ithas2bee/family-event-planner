@@ -106,11 +106,15 @@ export default function EventsScreen() {
             const creatorName = item.creatorDisplayName || 'Unknown Member';
 
             return (
-              <View style={styles.eventRow}>
+              <Pressable
+                style={styles.eventRow}
+                onPress={() => router.push({ pathname: `/event/${item.id}` })}
+                android_ripple={{ color: '#e0e0e0' }}
+              >
                 <ThemedText type="defaultSemiBold">{title}</ThemedText>
                 <ThemedText>{startDate}</ThemedText>
                 <ThemedText>{creatorName}</ThemedText>
-              </View>
+              </Pressable>
             );
           }}
           ListEmptyComponent={

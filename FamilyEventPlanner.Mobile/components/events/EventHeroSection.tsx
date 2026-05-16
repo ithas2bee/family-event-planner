@@ -1,68 +1,41 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '../themed-text';
+import { HeroGradientOverlay } from '../ui/hero-gradient-overlay';
+import { Spacing, Typography, Colors } from '../ui/design-system';
 
 interface EventHeroSectionProps {
   title: string;
   children?: React.ReactNode;
+  height?: number;
 }
 
-export const EventHeroSection: React.FC<EventHeroSectionProps> = ({ title, children }) => {
+/**
+ * Immersive event hero section with cinematic gradient overlay
+ * Uses design system for consistent styling across event screens
+ */
+export const EventHeroSection: React.FC<EventHeroSectionProps> = ({ title, children, height = 220 }) => {
   return (
-    <View style={styles.hero}>
-      <View style={styles.baseGradient} />
-      <View style={styles.glowTopLeft} />
-      <View style={styles.glowBottomRight} />
-      <View style={styles.overlay}>
-        <ThemedText type="title" style={styles.title}>{title}</ThemedText>
+    <HeroGradientOverlay height={height}>
+      <View style={[styles.content, { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xl }]}>
+        <ThemedText type="title" style={styles.title}>
+          {title}
+        </ThemedText>
         {children}
       </View>
-    </View>
+    </HeroGradientOverlay>
   );
 };
 
 const styles = StyleSheet.create({
-  hero: {
+  content: {
     width: '100%',
-    height: 220,
     justifyContent: 'flex-end',
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
-    overflow: 'hidden',
-    backgroundColor: '#131722',
-  },
-  baseGradient: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#1B2433',
-  },
-  glowTopLeft: {
-    position: 'absolute',
-    top: -70,
-    left: -40,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(93, 119, 255, 0.28)',
-  },
-  glowBottomRight: {
-    position: 'absolute',
-    right: -55,
-    bottom: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(33, 188, 166, 0.18)',
-  },
-  overlay: {
-    backgroundColor: 'rgba(20,20,30,0.55)',
-    padding: 24,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
   },
   title: {
-    color: '#fff',
-    fontSize: 28,
+    color: Colors.text.primary,
+    fontSize: Typography.sizes.hero,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: Spacing.md,
   },
 });

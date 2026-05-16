@@ -332,6 +332,7 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           emptyText="No events to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/events')}
+          onCardPress={(item) => router.push({ pathname: `/event/${item.id}` })}
         />
 
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
