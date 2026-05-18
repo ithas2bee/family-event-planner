@@ -3,6 +3,11 @@ const API_BASE_URL = 'http://10.0.0.115:5249';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
 
+export type EventAssignment = {
+  memberName: string;
+  task: string;
+};
+
 export type Event = {
   id: string;
   familyGroupId: string;
@@ -16,6 +21,7 @@ export type Event = {
   createdByMemberId?: string;
   creatorDisplayName?: string;
   createdAt: string;
+  assignments?: EventAssignment[];
 };
 
 export type CreateEventRequest = {
@@ -104,7 +110,23 @@ function mapEvent(payload: unknown): Event {
     createdByMemberId?: string;
     creatorDisplayName?: string;
     createdAt?: string;
+    assignments?: unknown[];
   };
+
+  const mappedAssignments: EventAssignment[] = [];
+  if (Array.isArray(event.assignments)) {
+    for (const assignment of event.assignments) {
+      if (assignment && typeof assignment === 'object') {
+        const a = assignment as { memberName?: string; task?: string };
+        if (a.memberName && a.task) {
+          mappedAssignments.push({
+            memberName: String(a.memberName),
+            task: String(a.task),
+          });
+        }
+      }
+    }
+  }
 
   return {
     id: String(event.id ?? ''),
@@ -119,6 +141,7 @@ function mapEvent(payload: unknown): Event {
     createdByMemberId: event.createdByMemberId,
     creatorDisplayName: event.creatorDisplayName,
     createdAt: String(event.createdAt ?? ''),
+    assignments: mappedAssignments.length > 0 ? mappedAssignments : undefined,
   };
 }
 
@@ -240,7 +263,7 @@ export async function updateEvent(eventId: string, updates: UpdateEventRequest):
 
   try {
     response = await fetch(`${API_BASE_URL}/api/events/${eventId}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers,
       body: JSON.stringify(updates),
     });

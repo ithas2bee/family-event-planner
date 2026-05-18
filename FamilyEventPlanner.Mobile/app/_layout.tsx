@@ -29,6 +29,7 @@ export default function RootLayout() {
           <Stack.Screen name="create-announcement" options={{ title: 'Create Announcement' }} />
           <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
           <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
+          <Stack.Screen name="event/[eventId]" options={{ title: '' }} />
         </Stack>
       </ActiveGroupProvider>
       <StatusBar style="auto" />

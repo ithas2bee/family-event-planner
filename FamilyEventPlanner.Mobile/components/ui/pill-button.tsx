@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, Pressable, PressableProps } from 'react-native';
+import { Pressable, PressableProps, StyleSheet } from 'react-native';
 import { ThemedText } from '../themed-text';
-import { Colors, Spacing, Radius, Typography } from './design-system';
+import { Colors, Spacing, Typography } from './design-system';
 
 interface PillButtonProps extends PressableProps {
   children: string;

@@ -108,7 +108,7 @@ export default function EventsScreen() {
             return (
               <Pressable
                 style={styles.eventRow}
-                onPress={() => router.push({ pathname: `/event/${item.id}` })}
+                onPress={() => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
                 android_ripple={{ color: '#e0e0e0' }}
               >
                 <ThemedText type="defaultSemiBold">{title}</ThemedText>

@@ -1,19 +1,17 @@
-import { useEffect, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
-import { EventHeroSection } from '@/components/events/EventHeroSection';
 import { EventDetailsCard } from '@/components/events/EventDetailsCard';
+import { EventHeroSection } from '@/components/events/EventHeroSection';
 import { ThemedText } from '@/components/themed-text';
-import { ScreenContainer } from '@/components/ui/screen-container';
-import { GlassCard } from '@/components/ui/glass-card';
-import { getEventById, Event } from '@/services/eventService';
-import { loadSession } from '@/services/sessionService';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
-import { StyleSheet } from 'react-native';
-import { ModalSheet } from '@/components/ui/modal-sheet';
-import { updateEvent } from '@/services/eventService';
 import { FormInput } from '@/components/ui/form-input';
+import { GlassCard } from '@/components/ui/glass-card';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
+import { ModalSheet } from '@/components/ui/modal-sheet';
+import { ScreenContainer } from '@/components/ui/screen-container';
+import { Event, getEventById, updateEvent } from '@/services/eventService';
+import { loadSession } from '@/services/sessionService';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 export default function EventDetailsScreen() {
   const { eventId } = useLocalSearchParams();
@@ -46,7 +44,16 @@ export default function EventDetailsScreen() {
         ]);
 
         if (!cancelled) {
-          setEvent(eventData);
+          // TODO: Remove mock assignments data once backend supports it
+          const eventWithMockAssignments = {
+            ...eventData,
+            assignments: eventData.assignments || [
+              { memberName: 'Tom', task: 'Cake' },
+              { memberName: 'Andre', task: 'Chicken' },
+              { memberName: 'Don', task: 'Drinks' },
+            ],
+          };
+          setEvent(eventWithMockAssignments);
           setCurrentMemberId(session?.memberId || '');
           setError(null);
         }
@@ -104,7 +111,34 @@ export default function EventDetailsScreen() {
 
     try {
       const updatedEvent = await updateEvent(eventId, updates);
-      setEvent(updatedEvent);
+
+      // Some successful update responses can be empty/minimal, which would map to blank fields.
+      // Preserve the current event state and only apply server fields when they contain real data.
+      setEvent((currentEvent) => {
+        if (!currentEvent) {
+          return updatedEvent;
+        }
+
+        const hasMeaningfulServerPayload =
+          updatedEvent.id.trim().length > 0 ||
+          updatedEvent.title.trim().length > 0 ||
+          updatedEvent.startDate.trim().length > 0;
+
+        if (!hasMeaningfulServerPayload) {
+          return currentEvent;
+        }
+
+        return {
+          ...currentEvent,
+          ...updatedEvent,
+          id: updatedEvent.id || currentEvent.id,
+          familyGroupId: updatedEvent.familyGroupId || currentEvent.familyGroupId,
+          title: updatedEvent.title || currentEvent.title,
+          startDate: updatedEvent.startDate || currentEvent.startDate,
+          createdAt: updatedEvent.createdAt || currentEvent.createdAt,
+        };
+      });
+
       setIsEditing(false);
     } catch (err) {
       setEditError(err instanceof Error ? err.message : 'Failed to update event.');
@@ -117,7 +151,8 @@ export default function EventDetailsScreen() {
     <ScreenContainer withScroll padding={0}>
       <EventHeroSection
         title={event.title}
-        height={240}
+        height={172}
+        glowScale={0.72}
       />
 
       <View style={styles.contentContainer}>
@@ -125,12 +160,14 @@ export default function EventDetailsScreen() {
           title={event.title}
           date={event.startDate ? new Date(event.startDate).toLocaleString() : 'TBD'}
           location={event.location || 'TBD'}
+          onPressDate={() => {}}
+          onPressLocation={() => {}}
           onPressSettings={() => setIsEditing(true)}
           showSettings={isCreator}
         />
 
         {event.description && (
-          <GlassCard style={styles.section}>
+          <GlassCard style={styles.section} padding={Spacing.lg}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
               Description
             </ThemedText>
@@ -141,7 +178,7 @@ export default function EventDetailsScreen() {
         )}
 
         {event.dressCode && (
-          <GlassCard style={styles.section}>
+          <GlassCard style={styles.section} padding={Spacing.lg}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
               Dress Code
             </ThemedText>
@@ -152,7 +189,7 @@ export default function EventDetailsScreen() {
         )}
 
         {event.notes && (
-          <GlassCard style={styles.section}>
+          <GlassCard style={styles.section} padding={Spacing.lg}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
               Notes
             </ThemedText>
@@ -163,13 +200,32 @@ export default function EventDetailsScreen() {
         )}
 
         {event.creatorDisplayName && (
-          <GlassCard style={styles.section}>
+          <GlassCard style={styles.section} padding={Spacing.lg}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
               Created By
             </ThemedText>
             <ThemedText style={styles.sectionText}>
               {event.creatorDisplayName}
             </ThemedText>
+          </GlassCard>
+        )}
+
+        {(event.assignments && event.assignments.length > 0) && (
+          <GlassCard style={styles.section} padding={Spacing.lg}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+              Assignments
+            </ThemedText>
+            <View style={styles.assignmentsList}>
+              {event.assignments.map((assignment, index) => (
+                <ThemedText
+                  key={index}
+                  style={styles.assignmentLine}
+                  numberOfLines={0}
+                >
+                  {assignment.memberName} <ThemedText style={styles.assignmentDash}>—</ThemedText> {assignment.task}
+                </ThemedText>
+              ))}
+            </View>
           </GlassCard>
         )}
       </View>
@@ -201,6 +257,67 @@ export default function EventDetailsScreen() {
               onChangeText={(text) => setEvent({ ...event, location: text })}
               placeholder="Location"
             />
+
+            {/* Assignments Editing Section */}
+            <View style={styles.advSettingsSection}>
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                Assignments
+              </ThemedText>
+              {(event.assignments && event.assignments.length > 0) ? (
+                event.assignments.map((assignment, idx) => (
+                  <View key={idx} style={styles.assignmentEditRow}>
+                    <FormInput
+                      value={assignment.memberName}
+                      onChangeText={text => {
+                        const updated = event.assignments ? [...event.assignments] : [];
+                        updated[idx] = { ...assignment, memberName: text };
+                        setEvent({ ...event, assignments: updated });
+                      }}
+                      placeholder="Name"
+                      style={styles.assignmentInput}
+                      maxLength={32}
+                    />
+                    <FormInput
+                      value={assignment.task}
+                      onChangeText={text => {
+                        const updated = event.assignments ? [...event.assignments] : [];
+                        updated[idx] = { ...assignment, task: text };
+                        setEvent({ ...event, assignments: updated });
+                      }}
+                      placeholder="Item/Task"
+                      style={styles.assignmentInput}
+                      maxLength={32}
+                    />
+                    <ImmersiveButton
+                      variant="tertiary"
+                      size="small"
+                      style={styles.assignmentRemoveBtn}
+                      onPress={() => {
+                        const updated = (event.assignments || []).filter((_, i) => i !== idx);
+                        setEvent({ ...event, assignments: updated });
+                      }}
+                    >
+                      Remove
+                    </ImmersiveButton>
+                  </View>
+                ))
+              ) : (
+                <ThemedText style={styles.sectionText}>No assignments yet.</ThemedText>
+              )}
+              <ImmersiveButton
+                variant="secondary"
+                size="small"
+                style={styles.assignmentAddBtn}
+                onPress={() => {
+                  const updated = event.assignments ? [...event.assignments] : [];
+                  updated.push({ memberName: '', task: '' });
+                  setEvent({ ...event, assignments: updated });
+                }}
+              >
+                Add Assignment
+              </ImmersiveButton>
+            </View>
+
             <ImmersiveButton
               variant="primary"
               size="large"
@@ -234,22 +351,70 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   contentContainer: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xl,
-    gap: Spacing.lg,
+    paddingHorizontal: 0,
+    paddingVertical: Spacing.lg,
+    gap: Spacing.md,
   },
   section: {
-    marginBottom: Spacing.md,
+    marginHorizontal: Spacing.lg,
+    marginBottom: 0,
   },
   sectionTitle: {
     color: Colors.text.primary,
     fontSize: Typography.sizes.base,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
   },
   sectionText: {
     color: Colors.text.secondary,
     fontSize: Typography.sizes.sm,
     lineHeight: 20,
+  },
+  advSettingsSection: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.lg,
+    gap: Spacing.xs,
+  },
+  assignmentEditRow: {
+    width: '100%',
+    alignItems: 'stretch',
+    gap: Spacing.xs,
+    marginBottom: Spacing.xs,
+    padding: Spacing.sm,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  assignmentInput: {
+    width: '100%',
+    marginBottom: 0,
+  },
+  assignmentRemoveBtn: {
+    alignSelf: 'flex-end',
+    marginTop: 0,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+  },
+  assignmentAddBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 2,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+  },
+  assignmentsList: {
+    gap: Spacing.xs,
+  },
+  assignmentLine: {
+    color: Colors.text.primary,
+    fontSize: Typography.sizes.sm,
+    lineHeight: 20,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+  },
+  assignmentDash: {
+    color: Colors.text.secondary,
+    fontWeight: 'bold',
+    fontSize: Typography.sizes.sm,
   },
   errorMessage: {
     color: Colors.error,

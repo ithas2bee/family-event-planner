@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
@@ -150,121 +151,122 @@ export default function FamilyHomeScreen() {
     };
   }, [groupId, memberId, memberName, setActiveGroup]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDashboardPreviews() {
-      if (!groupId) {
-        return;
-      }
-
-      setLoadingPreviews(true);
-
-      const session = await loadSession();
-      if (!session) {
-        if (!cancelled) {
-          setLoadingPreviews(false);
-        }
-        return;
-      }
-
-      const groupsPromise = fetch(`${API_BASE_URL}/api/familygroups/my/${session.userId}`, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      })
-        .then(async (response) => {
-          if (!response.ok) {
-            return [] as MyGroupPreview[];
-          }
-
-          const raw = (await response.json()) as unknown;
-          return mapGroups(raw);
-        })
-        .catch(() => [] as MyGroupPreview[]);
-
-      const membersPromise = memberId
-        ? getGroupMembers(groupId, memberId).catch(() => [])
-        : Promise.resolve([] as Array<{ memberId?: string; displayName?: string; isAdmin?: boolean }>);
-
-      const [groupsData, membersData, announcementsData, pollsData, kickbacksData, eventsData] =
-        await Promise.all([
-          groupsPromise,
-          membersPromise,
-          getAnnouncementsByGroup(groupId).catch(() => []),
-          getPollsByGroup(groupId).catch(() => []),
-          getKickbacksByGroup(groupId).catch(() => []),
-          getEventsByGroup(groupId).catch(() => []),
-        ]);
-
-      if (cancelled) {
-        return;
-      }
-
-      setMyGroupsPreview(
-        groupsData.slice(0, PREVIEW_LIMIT).map((group) => ({
-          id: group.groupId,
-          title: group.groupName,
-          subtitle: group.groupId === groupId ? 'Active group' : 'Available group',
-          meta: group.groupId,
-        }))
-      );
-
-      setMembersPreview(
-        membersData.slice(0, PREVIEW_LIMIT).map((member, index) => ({
-          id: String(member.memberId ?? index),
-          title: String(member.displayName ?? 'Unknown Member'),
-          subtitle: member.isAdmin ? 'Admin' : 'Member',
-          meta: String(member.memberId ?? ''),
-        }))
-      );
-
-      setAnnouncementsPreview(
-        announcementsData.slice(0, PREVIEW_LIMIT).map((announcement) => ({
-          id: announcement.id,
-          title: announcement.title || 'Untitled Announcement',
-          subtitle: toBodyPreview(announcement.body),
-          meta: announcement.creatorDisplayName || 'Unknown Member',
-        }))
-      );
-
-      setPollsPreview(
-        pollsData.slice(0, PREVIEW_LIMIT).map((poll) => ({
-          id: poll.id,
-          title: poll.question || 'Untitled Poll',
-          subtitle: `${poll.options.length} option${poll.options.length === 1 ? '' : 's'}`,
-          meta: poll.creatorDisplayName || 'Unknown Member',
-        }))
-      );
-
-      setKickbacksPreview(
-        kickbacksData.slice(0, PREVIEW_LIMIT).map((kickback) => ({
-          id: kickback.id,
-          title: kickback.vibe || 'Kickback',
-          subtitle: toBodyPreview(kickback.note ?? 'No note yet.'),
-          meta: `${kickback.pullingUpCount} pulling up | ${kickback.maybeCount} maybe`,
-        }))
-      );
-
-      setEventsPreview(
-        eventsData.slice(0, PREVIEW_LIMIT).map((event) => ({
-          id: event.id,
-          title: event.title || 'Untitled Event',
-          subtitle: event.location || 'No location set',
-          meta: event.startDate,
-        }))
-      );
-
-      setLoadingPreviews(false);
+  const loadDashboardPreviews = useCallback(async (cancelledRef: { cancelled: boolean }) => {
+    if (!groupId) {
+      return;
     }
 
-    void loadDashboardPreviews();
+    setLoadingPreviews(true);
 
-    return () => {
-      cancelled = true;
-    };
+    const session = await loadSession();
+    if (!session) {
+      if (!cancelledRef.cancelled) {
+        setLoadingPreviews(false);
+      }
+      return;
+    }
+
+    const groupsPromise = fetch(`${API_BASE_URL}/api/familygroups/my/${session.userId}`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return [] as MyGroupPreview[];
+        }
+
+        const raw = (await response.json()) as unknown;
+        return mapGroups(raw);
+      })
+      .catch(() => [] as MyGroupPreview[]);
+
+    const membersPromise = memberId
+      ? getGroupMembers(groupId, memberId).catch(() => [])
+      : Promise.resolve([] as Array<{ memberId?: string; displayName?: string; isAdmin?: boolean }>);
+
+    const [groupsData, membersData, announcementsData, pollsData, kickbacksData, eventsData] =
+      await Promise.all([
+        groupsPromise,
+        membersPromise,
+        getAnnouncementsByGroup(groupId).catch(() => []),
+        getPollsByGroup(groupId).catch(() => []),
+        getKickbacksByGroup(groupId).catch(() => []),
+        getEventsByGroup(groupId).catch(() => []),
+      ]);
+
+    if (cancelledRef.cancelled) {
+      return;
+    }
+
+    setMyGroupsPreview(
+      groupsData.slice(0, PREVIEW_LIMIT).map((group) => ({
+        id: group.groupId,
+        title: group.groupName,
+        subtitle: group.groupId === groupId ? 'Active group' : 'Available group',
+        meta: group.groupId,
+      }))
+    );
+
+    setMembersPreview(
+      membersData.slice(0, PREVIEW_LIMIT).map((member, index) => ({
+        id: String(member.memberId ?? index),
+        title: String(member.displayName ?? 'Unknown Member'),
+        subtitle: member.isAdmin ? 'Admin' : 'Member',
+        meta: String(member.memberId ?? ''),
+      }))
+    );
+
+    setAnnouncementsPreview(
+      announcementsData.slice(0, PREVIEW_LIMIT).map((announcement) => ({
+        id: announcement.id,
+        title: announcement.title || 'Untitled Announcement',
+        subtitle: toBodyPreview(announcement.body),
+        meta: announcement.creatorDisplayName || 'Unknown Member',
+      }))
+    );
+
+    setPollsPreview(
+      pollsData.slice(0, PREVIEW_LIMIT).map((poll) => ({
+        id: poll.id,
+        title: poll.question || 'Untitled Poll',
+        subtitle: `${poll.options.length} option${poll.options.length === 1 ? '' : 's'}`,
+        meta: poll.creatorDisplayName || 'Unknown Member',
+      }))
+    );
+
+    setKickbacksPreview(
+      kickbacksData.slice(0, PREVIEW_LIMIT).map((kickback) => ({
+        id: kickback.id,
+        title: kickback.vibe || 'Kickback',
+        subtitle: toBodyPreview(kickback.note ?? 'No note yet.'),
+        meta: `${kickback.pullingUpCount} pulling up | ${kickback.maybeCount} maybe`,
+      }))
+    );
+
+    setEventsPreview(
+      eventsData.slice(0, PREVIEW_LIMIT).map((event) => ({
+        id: event.id,
+        title: event.title || 'Untitled Event',
+        subtitle: event.location || 'No location set',
+        meta: event.startDate,
+      }))
+    );
+
+    setLoadingPreviews(false);
   }, [groupId, memberId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const cancelledRef = { cancelled: false };
+      void loadDashboardPreviews(cancelledRef);
+
+      return () => {
+        cancelledRef.cancelled = true;
+      };
+    }, [loadDashboardPreviews])
+  );
 
   const handleLogout = async () => {
     await clearSession();
@@ -332,7 +334,7 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           emptyText="No events to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/events')}
-          onCardPress={(item) => router.push({ pathname: `/event/${item.id}` })}
+          onCardPress={(item) => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
         />
 
         <Pressable style={styles.logoutButton} onPress={handleLogout}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, ViewProps, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, ViewProps } from 'react-native';
 import { Colors, Spacing } from './design-system';
 
 interface ScreenContainerProps extends ViewProps {

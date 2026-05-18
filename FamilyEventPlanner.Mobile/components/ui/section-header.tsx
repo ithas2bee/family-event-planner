@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, ViewProps, Pressable } from 'react-native';
+import { Pressable, StyleSheet, View, ViewProps } from 'react-native';
 import { ThemedText } from '../themed-text';
 import { Colors, Spacing, Typography } from './design-system';
 

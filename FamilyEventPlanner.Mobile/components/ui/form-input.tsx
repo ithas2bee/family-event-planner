@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, TextInput, TextInputProps, View } from 'react-native';
 import { ThemedText } from '../themed-text';
-import { Colors, Spacing, Radius, Typography } from './design-system';
+import { Colors, Radius, Spacing, Typography } from './design-system';
 
 interface FormInputProps extends TextInputProps {
   label?: string;

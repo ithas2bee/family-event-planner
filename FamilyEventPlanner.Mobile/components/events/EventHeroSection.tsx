@@ -1,22 +1,28 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ThemedText } from '../themed-text';
+import { Colors, Spacing, Typography } from '../ui/design-system';
 import { HeroGradientOverlay } from '../ui/hero-gradient-overlay';
-import { Spacing, Typography, Colors } from '../ui/design-system';
 
 interface EventHeroSectionProps {
   title: string;
   children?: React.ReactNode;
   height?: number;
+  glowScale?: number;
 }
 
 /**
  * Immersive event hero section with cinematic gradient overlay
  * Uses design system for consistent styling across event screens
  */
-export const EventHeroSection: React.FC<EventHeroSectionProps> = ({ title, children, height = 220 }) => {
+export const EventHeroSection: React.FC<EventHeroSectionProps> = ({
+  title,
+  children,
+  height = 220,
+  glowScale = 1,
+}) => {
   return (
-    <HeroGradientOverlay height={height}>
+    <HeroGradientOverlay height={height} glowScale={glowScale}>
       <View style={[styles.content, { paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xl }]}>
         <ThemedText type="title" style={styles.title}>
           {title}

@@ -4,6 +4,7 @@ import { Colors, Radius } from './design-system';
 
 interface HeroGradientOverlayProps {
   height?: number;
+  glowScale?: number;
   children?: React.ReactNode;
 }
 
@@ -12,16 +13,38 @@ interface HeroGradientOverlayProps {
  */
 export const HeroGradientOverlay: React.FC<HeroGradientOverlayProps> = ({
   height = 220,
+  glowScale = 1,
   children,
 }) => {
+  const topLeftSize = 220 * glowScale;
+  const bottomRightSize = 260 * glowScale;
+
   return (
     <View style={[styles.hero, { height }]}>
       {/* Base gradient background */}
       <View style={styles.baseGradient} />
 
       {/* Glow effects */}
-      <View style={styles.glowTopLeft} />
-      <View style={styles.glowBottomRight} />
+      <View
+        style={[
+          styles.glowTopLeft,
+          {
+            width: topLeftSize,
+            height: topLeftSize,
+            borderRadius: topLeftSize / 2,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.glowBottomRight,
+          {
+            width: bottomRightSize,
+            height: bottomRightSize,
+            borderRadius: bottomRightSize / 2,
+          },
+        ]}
+      />
 
       {/* Content overlay */}
       <View style={styles.overlay}>
@@ -48,18 +71,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -70,
     left: -40,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
     backgroundColor: Colors.glowBlue,
   },
   glowBottomRight: {
     position: 'absolute',
     right: -55,
     bottom: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
     backgroundColor: Colors.glowTeal,
   },
   overlay: {

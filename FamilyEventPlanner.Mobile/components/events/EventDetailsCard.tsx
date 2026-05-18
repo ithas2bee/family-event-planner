@@ -1,9 +1,9 @@
 import React from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '../themed-text';
+import { Colors, Spacing, Typography } from '../ui/design-system';
 import { GlassCard } from '../ui/glass-card';
 import { PillButton } from '../ui/pill-button';
-import { Colors, Spacing, Radius, Typography } from '../ui/design-system';
 
 interface EventDetailsCardProps {
   title: string;

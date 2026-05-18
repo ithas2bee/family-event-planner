@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, ViewProps } from 'react-native';
-import { Colors, Spacing, Shadow, Radius } from './design-system';
+import { Colors, Radius, Shadow, Spacing } from './design-system';
 
 interface GlassCardProps extends ViewProps {
   children: React.ReactNode;

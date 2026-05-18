@@ -1,19 +1,19 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View, ScrollView } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { useActiveGroupContext } from '@/contexts/active-group-context';
-import { createEvent } from '@/services/eventService';
-import { EventHeroSection } from '@/components/events/EventHeroSection';
-import { EventDetailsCard } from '@/components/events/EventDetailsCard';
 import { EventDateModal } from '@/components/events/EventDateModal';
+import { EventDetailsCard } from '@/components/events/EventDetailsCard';
+import { EventHeroSection } from '@/components/events/EventHeroSection';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
-import { ScreenContainer } from '@/components/ui/screen-container';
+import { ThemedText } from '@/components/themed-text';
+import { Colors, Spacing, Typography } from '@/components/ui/design-system';
+import { FormInput } from '@/components/ui/form-input';
 import { GlassCard } from '@/components/ui/glass-card';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
-import { FormInput } from '@/components/ui/form-input';
-import { Colors, Spacing, Typography } from '@/components/ui/design-system';
+import { ScreenContainer } from '@/components/ui/screen-container';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
+import { createEvent } from '@/services/eventService';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
 export default function CreateEventScreen() {
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
