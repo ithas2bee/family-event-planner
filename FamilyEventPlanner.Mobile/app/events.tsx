@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getEventsByGroup, type Event } from '@/services/eventService';
 
 export default function EventsScreen() {
@@ -12,7 +13,8 @@ export default function EventsScreen() {
     memberId: string;
     refreshToken?: string;
   }>();
-  const groupIdValue = String(groupId ?? '');
+  const { groupId: contextGroupId, setActiveGroup, isReady } = useActiveGroupContext();
+  const groupIdValue = String(groupId ?? contextGroupId ?? '');
   const refreshTokenValue = String(refreshToken ?? '');
 
   const [events, setEvents] = useState<Event[]>([]);
@@ -20,10 +22,25 @@ export default function EventsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!groupId) {
+      return;
+    }
+
+    void setActiveGroup({ groupId: String(groupId) });
+  }, [groupId, setActiveGroup]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadEvents() {
+      setLoading(true);
+      setError(null);
+
       if (groupIdValue.length === 0) {
+        if (!isReady) {
+          return;
+        }
+
         setError('Group not found.');
         setLoading(false);
         return;
@@ -51,7 +68,7 @@ export default function EventsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, refreshTokenValue]);
+  }, [groupIdValue, refreshTokenValue, isReady]);
 
   return (
     <ThemedView style={styles.container}>
@@ -89,11 +106,15 @@ export default function EventsScreen() {
             const creatorName = item.creatorDisplayName || 'Unknown Member';
 
             return (
-              <View style={styles.eventRow}>
+              <Pressable
+                style={styles.eventRow}
+                onPress={() => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
+                android_ripple={{ color: '#e0e0e0' }}
+              >
                 <ThemedText type="defaultSemiBold">{title}</ThemedText>
                 <ThemedText>{startDate}</ThemedText>
                 <ThemedText>{creatorName}</ThemedText>
-              </View>
+              </Pressable>
             );
           }}
           ListEmptyComponent={

@@ -9,13 +9,20 @@ export default function StartupGate() {
   useEffect(() => {
     async function checkSession() {
       const session = await loadSession();
-      if (session) {
-        router.replace('/my-groups');
-      } else {
+      if (!session) {
         router.replace('/auth');
+        return;
       }
+
+      if (session.groupId) {
+        router.replace('/(tabs)/(main)/family-home');
+        return;
+      }
+
+      router.replace('/(tabs)/(main)/my-groups');
     }
-    checkSession();
+
+    void checkSession();
   }, []);
 
   return (

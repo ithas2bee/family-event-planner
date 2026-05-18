@@ -4,12 +4,14 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput } from 
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createPoll } from '@/services/pollService';
 
 export default function CreatePollScreen() {
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
-  const groupIdValue = String(groupId ?? '');
-  const memberIdValue = String(memberId ?? '');
+  const { groupId: contextGroupId, memberId: contextMemberId } = useActiveGroupContext();
+  const groupIdValue = String(groupId ?? contextGroupId ?? '');
+  const memberIdValue = String(memberId ?? contextMemberId ?? '');
 
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState<string[]>(['', '']);
@@ -57,7 +59,7 @@ export default function CreatePollScreen() {
       });
 
       router.replace({
-        pathname: '/polls',
+        pathname: '/(tabs)/(main)/polls',
         params: {
           groupId: groupIdValue,
           memberId: memberIdValue,
