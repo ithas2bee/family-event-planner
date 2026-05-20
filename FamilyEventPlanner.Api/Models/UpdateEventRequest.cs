@@ -1,8 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace FamilyEventPlanner.Api.Models
 {
+    public class SimpleAssignment
+    {
+        public string MemberName { get; set; }
+        public string Task { get; set; }
+    }
+
     public class UpdateEventRequest
     {
         [Required, MaxLength(200)]
@@ -18,5 +25,8 @@ namespace FamilyEventPlanner.Api.Models
         public string? Location { get; set; }
         public string? DressCode { get; set; }
         public string? Notes { get; set; }
+
+        // Simple assignments matching frontend structure
+        public List<SimpleAssignment>? Assignments { get; set; }
     }
 }

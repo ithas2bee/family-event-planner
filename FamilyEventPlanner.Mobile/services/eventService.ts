@@ -33,6 +33,7 @@ export type CreateEventRequest = {
   location?: string;
   dressCode?: string;
   notes?: string;
+  assignments?: EventAssignment[]; // Added assignments
 };
 
 export type UpdateEventRequest = {
@@ -43,6 +44,7 @@ export type UpdateEventRequest = {
   location?: string;
   dressCode?: string;
   notes?: string;
+  assignments?: EventAssignment[]; // Added assignments
 };
 
 async function getEventHeaders(): Promise<Record<string, string>> {
@@ -214,7 +216,6 @@ export async function createEvent(request: CreateEventRequest): Promise<Event> {
   if (!parsedBody || typeof parsedBody !== 'object') {
     throw new Error('The server returned an unexpected response.');
   }
-
 
   return mapEvent(parsedBody);
 }

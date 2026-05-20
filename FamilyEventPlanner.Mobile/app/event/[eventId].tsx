@@ -34,26 +34,15 @@ export default function EventDetailsScreen() {
 
     async function load() {
       try {
-        // Ensure eventId is a string
         const validEventId = Array.isArray(eventId) ? eventId[0] : eventId;
 
-        // Load event and session in parallel
         const [eventData, session] = await Promise.all([
           getEventById(validEventId),
           loadSession(),
         ]);
 
         if (!cancelled) {
-          // TODO: Remove mock assignments data once backend supports it
-          const eventWithMockAssignments = {
-            ...eventData,
-            assignments: eventData.assignments || [
-              { memberName: 'Tom', task: 'Cake' },
-              { memberName: 'Andre', task: 'Chicken' },
-              { memberName: 'Don', task: 'Drinks' },
-            ],
-          };
-          setEvent(eventWithMockAssignments);
+          setEvent(eventData);
           setCurrentMemberId(session?.memberId || '');
           setError(null);
         }
@@ -75,7 +64,6 @@ export default function EventDetailsScreen() {
     };
   }, [eventId]);
 
-  // Determine if current user is the event creator
   const isCreator = Boolean(event?.createdByMemberId && currentMemberId && event.createdByMemberId === currentMemberId);
 
   if (loading) {
@@ -112,8 +100,6 @@ export default function EventDetailsScreen() {
     try {
       const updatedEvent = await updateEvent(eventId, updates);
 
-      // Some successful update responses can be empty/minimal, which would map to blank fields.
-      // Preserve the current event state and only apply server fields when they contain real data.
       setEvent((currentEvent) => {
         if (!currentEvent) {
           return updatedEvent;
@@ -136,6 +122,7 @@ export default function EventDetailsScreen() {
           title: updatedEvent.title || currentEvent.title,
           startDate: updatedEvent.startDate || currentEvent.startDate,
           createdAt: updatedEvent.createdAt || currentEvent.createdAt,
+          assignments: updatedEvent.assignments || currentEvent.assignments, // Ensure assignments persist
         };
       });
 
