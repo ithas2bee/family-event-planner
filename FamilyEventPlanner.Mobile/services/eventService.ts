@@ -4,6 +4,7 @@ import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
 
 export type EventAssignment = {
+  memberId?: string;
   memberName: string;
   task: string;
 };
@@ -119,9 +120,10 @@ function mapEvent(payload: unknown): Event {
   if (Array.isArray(event.assignments)) {
     for (const assignment of event.assignments) {
       if (assignment && typeof assignment === 'object') {
-        const a = assignment as { memberName?: string; task?: string };
+        const a = assignment as { memberId?: string; memberName?: string; task?: string };
         if (a.memberName && a.task) {
           mappedAssignments.push({
+            memberId: a.memberId != null ? String(a.memberId) : undefined,
             memberName: String(a.memberName),
             task: String(a.task),
           });

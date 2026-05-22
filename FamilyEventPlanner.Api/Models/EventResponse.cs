@@ -5,6 +5,7 @@ namespace FamilyEventPlanner.Api.Models
 {
     public class SimpleAssignmentResponse
     {
+        public string? MemberId { get; set; }
         public string MemberName { get; set; }
         public string Task { get; set; }
     }

@@ -1,4 +1,5 @@
 using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -6,7 +7,19 @@ namespace FamilyEventPlanner.Api.Models
 {
     public class SimpleAssignment
     {
+        /// <summary>
+        /// Optional: Member ID from the group. If null/empty, assignment uses Unknown Guest member.
+        /// </summary>
+        public string? MemberId { get; set; }
+
+        /// <summary>
+        /// Display name for the assignment (can be custom or snapshot of member name)
+        /// </summary>
         public string MemberName { get; set; }
+
+        /// <summary>
+        /// Task description
+        /// </summary>
         public string Task { get; set; }
     }
 

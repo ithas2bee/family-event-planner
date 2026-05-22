@@ -41,12 +41,24 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
-            // If AssignedToId provided, ensure that member belongs to the same group
+            // Resolve AssignedToId - use provided member or fallback to Unknown Guest
+            Guid resolvedMemberId;
             if (request.AssignedToId.HasValue)
             {
                 var assignedOk = await _context.GroupMembers.AnyAsync(m => m.Id == request.AssignedToId.Value && m.FamilyGroupId == ev.FamilyGroupId);
                 if (!assignedOk)
                     return BadRequest(new { message = "AssignedTo member does not belong to the event's family group." });
+                resolvedMemberId = request.AssignedToId.Value;
+            }
+            else
+            {
+                // Get Unknown Guest member for this group
+                var unknownGuest = await _context.GroupMembers
+                    .FirstOrDefaultAsync(m => m.FamilyGroupId == ev.FamilyGroupId && 
+                                            m.User.Id == FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId);
+                if (unknownGuest == null)
+                    return BadRequest(new { message = "Unknown Guest member not found for this group." });
+                resolvedMemberId = unknownGuest.Id;
             }
 
             var assignment = new EventAssignment
@@ -56,7 +68,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Title = request.Title,
                 Description = request.Description,
                 QuantityNeeded = request.QuantityNeeded,
-                AssignedToId = request.AssignedToId,
+                AssignedToId = resolvedMemberId,
                 Category = request.Category
             };
 
@@ -165,26 +177,42 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
-            // Only assigned member or group admin can update assignment
-            if (assignment.AssignedToId.HasValue && assignment.AssignedToId != memberId)
+            // Only assigned member or group admin can update assignment (skip check for Unknown Guest)
+            var assignedMember = await _context.GroupMembers
+                .Include(m => m.User)
+                .FirstOrDefaultAsync(m => m.Id == assignment.AssignedToId);
+
+            if (assignedMember != null && !assignedMember.IsUnknownGuest() && assignment.AssignedToId != memberId)
             {
                 var member = await _context.GroupMembers.FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == assignment.FamilyEvent.FamilyGroupId);
                 if (member == null || !member.IsAdmin)
                     return Forbid();
             }
 
-            // If updating AssignedToId, validate
+            // Resolve AssignedToId if updating
+            Guid? resolvedMemberId = null;
             if (request.AssignedToId.HasValue)
             {
                 var assignedOk = await _context.GroupMembers.AnyAsync(m => m.Id == request.AssignedToId.Value && m.FamilyGroupId == assignment.FamilyEvent.FamilyGroupId);
                 if (!assignedOk)
                     return BadRequest(new { message = "AssignedTo member does not belong to the event's family group." });
+                resolvedMemberId = request.AssignedToId.Value;
+            }
+            else
+            {
+                // Use Unknown Guest if no memberId provided
+                var unknownGuest = await _context.GroupMembers
+                    .FirstOrDefaultAsync(m => m.FamilyGroupId == assignment.FamilyEvent.FamilyGroupId && 
+                                            m.User.Id == FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId);
+                if (unknownGuest != null)
+                    resolvedMemberId = unknownGuest.Id;
             }
 
             assignment.Title = request.Title;
             assignment.Description = request.Description;
             assignment.QuantityNeeded = request.QuantityNeeded;
-            assignment.AssignedToId = request.AssignedToId;
+            if (resolvedMemberId.HasValue)
+                assignment.AssignedToId = resolvedMemberId.Value;
             assignment.Status = request.Status;
             assignment.Category = request.Category;
 

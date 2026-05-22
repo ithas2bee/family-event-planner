@@ -9,7 +9,7 @@ namespace FamilyEventPlanner.Api.Models.Responses
         public string Title { get; set; }
         public string? Description { get; set; }
         public int QuantityNeeded { get; set; }
-        public Guid? AssignedToId { get; set; }
+        public Guid AssignedToId { get; set; }  // Now required
         public int Status { get; set; }
         public int Category { get; set; }
     }

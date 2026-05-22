@@ -36,9 +36,10 @@ namespace FamilyEventPlanner.Api.Models
 
         public int QuantityNeeded { get; set; } = 1;
 
-        // Foreign key to GroupMember. Use AssignedToId to match EF conventions.
-        public Guid? AssignedToId { get; set; }
-        public GroupMember? AssignedTo { get; set; }
+        // Foreign key to GroupMember. Required - uses Unknown Guest member for non-member assignments.
+        [Required]
+        public Guid AssignedToId { get; set; }
+        public GroupMember AssignedTo { get; set; }
 
         public AssignmentStatus Status { get; set; } = AssignmentStatus.Needed;
         public AssignmentCategory Category { get; set; } = AssignmentCategory.Other;

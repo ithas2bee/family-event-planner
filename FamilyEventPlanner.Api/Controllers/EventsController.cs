@@ -128,6 +128,8 @@ namespace FamilyEventPlanner.Api.Controllers
             var events = await _context.FamilyEvents
                 .Where(e => e.FamilyGroupId == familyGroupId)
                 .Include(e => e.Assignments)
+                    .ThenInclude(a => a.AssignedTo)
+                        .ThenInclude(m => m.User)
                 .OrderBy(e => e.StartDate)  // ? Changed to ascending (earliest first)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -154,6 +156,10 @@ namespace FamilyEventPlanner.Api.Controllers
                 CreatedAt = e.CreatedAt,
                 Assignments = e.Assignments.Select(a => new SimpleAssignmentResponse
                 {
+                    // Only include memberId if it's not the Unknown Guest (for backward compatibility)
+                    MemberId = (a.AssignedTo != null && !a.AssignedTo.IsUnknownGuest()) 
+                        ? a.AssignedToId.ToString() 
+                        : null,
                     MemberName = a.Description ?? string.Empty,
                     Task = a.Title ?? string.Empty
                 }).ToList()
@@ -172,6 +178,8 @@ namespace FamilyEventPlanner.Api.Controllers
 
             var ev = await _context.FamilyEvents
                 .Include(e => e.Assignments)
+                    .ThenInclude(a => a.AssignedTo)
+                        .ThenInclude(m => m.User)
                 .FirstOrDefaultAsync(e => e.Id == id);
 
             if (ev == null)
@@ -222,6 +230,10 @@ namespace FamilyEventPlanner.Api.Controllers
                 CreatedAt = ev.CreatedAt,
                 Assignments = ev.Assignments.Select(a => new SimpleAssignmentResponse
                 {
+                    // Only include memberId if it's not the Unknown Guest (for backward compatibility)
+                    MemberId = (a.AssignedTo != null && !a.AssignedTo.IsUnknownGuest()) 
+                        ? a.AssignedToId.ToString() 
+                        : null,
                     MemberName = a.Description ?? string.Empty,
                     Task = a.Title ?? string.Empty
                 }).ToList()
@@ -271,6 +283,8 @@ namespace FamilyEventPlanner.Api.Controllers
 
             var ev = await _context.FamilyEvents
                 .Include(e => e.Assignments)
+                    .ThenInclude(a => a.AssignedTo)
+                        .ThenInclude(m => m.User)
                 .FirstOrDefaultAsync(e => e.Id == id);
 
             if (ev == null)
@@ -309,6 +323,44 @@ namespace FamilyEventPlanner.Api.Controllers
             {
                 System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] PROCESSING {request.Assignments.Count} assignments from request");
 
+                // Get or create Unknown Guest member for this group (for non-member assignments)
+                var unknownGuestMember = await _context.GroupMembers
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.FamilyGroupId == ev.FamilyGroupId && 
+                                            m.User.Id == FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId);
+
+                if (unknownGuestMember == null)
+                {
+                    // Unknown Guest member doesn't exist for this group - create it
+                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] Creating Unknown Guest member for group {ev.FamilyGroupId}");
+
+                    // Ensure system User exists
+                    var systemUser = await _context.Users.FindAsync(FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId);
+                    if (systemUser == null)
+                    {
+                        systemUser = new User
+                        {
+                            Id = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId,
+                            Email = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestEmail,
+                            DisplayName = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestDisplayName,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.Users.Add(systemUser);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    unknownGuestMember = new GroupMember
+                    {
+                        Id = Guid.NewGuid(),
+                        FamilyGroupId = ev.FamilyGroupId,
+                        UserId = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId,
+                        IsAdmin = false,
+                        JoinedAt = DateTime.UtcNow
+                    };
+                    _context.GroupMembers.Add(unknownGuestMember);
+                    await _context.SaveChangesAsync();
+                }
+
                 // Remove existing assignments
                 _context.EventAssignments.RemoveRange(ev.Assignments);
                 System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] REMOVED {ev.Assignments.Count} existing assignments");
@@ -317,24 +369,54 @@ namespace FamilyEventPlanner.Api.Controllers
                 var newAssignments = new List<EventAssignment>();
                 foreach (var assignmentData in request.Assignments)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]   Processing: MemberName='{assignmentData.MemberName}', Task='{assignmentData.Task}'");
+                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]   Processing: MemberId='{assignmentData.MemberId}', MemberName='{assignmentData.MemberName}', Task='{assignmentData.Task}'");
 
                     if (!string.IsNullOrWhiteSpace(assignmentData.MemberName) && 
                         !string.IsNullOrWhiteSpace(assignmentData.Task))
                     {
+                        Guid resolvedMemberId;
+
+                        // Resolve member ID
+                        if (!string.IsNullOrWhiteSpace(assignmentData.MemberId) && 
+                            Guid.TryParse(assignmentData.MemberId, out var providedMemberId))
+                        {
+                            // Validate that the provided memberId belongs to this group
+                            var memberExists = await _context.GroupMembers.AnyAsync(m => 
+                                m.Id == providedMemberId && 
+                                m.FamilyGroupId == ev.FamilyGroupId);
+
+                            if (memberExists)
+                            {
+                                resolvedMemberId = providedMemberId;
+                                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     Using provided memberId: {resolvedMemberId}");
+                            }
+                            else
+                            {
+                                // Invalid memberId - fall back to Unknown Guest
+                                resolvedMemberId = unknownGuestMember.Id;
+                                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     Invalid memberId, using Unknown Guest: {resolvedMemberId}");
+                            }
+                        }
+                        else
+                        {
+                            // No memberId provided - use Unknown Guest
+                            resolvedMemberId = unknownGuestMember.Id;
+                            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     No memberId provided, using Unknown Guest: {resolvedMemberId}");
+                        }
+
                         var assignment = new EventAssignment
                         {
                             Id = Guid.NewGuid(),
                             FamilyEventId = ev.Id,
                             Title = assignmentData.Task,
-                            Description = assignmentData.MemberName,
+                            Description = assignmentData.MemberName, // Store display name snapshot
                             QuantityNeeded = 1,
-                            AssignedToId = null,
+                            AssignedToId = resolvedMemberId, // Now always has a value
                             Status = AssignmentStatus.Needed,
                             Category = AssignmentCategory.Other
                         };
                         newAssignments.Add(assignment);
-                        System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     CREATED: Id={assignment.Id}, Title='{assignment.Title}', Description='{assignment.Description}'");
+                        System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     CREATED: Id={assignment.Id}, Title='{assignment.Title}', Description='{assignment.Description}', AssignedToId={assignment.AssignedToId}");
                     }
                     else
                     {
@@ -398,6 +480,10 @@ namespace FamilyEventPlanner.Api.Controllers
                 CreatedAt = ev.CreatedAt,
                 Assignments = ev.Assignments.Select(a => new SimpleAssignmentResponse
                 {
+                    // Only include memberId if it's not the Unknown Guest (for backward compatibility)
+                    MemberId = (a.AssignedTo != null && !a.AssignedTo.IsUnknownGuest()) 
+                        ? a.AssignedToId.ToString() 
+                        : null,
                     MemberName = a.Description ?? string.Empty,
                     Task = a.Title ?? string.Empty
                 }).ToList()
