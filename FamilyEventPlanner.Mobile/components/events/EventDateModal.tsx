@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import DatePickerOverlay from './DatePickerOverlay';
+import TimePickerModal from './TimePickerModal';
 import { ThemedText } from '../themed-text';
+import { PillButton } from '../ui/pill-button';
 
 interface EventDateModalProps {
   visible: boolean;
@@ -11,56 +14,84 @@ interface EventDateModalProps {
 }
 
 export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, endDate, onChange, onClose }) => {
-  const [startInput, setStartInput] = useState('');
-  const [endInput, setEndInput] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [selectedStart, setSelectedStart] = useState<Date | null>(null);
+  const [selectedEnd, setSelectedEnd] = useState<Date | null>(null);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  // time components for start
+  const [startHour, setStartHour] = useState<number>(12);
+  const [startMinute, setStartMinute] = useState<number>(0);
+  const [startAmPm, setStartAmPm] = useState<'AM' | 'PM'>('PM');
+  const [activeOverlay, setActiveOverlay] = useState<null | 'startDate' | 'startTime' | 'endDate' | 'endTime'>(null);
+  // time components for end
+  const [endHour, setEndHour] = useState<number>(12);
+  const [endMinute, setEndMinute] = useState<number>(0);
+  const [endAmPm, setEndAmPm] = useState<'AM' | 'PM'>('PM');
 
   useEffect(() => {
     if (!visible) {
       return;
     }
-
-    setStartInput(date ? date.toISOString().slice(0, 16) : '');
-    setEndInput(endDate ? endDate.toISOString().slice(0, 16) : '');
     setValidationError(null);
+    setSelectedStart(date ?? null);
+    setSelectedEnd(endDate ?? null);
+    if (date) {
+      const h = date.getHours();
+      setStartAmPm(h >= 12 ? 'PM' : 'AM');
+      setStartHour(((h + 11) % 12) + 1);
+      setStartMinute(date.getMinutes());
+    }
+    if (endDate) {
+      const eh = endDate.getHours();
+      setEndAmPm(eh >= 12 ? 'PM' : 'AM');
+      setEndHour(((eh + 11) % 12) + 1);
+      setEndMinute(endDate.getMinutes());
+      setShowEndPicker(true);
+    }
   }, [visible, date, endDate]);
 
-  function parseInput(value: string): Date | null {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    const normalized = trimmed.includes('T') ? trimmed : `${trimmed}T00:00`;
-    const parsed = new Date(normalized);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  function buildDateFromSelected(date: Date | null, hour: number, minute: number, ampm: 'AM' | 'PM') {
+    if (!date) return null;
+    let h = hour % 12;
+    if (ampm === 'PM') h += 12;
+    const d = new Date(date);
+    d.setHours(h, minute, 0, 0);
+    return d;
   }
 
   function handleApply() {
-    const parsedStart = parseInput(startInput);
-    const parsedEnd = parseInput(endInput);
+    const builtStart = buildDateFromSelected(selectedStart, startHour, startMinute, startAmPm);
+    const builtEnd = showEndPicker ? buildDateFromSelected(selectedEnd, endHour, endMinute, endAmPm) : null;
 
-    if (!parsedStart) {
-      setValidationError('Enter a valid start date/time (YYYY-MM-DDTHH:mm).');
+    if (!builtStart) {
+      setValidationError('Select a valid start date and time.');
       return;
     }
 
-    if (parsedEnd && parsedEnd.getTime() < parsedStart.getTime()) {
+    if (builtEnd && builtEnd.getTime() < builtStart.getTime()) {
       setValidationError('End date/time must be after start date/time.');
       return;
     }
 
-    onChange(parsedStart, parsedEnd);
+    onChange(builtStart, builtEnd);
     onClose();
   }
 
   function setNow() {
     const now = new Date();
-    setStartInput(now.toISOString().slice(0, 16));
+    setSelectedStart(now);
+    const h = now.getHours();
+    setStartAmPm(h >= 12 ? 'PM' : 'AM');
+    setStartHour(((h + 11) % 12) + 1);
+    setStartMinute(now.getMinutes());
   }
 
   function clearEnd() {
-    setEndInput('');
+    setSelectedEnd(null);
+    setShowEndPicker(false);
+    setEndHour(12);
+    setEndMinute(0);
+    setEndAmPm('PM');
   }
 
   return (
@@ -68,38 +99,65 @@ export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, e
       <View style={styles.overlay}>
         <View style={styles.modal}>
           <ThemedText type="title" style={styles.title}>Select Date & Time</ThemedText>
-          <ThemedText style={styles.hint}>Use local date/time in YYYY-MM-DDTHH:mm format.</ThemedText>
-          <ThemedText style={styles.label}>Start Date & Time</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={startInput}
-            onChangeText={setStartInput}
-            placeholder="2026-05-13T18:30"
-            placeholderTextColor="#8e95a3"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+          <ThemedText style={styles.label}>Start</ThemedText>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <PillButton onPress={() => setActiveOverlay('startDate')}>{selectedStart ? new Date(selectedStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select Date'}</PillButton>
+            <PillButton onPress={() => setActiveOverlay('startTime')}>{selectedStart ? new Date(buildDateFromSelected(selectedStart,startHour??12,startMinute??0,startAmPm??'PM') as Date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Select Time'}</PillButton>
+          </View>
           <View style={styles.actionRow}>
             <Pressable onPress={setNow} style={styles.actionButton}>
               <ThemedText style={styles.actionText}>Use Now</ThemedText>
             </Pressable>
           </View>
 
-          <ThemedText style={styles.label}>End Date (optional)</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={endInput}
-            onChangeText={setEndInput}
-            placeholder="2026-05-13T21:00"
-            placeholderTextColor="#8e95a3"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <View style={styles.actionRow}>
-            <Pressable onPress={clearEnd} style={styles.actionButton}>
-              <ThemedText style={styles.actionText}>Clear End</ThemedText>
-            </Pressable>
-          </View>
+          <ThemedText style={styles.label}>Ends</ThemedText>
+          {!showEndPicker ? (
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <PillButton onPress={() => setShowEndPicker(true)} size="small">Add End Time</PillButton>
+            </View>
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <PillButton onPress={() => setActiveOverlay('endDate')}>{selectedEnd ? new Date(selectedEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select Date'}</PillButton>
+                <PillButton onPress={() => setActiveOverlay('endTime')}>{selectedEnd ? new Date(buildDateFromSelected(selectedEnd,endHour??12,endMinute??0,endAmPm??'PM') as Date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Select Time'}</PillButton>
+              </View>
+              <View style={styles.actionRow}>
+                <Pressable onPress={clearEnd} style={styles.actionButton}>
+                  <ThemedText style={styles.actionText}>Clear End</ThemedText>
+                </Pressable>
+              </View>
+            </>
+          )}
+
+          <DatePickerOverlay visible={activeOverlay==='startDate' || activeOverlay==='endDate'} value={activeOverlay==='startDate' ? selectedStart ?? date : selectedEnd ?? endDate} onChange={(d) => {
+            if (activeOverlay==='startDate') {
+              setSelectedStart(d);
+              const h = d.getHours();
+              setStartAmPm(h >= 12 ? 'PM' : 'AM');
+              setStartHour(((h + 11) % 12) + 1);
+              setStartMinute(d.getMinutes());
+            } else {
+              setSelectedEnd(d);
+              const h = d.getHours();
+              setEndAmPm(h >= 12 ? 'PM' : 'AM');
+              setEndHour(((h + 11) % 12) + 1);
+              setEndMinute(d.getMinutes());
+            }
+            setActiveOverlay(null);
+          }} onClose={() => setActiveOverlay(null)} />
+
+          <TimePickerModal visible={activeOverlay==='startTime' || activeOverlay==='endTime'} initialHour={activeOverlay==='startTime' ? startHour : endHour} initialMinute={activeOverlay==='startTime' ? startMinute : endMinute} initialAmPm={activeOverlay==='startTime' ? startAmPm : endAmPm} onCancel={() => setActiveOverlay(null)} onDone={(h,m,ap) => {
+            if (activeOverlay==='startTime') {
+              setStartHour(h);
+              setStartMinute(m);
+              setStartAmPm(ap);
+            } else {
+              setEndHour(h);
+              setEndMinute(m);
+              setEndAmPm(ap);
+            }
+            setActiveOverlay(null);
+          }} />
 
           {validationError ? <ThemedText style={styles.errorText}>{validationError}</ThemedText> : null}
 
