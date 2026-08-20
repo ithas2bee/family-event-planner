@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
+using FamilyEventPlanner.Api.Constants;
 
 namespace FamilyEventPlanner.Api.Models
 {
@@ -17,5 +19,14 @@ namespace FamilyEventPlanner.Api.Models
         public bool IsAdmin { get; set; }
 
         public DateTime JoinedAt { get; set; }
+
+        /// <summary>
+        /// Returns true if this GroupMember is the system "Unknown Guest" member
+        /// used for non-group participants in assignments.
+        /// </summary>
+        public bool IsUnknownGuest()
+        {
+            return UserId == SystemConstants.UnknownGuestUserId;
+        }
     }
 }

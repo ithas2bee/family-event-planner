@@ -4,6 +4,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getEventsByGroup, type Event } from '@/services/eventService';
 
@@ -99,21 +100,36 @@ export default function EventsScreen() {
         <FlatList
           data={events}
           keyExtractor={(item, index) => String(item.id ?? index)}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
           renderItem={({ item }) => {
             const title = item.title || 'Untitled Event';
             const startDate = item.startDate || '';
             const creatorName = item.creatorDisplayName || 'Unknown Member';
 
+            // format ISO datetime to local friendly string: "May 10, 2026 • 6:00 PM"
+            function formatEventDate(iso?: string) {
+              if (!iso) return '';
+              const d = new Date(iso);
+              if (isNaN(d.getTime())) return iso;
+              const datePart = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(d);
+              const timePart = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(d);
+              return `${datePart} • ${timePart}`;
+            }
+
             return (
               <Pressable
-                style={styles.eventRow}
+                style={styles.eventCard}
                 onPress={() => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
                 android_ripple={{ color: '#e0e0e0' }}
               >
                 <ThemedText type="defaultSemiBold">{title}</ThemedText>
-                <ThemedText>{startDate}</ThemedText>
-                <ThemedText>{creatorName}</ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                  <IconSymbol name="calendar" size={16} color="#8f99a6" />
+                  <ThemedText style={{ marginLeft: 8, fontSize: 14 }}>{formatEventDate(startDate)}</ThemedText>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                  <IconSymbol name="person.fill" size={14} color="#9aa3ab" />
+                  <ThemedText style={{ marginLeft: 8, color: '#8f99a6' }}>Hosted by {creatorName}</ThemedText>
+                </View>
               </Pressable>
             );
           }}
@@ -129,7 +145,7 @@ export default function EventsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 24,
     gap: 16,
   },
   title: {
@@ -154,6 +170,21 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: '#D5D8DC',
+  },
+  eventCard: {
+    backgroundColor: 'transparent',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.02)',
+    marginBottom: 16,
+    // very subtle shadow / elevation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 1,
+    elevation: 1,
   },
   feedback: {
     textAlign: 'center',

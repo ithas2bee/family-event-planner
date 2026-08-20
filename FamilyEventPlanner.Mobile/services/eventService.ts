@@ -4,6 +4,7 @@ import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
 
 export type EventAssignment = {
+  memberId?: string;
   memberName: string;
   task: string;
 };
@@ -33,6 +34,7 @@ export type CreateEventRequest = {
   location?: string;
   dressCode?: string;
   notes?: string;
+  assignments?: EventAssignment[]; // Added assignments
 };
 
 export type UpdateEventRequest = {
@@ -43,6 +45,7 @@ export type UpdateEventRequest = {
   location?: string;
   dressCode?: string;
   notes?: string;
+  assignments?: EventAssignment[]; // Added assignments
 };
 
 async function getEventHeaders(): Promise<Record<string, string>> {
@@ -117,9 +120,10 @@ function mapEvent(payload: unknown): Event {
   if (Array.isArray(event.assignments)) {
     for (const assignment of event.assignments) {
       if (assignment && typeof assignment === 'object') {
-        const a = assignment as { memberName?: string; task?: string };
+        const a = assignment as { memberId?: string; memberName?: string; task?: string };
         if (a.memberName && a.task) {
           mappedAssignments.push({
+            memberId: a.memberId != null ? String(a.memberId) : undefined,
             memberName: String(a.memberName),
             task: String(a.task),
           });
@@ -214,7 +218,6 @@ export async function createEvent(request: CreateEventRequest): Promise<Event> {
   if (!parsedBody || typeof parsedBody !== 'object') {
     throw new Error('The server returned an unexpected response.');
   }
-
 
   return mapEvent(parsedBody);
 }

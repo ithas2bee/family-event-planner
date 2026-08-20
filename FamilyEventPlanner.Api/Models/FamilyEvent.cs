@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace FamilyEventPlanner.Api.Models
@@ -27,5 +28,8 @@ namespace FamilyEventPlanner.Api.Models
         public GroupMember? CreatedByMember { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        // Navigation property for assignments
+        public List<EventAssignment> Assignments { get; set; } = new();
     }
 }

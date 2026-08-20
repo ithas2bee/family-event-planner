@@ -94,7 +94,7 @@ namespace FamilyEventPlanner.Api.Data
 
             // Align naming conventions for foreign keys if necessary
             modelBuilder.Entity<EventAssignment>()
-                .Property<Guid?>("AssignedToId");
+                .Property<Guid>("AssignedToId");  // Changed to required (not nullable)
 
             modelBuilder.Entity<Photo>()
                 .Property<Guid>("UploadedById");

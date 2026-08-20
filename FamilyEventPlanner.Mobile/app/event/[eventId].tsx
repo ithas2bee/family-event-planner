@@ -8,10 +8,11 @@ import { ImmersiveButton } from '@/components/ui/immersive-button';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { Event, getEventById, updateEvent } from '@/services/eventService';
+import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 export default function EventDetailsScreen() {
   const { eventId } = useLocalSearchParams();
@@ -22,6 +23,8 @@ export default function EventDetailsScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [activeAssignmentIndex, setActiveAssignmentIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (!eventId || typeof eventId !== 'string') {
@@ -34,27 +37,26 @@ export default function EventDetailsScreen() {
 
     async function load() {
       try {
-        // Ensure eventId is a string
         const validEventId = Array.isArray(eventId) ? eventId[0] : eventId;
 
-        // Load event and session in parallel
         const [eventData, session] = await Promise.all([
           getEventById(validEventId),
           loadSession(),
         ]);
 
+        let members: GroupMember[] = [];
+        if (eventData.familyGroupId && session?.memberId) {
+          try {
+            members = await getGroupMembers(eventData.familyGroupId, session.memberId);
+          } catch {
+            // Keep editing usable even if member suggestions cannot be loaded.
+          }
+        }
+
         if (!cancelled) {
-          // TODO: Remove mock assignments data once backend supports it
-          const eventWithMockAssignments = {
-            ...eventData,
-            assignments: eventData.assignments || [
-              { memberName: 'Tom', task: 'Cake' },
-              { memberName: 'Andre', task: 'Chicken' },
-              { memberName: 'Don', task: 'Drinks' },
-            ],
-          };
-          setEvent(eventWithMockAssignments);
+          setEvent(eventData);
           setCurrentMemberId(session?.memberId || '');
+          setGroupMembers(members);
           setError(null);
         }
       } catch (err) {
@@ -75,7 +77,35 @@ export default function EventDetailsScreen() {
     };
   }, [eventId]);
 
-  // Determine if current user is the event creator
+  const memberOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return groupMembers
+      .map((member) => ({
+        memberId: String(member.memberId ?? '').trim(),
+        memberName: String(member.displayName ?? '').trim(),
+      }))
+      .filter((member) => member.memberId.length > 0 && member.memberName.length > 0)
+      .filter((member) => {
+        const key = member.memberId.toLowerCase();
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }, [groupMembers]);
+
+  const getMemberSuggestions = (query: string) => {
+    const normalized = query.trim().toLowerCase();
+    if (normalized.length === 0) {
+      return [];
+    }
+
+    return memberOptions
+      .filter((member) => member.memberName.toLowerCase().includes(normalized))
+      .slice(0, 6);
+  };
+
   const isCreator = Boolean(event?.createdByMemberId && currentMemberId && event.createdByMemberId === currentMemberId);
 
   if (loading) {
@@ -112,8 +142,6 @@ export default function EventDetailsScreen() {
     try {
       const updatedEvent = await updateEvent(eventId, updates);
 
-      // Some successful update responses can be empty/minimal, which would map to blank fields.
-      // Preserve the current event state and only apply server fields when they contain real data.
       setEvent((currentEvent) => {
         if (!currentEvent) {
           return updatedEvent;
@@ -136,6 +164,7 @@ export default function EventDetailsScreen() {
           title: updatedEvent.title || currentEvent.title,
           startDate: updatedEvent.startDate || currentEvent.startDate,
           createdAt: updatedEvent.createdAt || currentEvent.createdAt,
+          assignments: updatedEvent.assignments || currentEvent.assignments, // Ensure assignments persist
         };
       });
 
@@ -264,43 +293,77 @@ export default function EventDetailsScreen() {
                 Assignments
               </ThemedText>
               {(event.assignments && event.assignments.length > 0) ? (
-                event.assignments.map((assignment, idx) => (
-                  <View key={idx} style={styles.assignmentEditRow}>
-                    <FormInput
-                      value={assignment.memberName}
-                      onChangeText={text => {
-                        const updated = event.assignments ? [...event.assignments] : [];
-                        updated[idx] = { ...assignment, memberName: text };
-                        setEvent({ ...event, assignments: updated });
-                      }}
-                      placeholder="Name"
-                      style={styles.assignmentInput}
-                      maxLength={32}
-                    />
-                    <FormInput
-                      value={assignment.task}
-                      onChangeText={text => {
-                        const updated = event.assignments ? [...event.assignments] : [];
-                        updated[idx] = { ...assignment, task: text };
-                        setEvent({ ...event, assignments: updated });
-                      }}
-                      placeholder="Item/Task"
-                      style={styles.assignmentInput}
-                      maxLength={32}
-                    />
-                    <ImmersiveButton
-                      variant="tertiary"
-                      size="small"
-                      style={styles.assignmentRemoveBtn}
-                      onPress={() => {
-                        const updated = (event.assignments || []).filter((_, i) => i !== idx);
-                        setEvent({ ...event, assignments: updated });
-                      }}
-                    >
-                      Remove
-                    </ImmersiveButton>
-                  </View>
-                ))
+                event.assignments.map((assignment, idx) => {
+                  const suggestions = getMemberSuggestions(assignment.memberName);
+                  const showSuggestions =
+                    activeAssignmentIndex === idx &&
+                    assignment.memberName.trim().length > 0 &&
+                    suggestions.length > 0;
+
+                  return (
+                    <View key={idx} style={styles.assignmentEditRow}>
+                      <FormInput
+                        value={assignment.memberName}
+                        onFocus={() => setActiveAssignmentIndex(idx)}
+                        onChangeText={text => {
+                          const updated = event.assignments ? [...event.assignments] : [];
+                          updated[idx] = { ...assignment, memberName: text, memberId: undefined };
+                          setEvent({ ...event, assignments: updated });
+                          setActiveAssignmentIndex(idx);
+                        }}
+                        placeholder="Name"
+                        style={styles.assignmentInput}
+                        maxLength={32}
+                      />
+                      {showSuggestions && (
+                        <View style={styles.suggestionsContainer}>
+                          {suggestions.map((member) => (
+                            <Pressable
+                              key={member.memberId}
+                              style={styles.suggestionItem}
+                              onPress={() => {
+                                const updated = event.assignments ? [...event.assignments] : [];
+                                updated[idx] = {
+                                  ...assignment,
+                                  memberName: member.memberName,
+                                  memberId: member.memberId,
+                                };
+                                setEvent({ ...event, assignments: updated });
+                                setActiveAssignmentIndex(null);
+                              }}
+                            >
+                              <ThemedText style={styles.suggestionText}>{member.memberName}</ThemedText>
+                            </Pressable>
+                          ))}
+                        </View>
+                      )}
+                      <FormInput
+                        value={assignment.task}
+                        onFocus={() => setActiveAssignmentIndex(null)}
+                        onChangeText={text => {
+                          const updated = event.assignments ? [...event.assignments] : [];
+                          updated[idx] = { ...assignment, task: text };
+                          setEvent({ ...event, assignments: updated });
+                        }}
+                        placeholder="Item/Task"
+                        style={styles.assignmentInput}
+                        maxLength={32}
+                      />
+                      <ImmersiveButton
+                        variant="tertiary"
+                        size="small"
+                        style={styles.assignmentRemoveBtn}
+                        onPress={() => {
+                          const updated = (event.assignments || []).filter((_, i) => i !== idx);
+                          setEvent({ ...event, assignments: updated });
+                          setActiveAssignmentIndex(null);
+                        }}
+                      >
+                        Remove
+                      </ImmersiveButton>
+                    </View>
+                  );
+                })
               ) : (
                 <ThemedText style={styles.sectionText}>No assignments yet.</ThemedText>
               )}
@@ -310,8 +373,9 @@ export default function EventDetailsScreen() {
                 style={styles.assignmentAddBtn}
                 onPress={() => {
                   const updated = event.assignments ? [...event.assignments] : [];
-                  updated.push({ memberName: '', task: '' });
+                  updated.push({ memberName: '', task: '', memberId: undefined });
                   setEvent({ ...event, assignments: updated });
+                  setActiveAssignmentIndex(updated.length - 1);
                 }}
               >
                 Add Assignment
@@ -400,6 +464,26 @@ const styles = StyleSheet.create({
     marginTop: 2,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
+  },
+  suggestionsContainer: {
+    marginTop: -Spacing.sm,
+    marginBottom: Spacing.xs,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(15,15,20,0.95)',
+    maxHeight: 180,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.07)',
+  },
+  suggestionText: {
+    color: Colors.text.primary,
+    fontSize: Typography.sizes.sm,
   },
   assignmentsList: {
     gap: Spacing.xs,

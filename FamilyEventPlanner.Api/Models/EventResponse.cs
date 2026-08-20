@@ -1,7 +1,15 @@
 using System;
+using System.Collections.Generic;
 
 namespace FamilyEventPlanner.Api.Models
 {
+    public class SimpleAssignmentResponse
+    {
+        public string? MemberId { get; set; }
+        public string MemberName { get; set; }
+        public string Task { get; set; }
+    }
+
     public class EventResponse
     {
         public Guid Id { get; set; }
@@ -16,5 +24,6 @@ namespace FamilyEventPlanner.Api.Models
         public Guid? CreatedByMemberId { get; set; }
         public string? CreatorDisplayName { get; set; }
         public DateTime CreatedAt { get; set; }
+        public List<SimpleAssignmentResponse>? Assignments { get; set; }
     }
 }

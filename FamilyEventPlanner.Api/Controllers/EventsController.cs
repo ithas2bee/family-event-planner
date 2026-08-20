@@ -95,7 +95,8 @@ namespace FamilyEventPlanner.Api.Controllers
                 Notes = ev.Notes,
                 CreatedByMemberId = ev.CreatedByMemberId,
                 CreatorDisplayName = member.User?.DisplayName,
-                CreatedAt = ev.CreatedAt
+                CreatedAt = ev.CreatedAt,
+                Assignments = new List<SimpleAssignmentResponse>()
             };
 
             return CreatedAtAction(nameof(GetEvent), new { id = ev.Id }, response);
@@ -126,42 +127,73 @@ namespace FamilyEventPlanner.Api.Controllers
             // Join with GroupMembers and Users to get creator display name
             var events = await _context.FamilyEvents
                 .Where(e => e.FamilyGroupId == familyGroupId)
+                .Include(e => e.Assignments)
+                    .ThenInclude(a => a.AssignedTo)
+                        .ThenInclude(m => m.User)
                 .OrderBy(e => e.StartDate)  // ? Changed to ascending (earliest first)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .Select(e => new EventResponse
-                {
-                    Id = e.Id,
-                    FamilyGroupId = e.FamilyGroupId,
-                    Title = e.Title,
-                    Description = e.Description,
-                    StartDate = e.StartDate,
-                    EndDate = e.EndDate,
-                    Location = e.Location,
-                    DressCode = e.DressCode,
-                    Notes = e.Notes,
-                    CreatedByMemberId = e.CreatedByMemberId,
-                    CreatorDisplayName = e.CreatedByMemberId != null
-                        ? _context.GroupMembers
-                            .Where(m => m.Id == e.CreatedByMemberId)
-                            .Select(m => m.User.DisplayName)
-                            .FirstOrDefault()
-                        : null,
-                    CreatedAt = e.CreatedAt
-                })
                 .ToListAsync();
 
-            System.Diagnostics.Debug.WriteLine($"[GET EVENTS] Returning {events.Count} events for group {familyGroupId}");
+            var result = events.Select(e => new EventResponse
+            {
+                Id = e.Id,
+                FamilyGroupId = e.FamilyGroupId,
+                Title = e.Title,
+                Description = e.Description,
+                StartDate = e.StartDate,
+                EndDate = e.EndDate,
+                Location = e.Location,
+                DressCode = e.DressCode,
+                Notes = e.Notes,
+                CreatedByMemberId = e.CreatedByMemberId,
+                CreatorDisplayName = e.CreatedByMemberId != null
+                    ? _context.GroupMembers
+                        .Where(m => m.Id == e.CreatedByMemberId)
+                        .Select(m => m.User.DisplayName)
+                        .FirstOrDefault()
+                    : null,
+                CreatedAt = e.CreatedAt,
+                Assignments = e.Assignments.Select(a => new SimpleAssignmentResponse
+                {
+                    // Only include memberId if it's not the Unknown Guest (for backward compatibility)
+                    MemberId = (a.AssignedTo != null && !a.AssignedTo.IsUnknownGuest()) 
+                        ? a.AssignedToId.ToString() 
+                        : null,
+                    MemberName = a.Description ?? string.Empty,
+                    Task = a.Title ?? string.Empty
+                }).ToList()
+            }).ToList();
 
-            return Ok(events);
+            System.Diagnostics.Debug.WriteLine($"[GET EVENTS] Returning {result.Count} events for group {familyGroupId}");
+
+            return Ok(result);
         }
         // GET: api/events/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetEvent(Guid id)
         {
-            var ev = await _context.FamilyEvents.FindAsync(id);
+            System.Diagnostics.Debug.WriteLine("========================================");
+            System.Diagnostics.Debug.WriteLine($"[GET EVENT] GET /api/events/{id} STARTED");
+
+            var ev = await _context.FamilyEvents
+                .Include(e => e.Assignments)
+                    .ThenInclude(a => a.AssignedTo)
+                        .ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
             if (ev == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[GET EVENT] Event NOT FOUND");
                 return NotFound(new { message = "Event not found." });
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[GET EVENT] Event FOUND: {ev.Title}");
+            System.Diagnostics.Debug.WriteLine($"[GET EVENT] Assignments in DB: {ev.Assignments.Count}");
+            foreach (var a in ev.Assignments)
+            {
+                System.Diagnostics.Debug.WriteLine($"[GET EVENT]   DB Assignment: Id={a.Id}, Title='{a.Title}', Description='{a.Description}'");
+            }
 
             // Validate authenticated member is a member of this group
             var memberIdClaim = User.FindFirst("memberId")?.Value;
@@ -195,8 +227,35 @@ namespace FamilyEventPlanner.Api.Controllers
                 Notes = ev.Notes,
                 CreatedByMemberId = ev.CreatedByMemberId,
                 CreatorDisplayName = creatorDisplayName,
-                CreatedAt = ev.CreatedAt
+                CreatedAt = ev.CreatedAt,
+                Assignments = ev.Assignments.Select(a => new SimpleAssignmentResponse
+                {
+                    // Only include memberId if it's not the Unknown Guest (for backward compatibility)
+                    MemberId = (a.AssignedTo != null && !a.AssignedTo.IsUnknownGuest()) 
+                        ? a.AssignedToId.ToString() 
+                        : null,
+                    MemberName = a.Description ?? string.Empty,
+                    Task = a.Title ?? string.Empty
+                }).ToList()
             };
+
+            System.Diagnostics.Debug.WriteLine($"[GET EVENT] RESPONSE OBJECT - Assignments: {response.Assignments?.Count ?? 0}");
+            if (response.Assignments != null)
+            {
+                foreach (var a in response.Assignments)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[GET EVENT]   Response Assignment: MemberName='{a.MemberName}', Task='{a.Task}'");
+                }
+            }
+
+            var jsonResponse = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = true 
+            });
+            System.Diagnostics.Debug.WriteLine("[GET EVENT] RAW JSON RESPONSE:");
+            System.Diagnostics.Debug.WriteLine(jsonResponse);
+            System.Diagnostics.Debug.WriteLine("========================================");
 
             return Ok(response);
         }
@@ -204,12 +263,42 @@ namespace FamilyEventPlanner.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateEvent(Guid id, [FromBody] UpdateEventRequest request)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            System.Diagnostics.Debug.WriteLine("========================================");
+            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] PUT /api/events/{id} STARTED");
+            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] Request Title: {request.Title}");
+            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] Request Assignments Count: {request.Assignments?.Count ?? 0}");
+            if (request.Assignments != null)
+            {
+                foreach (var a in request.Assignments)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]   Incoming Assignment: MemberName='{a.MemberName}', Task='{a.Task}'");
+                }
+            }
 
-            var ev = await _context.FamilyEvents.FindAsync(id);
+            if (!ModelState.IsValid)
+            {
+                System.Diagnostics.Debug.WriteLine("[UPDATE EVENT] ModelState INVALID");
+                return BadRequest(ModelState);
+            }
+
+            var ev = await _context.FamilyEvents
+                .Include(e => e.Assignments)
+                    .ThenInclude(a => a.AssignedTo)
+                        .ThenInclude(m => m.User)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
             if (ev == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[UPDATE EVENT] Event NOT FOUND");
                 return NotFound(new { message = "Event not found." });
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] Event FOUND: {ev.Title}");
+            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] BEFORE UPDATE - Existing Assignments: {ev.Assignments.Count}");
+            foreach (var a in ev.Assignments)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]   Existing: Title='{a.Title}', Description='{a.Description}'");
+            }
 
             // Validate authenticated member is a member of this group
             var memberIdClaim = User.FindFirst("memberId")?.Value;
@@ -220,7 +309,7 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
-            // Apply updates
+            // Apply updates to event fields
             ev.Title = request.Title;
             ev.Description = request.Description;
             ev.StartDate = request.StartDate;
@@ -229,10 +318,196 @@ namespace FamilyEventPlanner.Api.Controllers
             ev.DressCode = request.DressCode;
             ev.Notes = request.Notes;
 
-            _context.FamilyEvents.Update(ev);
+            // Handle assignments update
+            if (request.Assignments != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] PROCESSING {request.Assignments.Count} assignments from request");
+
+                // Get or create Unknown Guest member for this group (for non-member assignments)
+                var unknownGuestMember = await _context.GroupMembers
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.FamilyGroupId == ev.FamilyGroupId && 
+                                            m.User.Id == FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId);
+
+                if (unknownGuestMember == null)
+                {
+                    // Unknown Guest member doesn't exist for this group - create it
+                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] Creating Unknown Guest member for group {ev.FamilyGroupId}");
+
+                    // Ensure system User exists
+                    var systemUser = await _context.Users.FindAsync(FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId);
+                    if (systemUser == null)
+                    {
+                        systemUser = new User
+                        {
+                            Id = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId,
+                            Email = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestEmail,
+                            DisplayName = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestDisplayName,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _context.Users.Add(systemUser);
+                        await _context.SaveChangesAsync();
+                    }
+
+                    unknownGuestMember = new GroupMember
+                    {
+                        Id = Guid.NewGuid(),
+                        FamilyGroupId = ev.FamilyGroupId,
+                        UserId = FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId,
+                        IsAdmin = false,
+                        JoinedAt = DateTime.UtcNow
+                    };
+                    _context.GroupMembers.Add(unknownGuestMember);
+                    await _context.SaveChangesAsync();
+                }
+
+                // Remove existing assignments
+                _context.EventAssignments.RemoveRange(ev.Assignments);
+                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] REMOVED {ev.Assignments.Count} existing assignments");
+
+                // Add new assignments from request
+                var newAssignments = new List<EventAssignment>();
+                foreach (var assignmentData in request.Assignments)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]   Processing: MemberId='{assignmentData.MemberId}', MemberName='{assignmentData.MemberName}', Task='{assignmentData.Task}'");
+
+                    if (!string.IsNullOrWhiteSpace(assignmentData.MemberName) && 
+                        !string.IsNullOrWhiteSpace(assignmentData.Task))
+                    {
+                        Guid resolvedMemberId;
+
+                        // Resolve member ID
+                        if (!string.IsNullOrWhiteSpace(assignmentData.MemberId) && 
+                            Guid.TryParse(assignmentData.MemberId, out var providedMemberId))
+                        {
+                            // Validate that the provided memberId belongs to this group
+                            var memberExists = await _context.GroupMembers.AnyAsync(m => 
+                                m.Id == providedMemberId && 
+                                m.FamilyGroupId == ev.FamilyGroupId);
+
+                            if (memberExists)
+                            {
+                                resolvedMemberId = providedMemberId;
+                                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     Using provided memberId: {resolvedMemberId}");
+                            }
+                            else
+                            {
+                                // Invalid memberId - fall back to Unknown Guest
+                                resolvedMemberId = unknownGuestMember.Id;
+                                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     Invalid memberId, using Unknown Guest: {resolvedMemberId}");
+                            }
+                        }
+                        else
+                        {
+                            // No memberId provided - use Unknown Guest
+                            resolvedMemberId = unknownGuestMember.Id;
+                            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     No memberId provided, using Unknown Guest: {resolvedMemberId}");
+                        }
+
+                        var assignment = new EventAssignment
+                        {
+                            Id = Guid.NewGuid(),
+                            FamilyEventId = ev.Id,
+                            Title = assignmentData.Task,
+                            Description = assignmentData.MemberName, // Store display name snapshot
+                            QuantityNeeded = 1,
+                            AssignedToId = resolvedMemberId, // Now always has a value
+                            Status = AssignmentStatus.Needed,
+                            Category = AssignmentCategory.Other
+                        };
+                        newAssignments.Add(assignment);
+                        System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     CREATED: Id={assignment.Id}, Title='{assignment.Title}', Description='{assignment.Description}', AssignedToId={assignment.AssignedToId}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]     SKIPPED: Empty memberName or task");
+                    }
+                }
+
+                ev.Assignments.Clear();
+                foreach (var a in newAssignments)
+                {
+                    ev.Assignments.Add(a);
+                    _context.EventAssignments.Add(a); // Explicitly mark as Added
+                }
+                System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] ADDED {newAssignments.Count} new assignments to entity");
+            }
+
+            // Don't call Update() - ev is already tracked from the query with Include()
+            // Calling Update() marks the entire graph as Modified, including new assignments
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            System.Diagnostics.Debug.WriteLine("[UPDATE EVENT] SaveChanges() COMPLETED");
+
+            // Immediately re-query to verify DB state
+            var verifyEv = await _context.FamilyEvents
+                .Include(e => e.Assignments)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] VERIFICATION QUERY - Assignments in DB: {verifyEv?.Assignments.Count ?? 0}");
+            if (verifyEv != null && verifyEv.Assignments.Any())
+            {
+                foreach (var a in verifyEv.Assignments)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]   DB Assignment: Id={a.Id}, Title='{a.Title}', Description='{a.Description}'");
+                }
+            }
+
+            // Get creator display name
+            string creatorDisplayName = null;
+            if (ev.CreatedByMemberId != null)
+            {
+                var creator = await _context.GroupMembers
+                    .Include(m => m.User)
+                    .FirstOrDefaultAsync(m => m.Id == ev.CreatedByMemberId);
+                creatorDisplayName = creator?.User?.DisplayName;
+            }
+
+            // Return updated event with assignments
+            var response = new EventResponse
+            {
+                Id = ev.Id,
+                FamilyGroupId = ev.FamilyGroupId,
+                Title = ev.Title,
+                Description = ev.Description,
+                StartDate = ev.StartDate,
+                EndDate = ev.EndDate,
+                Location = ev.Location,
+                DressCode = ev.DressCode,
+                Notes = ev.Notes,
+                CreatedByMemberId = ev.CreatedByMemberId,
+                CreatorDisplayName = creatorDisplayName,
+                CreatedAt = ev.CreatedAt,
+                Assignments = ev.Assignments.Select(a => new SimpleAssignmentResponse
+                {
+                    // Only include memberId if it's not the Unknown Guest (for backward compatibility)
+                    MemberId = (a.AssignedTo != null && !a.AssignedTo.IsUnknownGuest()) 
+                        ? a.AssignedToId.ToString() 
+                        : null,
+                    MemberName = a.Description ?? string.Empty,
+                    Task = a.Title ?? string.Empty
+                }).ToList()
+            };
+
+            System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT] RESPONSE OBJECT - Assignments: {response.Assignments?.Count ?? 0}");
+            if (response.Assignments != null)
+            {
+                foreach (var a in response.Assignments)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UPDATE EVENT]   Response Assignment: MemberName='{a.MemberName}', Task='{a.Task}'");
+                }
+            }
+
+            var jsonResponse = System.Text.Json.JsonSerializer.Serialize(response, new System.Text.Json.JsonSerializerOptions 
+            { 
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                WriteIndented = true 
+            });
+            System.Diagnostics.Debug.WriteLine("[UPDATE EVENT] RAW JSON RESPONSE:");
+            System.Diagnostics.Debug.WriteLine(jsonResponse);
+            System.Diagnostics.Debug.WriteLine("========================================");
+
+            return Ok(response);
         }
 
         // DELETE: api/events/{id}
