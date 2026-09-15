@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { API_BASE_URL } from '@/config/api';
 import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -14,7 +15,6 @@ import { getKickbacksByGroup } from '@/services/kickbackService';
 import { getPollsByGroup } from '@/services/pollService';
 import { clearSession, loadSession, setMemberInfo } from '@/services/sessionService';
 
-const API_BASE_URL = 'http://10.0.0.115:5249';
 const PREVIEW_LIMIT = 5;
 
 type MyGroupPreview = {

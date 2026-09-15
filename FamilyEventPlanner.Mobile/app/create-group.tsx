@@ -2,12 +2,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput } from 'react-native';
 
+import { API_BASE_URL } from '@/config/api';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { loadSession, saveSession } from '@/services/sessionService';
-
-const API_BASE_URL = 'http://10.0.0.115:5249';
 
 export default function CreateGroupScreen() {
   const { setActiveGroup } = useActiveGroupContext();
