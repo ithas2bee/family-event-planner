@@ -4,9 +4,9 @@
 // Do NOT use "localhost" in a React Native / Expo app.
 // On a physical device, "localhost" refers to the device itself, not your PC.
 // Use the actual local IP address of the machine running your ASP.NET backend.
-// Change this value to match your machine's IP address and port.
+// Configure it via EXPO_PUBLIC_API_BASE_URL in your local .env file.
 // ─────────────────────────────────────────────────────────────────────────────
-const API_BASE_URL = 'http://10.0.0.115:5249';
+import { API_BASE_URL } from '@/config/api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
