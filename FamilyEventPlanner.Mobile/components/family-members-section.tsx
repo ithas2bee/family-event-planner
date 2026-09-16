@@ -58,7 +58,9 @@ export function FamilyMembersSection({
               return (
                 <View key={member.memberId ?? `${name}-${index}`} style={styles.member}>
                   <View style={[styles.avatar, isCurrentUser && styles.currentAvatar]}>
-                    <ThemedText style={styles.avatarText}>{getMemberInitials(name)}</ThemedText>
+                    <ThemedText style={[styles.avatarText, isCurrentUser && styles.currentAvatarText]}>
+                      {getMemberInitials(name)}
+                    </ThemedText>
                   </View>
                   <ThemedText type="defaultSemiBold" style={styles.memberName} numberOfLines={1}>
                     {name}
@@ -129,6 +131,9 @@ const styles = StyleSheet.create({
   },
   currentAvatar: {
     backgroundColor: '#0A7EA4',
+  },
+  currentAvatarText: {
+    color: '#FFFFFF',
   },
   avatarText: {
     color: '#174B5C',
