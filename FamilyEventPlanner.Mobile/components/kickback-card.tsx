@@ -47,10 +47,7 @@ export function getKickbackAccessibilityLabel(item: KickbackCardItem): string {
 export function KickbackCard({ item, index, onPress }: KickbackCardProps) {
   const tone = KICKBACK_TONES[index % KICKBACK_TONES.length];
   const title = item.title || 'Kickback';
-  const note = item.note?.trim() || 'No note yet.';
-  const detailLabel = item.note?.trim()
-    ? note
-    : `${item.pullingUpCount ?? 0} pulling up • ${item.maybeCount ?? 0} maybe`;
+  const detailLabel = `${item.pullingUpCount ?? 0} pulling up • ${item.maybeCount ?? 0} maybe`;
 
   return (
     <Pressable
@@ -67,21 +64,27 @@ export function KickbackCard({ item, index, onPress }: KickbackCardProps) {
       <View style={[styles.decorativeSmall, { backgroundColor: tone.bubble }]} />
 
       <View style={styles.content}>
-        <View style={[styles.iconCircle, { backgroundColor: tone.accent }]}>
-          <MaterialIcons name="chat-bubble-outline" size={27} color="#1976F3" />
+        <View style={styles.topRow}>
+          <View style={[styles.iconCircle, { backgroundColor: tone.accent }]}>
+            <MaterialIcons name="chat-bubble-outline" size={24} color={tone.background} />
+          </View>
+          <View style={styles.contextBadge}>
+            <View style={styles.contextDot} />
+            <ThemedText style={styles.contextText}>Kickback</ThemedText>
+          </View>
         </View>
 
-        <View style={styles.textContent}>
-          <ThemedText style={styles.title} numberOfLines={1}>
-            {title}
-          </ThemedText>
+        <ThemedText style={styles.title} numberOfLines={2}>
+          {title}
+        </ThemedText>
+
+        <View style={styles.footer}>
           <ThemedText style={styles.note} numberOfLines={1}>
             {detailLabel}
           </ThemedText>
-        </View>
-
-        <View style={styles.ctaCircle}>
-          <MaterialIcons name="arrow-forward" size={22} color="#FFFFFF" />
+          <View style={styles.ctaCircle}>
+            <MaterialIcons name="arrow-forward" size={20} color={tone.background} />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -91,8 +94,8 @@ export function KickbackCard({ item, index, onPress }: KickbackCardProps) {
 const styles = StyleSheet.create({
   card: {
     width: 300,
-    height: 122,
-    borderRadius: 18,
+    minHeight: 142,
+    borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#11213A',
     shadowOffset: { width: 0, height: 10 },
@@ -105,56 +108,84 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 14,
+    gap: 12,
+    padding: 16,
   },
   decorativeLarge: {
     position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
     right: -54,
-    top: -85,
+    top: -72,
   },
   decorativeSmall: {
     position: 'absolute',
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    left: 160,
-    bottom: -58,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    left: 112,
+    bottom: -52,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   iconCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  textContent: {
-    flex: 1,
-    gap: 4,
+  contextBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.17)',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  contextDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#9AFFC5',
+  },
+  contextText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 16,
   },
   title: {
+    flex: 1,
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '700',
-    lineHeight: 26,
+    lineHeight: 24,
   },
   note: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 15,
-    lineHeight: 19,
+    flex: 1,
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: '600',
   },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   ctaCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(24,36,54,0.58)',
+    backgroundColor: 'rgba(255,255,255,0.88)',
   },
 });
