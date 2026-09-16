@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { API_BASE_URL } from '@/config/api';
 import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
 import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
+import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { UpcomingEventCard, type UpcomingEventCardItem } from '@/components/upcoming-event-card';
@@ -114,7 +115,7 @@ export default function FamilyHomeScreen() {
   const [membersPreview, setMembersPreview] = useState<DashboardCardItem[]>([]);
   const [announcementsPreview, setAnnouncementsPreview] = useState<DashboardCardItem[]>([]);
   const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
-  const [kickbacksPreview, setKickbacksPreview] = useState<DashboardCardItem[]>([]);
+  const [kickbacksPreview, setKickbacksPreview] = useState<KickbackCardItem[]>([]);
   const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState(false);
 
@@ -276,8 +277,12 @@ export default function FamilyHomeScreen() {
       kickbacksData.slice(0, PREVIEW_LIMIT).map((kickback) => ({
         id: kickback.id,
         title: kickback.vibe || 'Kickback',
-        subtitle: toBodyPreview(kickback.note ?? 'No note yet.'),
-        meta: `${kickback.pullingUpCount} pulling up | ${kickback.maybeCount} maybe`,
+        note: toBodyPreview(kickback.note ?? 'No note yet.'),
+        expiresAtUtc: kickback.expiresAtUtc,
+        creator: kickback.creatorDisplayName?.trim() || undefined,
+        pullingUpCount: kickback.pullingUpCount,
+        maybeCount: kickback.maybeCount,
+        currentMemberResponse: kickback.currentMemberResponse,
       }))
     );
 
@@ -361,6 +366,14 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           emptyText="No kickbacks to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/kickbacks')}
+          onCardPress={() => router.push('/(tabs)/(main)/kickbacks')}
+          renderCard={(item, index) => (
+            <KickbackCard
+              item={item}
+              index={index}
+              onPress={() => router.push('/(tabs)/(main)/kickbacks')}
+            />
+          )}
         />
 
         <DashboardSection
