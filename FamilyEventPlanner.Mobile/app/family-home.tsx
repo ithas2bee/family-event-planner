@@ -361,7 +361,7 @@ export default function FamilyHomeScreen() {
         />
 
         <DashboardSection
-          title="Kickbacks"
+          title="Recent Kickbacks"
           items={kickbacksPreview}
           loading={loadingPreviews}
           emptyText="No kickbacks to preview yet."

@@ -5,9 +5,10 @@ import type { DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
 
 const KICKBACK_TONES = [
-  { background: '#8B3A62', accent: '#FFD166', bubble: 'rgba(255,209,102,0.2)' },
-  { background: '#9A4D2F', accent: '#FFE0A3', bubble: 'rgba(255,224,163,0.2)' },
-  { background: '#3C557A', accent: '#A9E5BB', bubble: 'rgba(169,229,187,0.2)' },
+  { background: '#172536', accent: '#E8D9FF', bubble: 'rgba(255,117,91,0.48)' },
+  { background: '#12677A', accent: '#D9F8FF', bubble: 'rgba(255,177,67,0.42)' },
+  { background: '#6B351F', accent: '#FFE5C4', bubble: 'rgba(255,213,79,0.38)' },
+  { background: '#345E28', accent: '#E7F8D0', bubble: 'rgba(132,201,96,0.42)' },
 ];
 
 export type KickbackCardItem = DashboardCardItem & {
@@ -26,14 +27,9 @@ type KickbackCardProps = {
 };
 
 function formatExpiry(expiresAtUtc?: string): string {
-  if (!expiresAtUtc) {
-    return 'No end time';
-  }
-
+  if (!expiresAtUtc) return 'No end time';
   const date = new Date(expiresAtUtc);
-  if (Number.isNaN(date.getTime())) {
-    return 'End time pending';
-  }
+  if (Number.isNaN(date.getTime())) return 'End time pending';
 
   return `Until ${new Intl.DateTimeFormat(undefined, {
     month: 'short',
@@ -52,17 +48,17 @@ export function KickbackCard({ item, index, onPress }: KickbackCardProps) {
   const tone = KICKBACK_TONES[index % KICKBACK_TONES.length];
   const title = item.title || 'Kickback';
   const note = item.note?.trim() || 'No note yet.';
-  const responseLabel =
-    item.currentMemberResponse === 'PullingUp'
-      ? 'You are pulling up'
-      : item.currentMemberResponse === 'Maybe'
-        ? 'You might be there'
-        : 'Tap to respond';
-  const attendanceLabel = `${item.pullingUpCount ?? 0} pulling up • ${item.maybeCount ?? 0} maybe`;
+  const detailLabel = item.note?.trim()
+    ? note
+    : `${item.pullingUpCount ?? 0} pulling up • ${item.maybeCount ?? 0} maybe`;
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: tone.background },
+        pressed ? styles.cardPressed : null,
+      ]}
       onPress={onPress}
       android_ripple={{ color: 'rgba(255,255,255,0.16)' }}
       accessibilityRole="button"
@@ -71,44 +67,21 @@ export function KickbackCard({ item, index, onPress }: KickbackCardProps) {
       <View style={[styles.decorativeSmall, { backgroundColor: tone.bubble }]} />
 
       <View style={styles.content}>
-        <View style={styles.topRow}>
-          <View style={[styles.iconCircle, { backgroundColor: tone.accent }]}>
-            <MaterialIcons name="local-fire-department" size={24} color={tone.background} />
-          </View>
-          <View style={styles.contextBadge}>
-            <MaterialIcons name="groups" size={15} color="#FFFFFF" />
-            <ThemedText style={styles.contextText}>Kickback</ThemedText>
-          </View>
+        <View style={[styles.iconCircle, { backgroundColor: tone.accent }]}>
+          <MaterialIcons name="chat-bubble-outline" size={27} color="#1976F3" />
         </View>
 
-        <ThemedText style={styles.title} numberOfLines={2}>
-          {title}
-        </ThemedText>
-        <ThemedText style={styles.note} numberOfLines={2}>
-          {note}
-        </ThemedText>
-
-        <View style={styles.details}>
-          <ThemedText style={styles.detailText} numberOfLines={1}>
-            {formatExpiry(item.expiresAtUtc)}
+        <View style={styles.textContent}>
+          <ThemedText style={styles.title} numberOfLines={1}>
+            {title}
           </ThemedText>
-          {item.creator ? (
-            <ThemedText style={styles.detailText} numberOfLines={1}>
-              Posted by {item.creator}
-            </ThemedText>
-          ) : null}
-          <ThemedText style={styles.detailText} numberOfLines={1}>
-            {attendanceLabel}
+          <ThemedText style={styles.note} numberOfLines={1}>
+            {detailLabel}
           </ThemedText>
         </View>
 
-        <View style={styles.footer}>
-          <ThemedText style={[styles.responseText, { color: tone.accent }]} numberOfLines={1}>
-            {responseLabel}
-          </ThemedText>
-          <View style={styles.ctaCircle}>
-            <MaterialIcons name="arrow-forward" size={20} color={tone.background} />
-          </View>
+        <View style={styles.ctaCircle}>
+          <MaterialIcons name="arrow-forward" size={22} color="#FFFFFF" />
         </View>
       </View>
     </Pressable>
@@ -118,107 +91,70 @@ export function KickbackCard({ item, index, onPress }: KickbackCardProps) {
 const styles = StyleSheet.create({
   card: {
     width: 300,
-    minHeight: 218,
-    borderRadius: 24,
+    height: 122,
+    borderRadius: 18,
     overflow: 'hidden',
-    backgroundColor: '#8B3A62',
     shadowColor: '#11213A',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
     elevation: 6,
   },
   cardPressed: {
-    opacity: 0.9,
+    opacity: 0.88,
   },
   content: {
     flex: 1,
-    gap: 10,
-    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 14,
   },
   decorativeLarge: {
     position: 'absolute',
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    right: -62,
-    top: -74,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    right: -54,
+    top: -85,
   },
   decorativeSmall: {
     position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    left: 126,
-    bottom: -56,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    left: 160,
+    bottom: -58,
   },
   iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  contextBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.17)',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-  },
-  contextText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 16,
+  textContent: {
+    flex: 1,
+    gap: 4,
   },
   title: {
     color: '#FFFFFF',
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: '700',
     lineHeight: 26,
   },
   note: {
-    minHeight: 36,
-    color: 'rgba(255,255,255,0.88)',
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  details: {
-    gap: 3,
-  },
-  detailText: {
-    color: 'rgba(255,255,255,0.76)',
-    fontSize: 13,
-    lineHeight: 17,
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: '600',
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginTop: 'auto',
-  },
-  responseText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
   ctaCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(24,36,54,0.58)',
   },
 });
