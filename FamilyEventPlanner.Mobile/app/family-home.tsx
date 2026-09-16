@@ -284,8 +284,6 @@ export default function FamilyHomeScreen() {
         <View style={styles.infoGroup}>
           <ThemedText type="defaultSemiBold">Welcome to {groupName || 'Unknown Group'}</ThemedText>
           <ThemedText>Hello, {memberName || 'Unknown Member'}</ThemedText>
-          <ThemedText>Group ID: {groupId || 'Unknown'}</ThemedText>
-          <ThemedText>Member ID: {memberId || 'Unknown'}</ThemedText>
         </View>
 
         <DashboardSection
