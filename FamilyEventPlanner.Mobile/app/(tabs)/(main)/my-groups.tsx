@@ -2,13 +2,12 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
+import { API_BASE_URL } from '@/config/api';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getGroupMemberByUser } from '@/services/groupMemberService';
 import { clearSession, loadSession, type AppSession } from '@/services/sessionService';
-
-const API_BASE_URL = 'http://10.0.0.115:5249';
 
 type MyGroup = {
   groupId: string;
