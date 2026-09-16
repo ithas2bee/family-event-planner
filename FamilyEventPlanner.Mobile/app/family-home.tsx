@@ -1,7 +1,9 @@
 import { useFocusEffect } from '@react-navigation/native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { API_BASE_URL } from '@/config/api';
 import { AnnouncementCard, type AnnouncementCardItem } from '@/components/announcement-card';
@@ -95,7 +97,21 @@ function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
   }));
 }
 
+function getInitials(name: string): string {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return initials || '?';
+}
+
 export default function FamilyHomeScreen() {
+  const insets = useSafeAreaInsets();
   const {
     groupId: contextGroupId,
     groupName: contextGroupName,
@@ -147,17 +163,20 @@ export default function FamilyHomeScreen() {
     let cancelled = false;
 
     async function resolveMember() {
-      if (!groupId) return;
-
       const session = await loadSession();
       if (!session) {
         router.replace('/auth');
         return;
       }
 
+      if (!memberName && session.displayName) {
+        setMemberName(session.displayName);
+      }
+
+      if (!groupId) return;
+
       // If we already have a memberId from params/session, keep it
       if (memberId) {
-        if (!memberName && session.displayName) setMemberName(session.displayName);
         return;
       }
 
@@ -307,22 +326,38 @@ export default function FamilyHomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ThemedText type="title" style={styles.title}>
-          Family Home
-        </ThemedText>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
+          <View style={styles.headerCopy}>
+            <ThemedText type="title" style={styles.title}>
+              Family Home
+            </ThemedText>
+            <ThemedText type="subtitle" style={styles.greeting}>
+              Good morning, {memberName || 'there'}!
+            </ThemedText>
+            <ThemedText style={styles.supportingMessage}>Great families make great memories 💙</ThemedText>
+          </View>
 
-        <View style={styles.infoGroup}>
-          <ThemedText type="defaultSemiBold">Welcome to {groupName || 'Unknown Group'}</ThemedText>
-          <ThemedText>Hello, {memberName || 'Unknown Member'}</ThemedText>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityLabel="Open notifications"
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => router.push('/(tabs)/(main)/activity')}
+              style={styles.iconButton}
+            >
+              <MaterialIcons name="notifications-none" size={26} color="#174B5C" />
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Open profile"
+              accessibilityRole="button"
+              hitSlop={6}
+              onPress={() => router.push('/(tabs)/(main)/my-groups')}
+              style={styles.profileButton}
+            >
+              <ThemedText style={styles.profileInitials}>{getInitials(memberName)}</ThemedText>
+            </Pressable>
+          </View>
         </View>
-
-        <DashboardSection
-          title="My Groups"
-          items={myGroupsPreview}
-          loading={loadingPreviews}
-          emptyText="No groups to preview yet."
-          onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
-        />
 
         <FamilyMembersSection
           members={membersPreview}
@@ -330,6 +365,14 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           onViewAll={() => router.push('/(tabs)/(main)/members')}
           onInvite={() => router.push('/join-group')}
+        />
+
+        <DashboardSection
+          title="My Groups"
+          items={myGroupsPreview}
+          loading={loadingPreviews}
+          emptyText="No groups to preview yet."
+          onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
         />
 
         <DashboardSection
@@ -414,14 +457,52 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 28,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  headerCopy: {
+    flex: 1,
+    gap: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 4,
+  },
   title: {
     textAlign: 'left',
-    fontSize: 30,
-    lineHeight: 34,
+    fontSize: 32,
+    lineHeight: 36,
   },
-  infoGroup: {
-    alignItems: 'flex-start',
-    gap: 4,
+  greeting: {
+    fontSize: 20,
+    lineHeight: 26,
+  },
+  supportingMessage: {
+    color: '#687076',
+  },
+  iconButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+  },
+  profileButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#DCEAF0',
+  },
+  profileInitials: {
+    color: '#174B5C',
+    fontSize: 14,
+    fontWeight: '700',
   },
   logoutButton: {
     borderRadius: 10,
