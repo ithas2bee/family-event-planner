@@ -236,7 +236,12 @@ export default function EventDetailsScreen() {
         </View>
 
         <View style={styles.detailsCard}>
-          <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
+          <View style={styles.titleRow}>
+            <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
+            <View style={styles.nextUpBadge}>
+              <ThemedText style={styles.nextUpText}>Next Up</ThemedText>
+            </View>
+          </View>
           <View style={styles.infoRow}>
             <View style={styles.iconCircle}><MaterialIcons name="event" size={19} color="#087AC5" /></View>
             <View style={styles.infoCopy}>
@@ -257,7 +262,7 @@ export default function EventDetailsScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeading}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Attendance</ThemedText>
-            <ThemedText style={styles.attendanceCount}>{goingCount} going · {maybeCount} maybe</ThemedText>
+            <ThemedText style={styles.attendanceCount}>{goingCount} going · {maybeCount} maybe · {attendance.filter((item) => item.rsvp === 2).length} can&apos;t go</ThemedText>
           </View>
           <View style={styles.responseRow}>
             {[
@@ -290,7 +295,7 @@ export default function EventDetailsScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeading}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Attendees</ThemedText>
-            <ThemedText style={styles.attendanceCount}>{attendance.length} responded</ThemedText>
+            <ThemedText style={styles.seeAll}>See All</ThemedText>
           </View>
           {attendees.length > 0 ? (
             <View style={styles.attendeeList}>
@@ -305,6 +310,23 @@ export default function EventDetailsScreen() {
             </View>
           ) : <ThemedText style={styles.sectionText}>No attendee responses yet.</ThemedText>}
         </View>
+
+        {(event.assignments?.length ?? 0) > 0 ? (
+          <View style={styles.assignmentsSection}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Assignments</ThemedText>
+            {event.assignments?.map((assignment, index) => (
+              <View key={`${assignment.memberName}-${index}`} style={styles.assignmentRow}>
+                <View style={styles.assignmentIcon}>
+                  <MaterialIcons name="assignment" size={16} color="#087AC5" />
+                </View>
+                <View style={styles.assignmentCopy}>
+                  <ThemedText style={styles.assignmentName}>{assignment.memberName}</ThemedText>
+                  <ThemedText style={styles.assignmentTask}>{assignment.task}</ThemedText>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {isCreator ? (
           <Pressable style={styles.settingsButton} onPress={() => setIsEditing(true)}>
@@ -346,24 +368,6 @@ export default function EventDetailsScreen() {
           </GlassCard>
         )}
 
-        {(event.assignments && event.assignments.length > 0) && (
-          <GlassCard style={styles.section} padding={Spacing.lg}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              Assignments
-            </ThemedText>
-            <View style={styles.assignmentsList}>
-              {event.assignments.map((assignment, index) => (
-                <ThemedText
-                  key={index}
-                  style={styles.assignmentLine}
-                  numberOfLines={0}
-                >
-                  {assignment.memberName} <ThemedText style={styles.assignmentDash}>—</ThemedText> {assignment.task}
-                </ThemedText>
-              ))}
-            </View>
-          </GlassCard>
-        )}
       </View>
 
       {/* Immersive Editing Form */}
@@ -583,6 +587,24 @@ const styles = StyleSheet.create({
     color: '#16213A',
     fontSize: 24,
     lineHeight: 30,
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+  },
+  nextUpBadge: {
+    borderRadius: 999,
+    backgroundColor: '#1689EE',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 2,
+  },
+  nextUpText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
   infoRow: {
     flexDirection: 'row',
@@ -620,6 +642,13 @@ const styles = StyleSheet.create({
   attendanceCount: {
     color: '#6B7A90',
     fontSize: Typography.sizes.xs,
+    flexShrink: 1,
+    textAlign: 'right',
+  },
+  seeAll: {
+    color: '#087AC5',
+    fontSize: Typography.sizes.xs,
+    fontWeight: '600',
   },
   responseRow: {
     flexDirection: 'row',
@@ -694,6 +723,42 @@ const styles = StyleSheet.create({
     color: '#087AC5',
     fontSize: Typography.sizes.sm,
     fontWeight: '700',
+  },
+  assignmentsSection: {
+    marginHorizontal: Spacing.lg,
+    borderRadius: 18,
+    padding: Spacing.lg,
+    gap: Spacing.sm,
+    backgroundColor: '#FFFFFF',
+  },
+  assignmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#EDF1F6',
+    paddingTop: Spacing.sm,
+  },
+  assignmentIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAF5FF',
+  },
+  assignmentCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  assignmentName: {
+    color: '#243750',
+    fontSize: Typography.sizes.sm,
+    fontWeight: '700',
+  },
+  assignmentTask: {
+    color: '#6B7A90',
+    fontSize: Typography.sizes.xs,
   },
   section: {
     marginHorizontal: Spacing.lg,
