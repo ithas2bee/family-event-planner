@@ -91,7 +91,11 @@ function getStatusLabel(startDate: string, isNextUp?: boolean) {
     return 'Next Up';
   }
 
-  if (dayDifference <= 0) {
+  if (dayDifference < 0) {
+    return 'Passed';
+  }
+
+  if (dayDifference === 0) {
     return 'Today';
   }
 

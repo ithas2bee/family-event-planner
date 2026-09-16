@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { cloneElement, isValidElement, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -65,7 +65,10 @@ export function DashboardSection<T extends DashboardCardItem>({
         ) : (
           items.map((item, index) => {
             if (renderCard) {
-              return <View key={item.id}>{renderCard(item, index)}</View>;
+              const renderedCard = renderCard(item, index);
+              return isValidElement(renderedCard)
+                ? cloneElement(renderedCard, { key: item.id })
+                : renderedCard;
             }
 
             const content = (
