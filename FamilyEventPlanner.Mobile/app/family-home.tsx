@@ -264,8 +264,11 @@ export default function FamilyHomeScreen() {
       pollsData.slice(0, PREVIEW_LIMIT).map((poll) => ({
         id: poll.id,
         title: poll.question || 'Untitled Poll',
-        optionCount: poll.options.length,
-        voteCount: poll.options.reduce((total, option) => total + option.voteCount, 0),
+        optionCount: poll.options.length > 0 ? poll.options.length : undefined,
+        voteCount:
+          poll.options.length > 0
+            ? poll.options.reduce((total, option) => total + option.voteCount, 0)
+            : undefined,
       }))
     );
 
