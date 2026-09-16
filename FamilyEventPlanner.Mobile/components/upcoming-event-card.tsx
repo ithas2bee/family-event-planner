@@ -52,6 +52,7 @@ function formatEventDateParts(startDate: string) {
 
   if (Number.isNaN(parsedDate.getTime())) {
     return {
+      hasValidDate: false,
       monthDay: 'TBD',
       shortDate: startDate || 'Date pending',
       time: 'Time pending',
@@ -59,6 +60,7 @@ function formatEventDateParts(startDate: string) {
   }
 
   return {
+    hasValidDate: true,
     monthDay: new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(parsedDate),
     shortDate: new Intl.DateTimeFormat(undefined, {
       weekday: 'short',
@@ -133,6 +135,9 @@ export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardPro
     item.participantCount && item.participantCount > 0
       ? `${item.participantCount} plan${item.participantCount === 1 ? '' : 's'} assigned`
       : 'Family event';
+  const accessibilityLabel = dateParts.hasValidDate
+    ? `${item.title}. ${statusLabel}. ${dateParts.shortDate} at ${dateParts.time}.`
+    : `${item.title}. ${statusLabel}. ${dateParts.shortDate}.`;
 
   return (
     <Pressable
@@ -140,7 +145,7 @@ export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardPro
       onPress={onPress}
       android_ripple={{ color: 'rgba(53,80,112,0.08)' }}
       accessibilityRole="button"
-      accessibilityLabel={`${item.title}. ${statusLabel}. ${dateParts.shortDate} at ${dateParts.time}.`}>
+      accessibilityLabel={accessibilityLabel}>
       <View style={[styles.header, { backgroundColor: tone.background }]}>
         <View style={[styles.headerBubbleLarge, { backgroundColor: tone.bubble }]} />
         <View style={[styles.headerBubbleSmall, { backgroundColor: tone.bubble }]} />

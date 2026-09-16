@@ -59,14 +59,35 @@ function toBodyPreview(text: string, maxLength = 72): string {
 }
 
 function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
-  return events.slice(0, PREVIEW_LIMIT).map((event, index) => ({
+  const previewEvents = events.slice(0, PREVIEW_LIMIT);
+  const nextUpEventId = previewEvents.reduce<string | null>((closestEventId, event) => {
+    const parsedDate = new Date(event.startDate);
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getTime() < Date.now()) {
+      return closestEventId;
+    }
+
+    if (!closestEventId) {
+      return event.id;
+    }
+
+    const closestEvent = previewEvents.find((previewEvent) => previewEvent.id === closestEventId);
+    const closestDate = closestEvent ? new Date(closestEvent.startDate) : null;
+
+    if (!closestDate || Number.isNaN(closestDate.getTime()) || parsedDate.getTime() < closestDate.getTime()) {
+      return event.id;
+    }
+
+    return closestEventId;
+  }, null);
+
+  return previewEvents.map((event) => ({
     id: event.id,
     title: event.title || 'Untitled Event',
     startDate: event.startDate,
     location: event.location?.trim() || undefined,
     host: event.creatorDisplayName?.trim() || undefined,
     participantCount: event.assignments?.length,
-    isNextUp: index === 0,
+    isNextUp: event.id === nextUpEventId,
   }));
 }
 
