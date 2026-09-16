@@ -6,7 +6,7 @@ import { loadSession } from '@/services/sessionService';
 export type PollOption = {
   id: string;
   text: string;
-  voteCount: number;
+  voteCount?: number;
 };
 
 export type Poll = {
@@ -19,6 +19,7 @@ export type Poll = {
   createdAt: string;
   currentMemberSelectedOptionId?: string;
   options: PollOption[];
+  optionsAvailable: boolean;
 };
 
 async function getPollHeaders(): Promise<Record<string, string>> {
@@ -82,7 +83,9 @@ function mapPollOption(payload: unknown): PollOption {
   return {
     id: String(option.id ?? ''),
     text: String(option.text ?? ''),
-    voteCount: Number(option.voteCount ?? 0),
+    voteCount: typeof option.voteCount === 'number' && Number.isFinite(option.voteCount)
+      ? option.voteCount
+      : undefined,
   };
 }
 
@@ -112,6 +115,7 @@ function mapPoll(payload: unknown): Poll {
         ? String(poll.currentMemberSelectedOptionId)
         : undefined,
     options: Array.isArray(poll.options) ? poll.options.map(mapPollOption) : [],
+    optionsAvailable: Array.isArray(poll.options),
   };
 }
 

@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -8,6 +9,8 @@ export type DashboardCardItem = {
   title: string;
   subtitle?: string;
   meta?: string;
+  pollOptionCount?: number;
+  pollVoteCount?: number;
 };
 
 type DashboardSectionProps = {
@@ -18,6 +21,7 @@ type DashboardSectionProps = {
   viewAllLabel?: string;
   onViewAll: () => void;
   onCardPress?: (item: DashboardCardItem) => void;
+  renderCard?: (item: DashboardCardItem) => ReactNode;
 };
 
 export function DashboardSection({
@@ -28,6 +32,7 @@ export function DashboardSection({
   viewAllLabel = 'View All',
   onViewAll,
   onCardPress,
+  renderCard,
 }: DashboardSectionProps) {
   return (
     <ThemedView style={styles.section}>
@@ -57,6 +62,10 @@ export function DashboardSection({
           </ThemedView>
         ) : (
           items.map((item) => {
+            if (renderCard) {
+              return <View key={item.id}>{renderCard(item)}</View>;
+            }
+
             const content = (
               <>
                 <ThemedText type="defaultSemiBold" style={styles.cardTitle} numberOfLines={2}>

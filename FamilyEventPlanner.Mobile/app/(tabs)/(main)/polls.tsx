@@ -156,7 +156,9 @@ export default function PollsScreen() {
                       onPress={() => handleVote(item.id, option.id, hasVoted)}
                       disabled={!canVote}>
                       <ThemedText>
-                        {option.text} ({option.voteCount}) {isSelected ? '(Your Vote)' : ''}
+                        {option.text}
+                        {option.voteCount !== undefined ? ` (${option.voteCount})` : ''}
+                        {isSelected ? ' (Your Vote)' : ''}
                       </ThemedText>
                     </Pressable>
                   );

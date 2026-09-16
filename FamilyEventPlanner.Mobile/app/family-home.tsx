@@ -1,4 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -21,6 +22,40 @@ type MyGroupPreview = {
   groupId: string;
   groupName: string;
 };
+
+function PollCard({ item }: { item: DashboardCardItem }) {
+  const optionCount = item.pollOptionCount;
+  const voteCount = item.pollVoteCount;
+  const details = [
+    optionCount !== undefined ? `${optionCount} option${optionCount === 1 ? '' : 's'}` : null,
+    voteCount !== undefined ? `${voteCount} vote${voteCount === 1 ? '' : 's'}` : null,
+  ].filter(Boolean).join(' • ');
+  const accessibilityLabel = [item.title, 'poll', details].filter(Boolean).join('. ');
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.pollCard, pressed && styles.pollCardPressed]}
+      onPress={() => router.push('/(tabs)/(main)/polls')}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}>
+      <View style={styles.pollHeader}>
+        <View style={styles.pollIcon}>
+          <Ionicons name="bar-chart" size={24} color="#2563EB" />
+        </View>
+        <View style={styles.pollHeaderCopy}>
+          <ThemedText style={styles.pollEyebrow}>FAMILY DECISION</ThemedText>
+          <ThemedText style={styles.pollPrompt} numberOfLines={2}>
+            {item.title}
+          </ThemedText>
+        </View>
+        <View style={styles.pollArrow}>
+          <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+        </View>
+      </View>
+      {details ? <ThemedText style={styles.pollDetails} numberOfLines={1}>{details}</ThemedText> : null}
+    </Pressable>
+  );
+}
 
 function mapGroups(raw: unknown): MyGroupPreview[] {
   if (!Array.isArray(raw)) return [];
@@ -205,7 +240,6 @@ export default function FamilyHomeScreen() {
         id: group.groupId,
         title: group.groupName,
         subtitle: group.groupId === groupId ? 'Active group' : 'Available group',
-        meta: group.groupId,
       }))
     );
 
@@ -214,7 +248,6 @@ export default function FamilyHomeScreen() {
         id: String(member.memberId ?? index),
         title: String(member.displayName ?? 'Unknown Member'),
         subtitle: member.isAdmin ? 'Admin' : 'Member',
-        meta: String(member.memberId ?? ''),
       }))
     );
 
@@ -231,9 +264,11 @@ export default function FamilyHomeScreen() {
       pollsData.slice(0, PREVIEW_LIMIT).map((poll) => ({
         id: poll.id,
         title: poll.question || 'Untitled Poll',
-        subtitle: `${poll.options.length} option${poll.options.length === 1 ? '' : 's'}`,
-        meta: poll.creatorDisplayName || 'Unknown Member',
-      }))
+      pollOptionCount: poll.optionsAvailable ? poll.options.length : undefined,
+      pollVoteCount: poll.optionsAvailable && poll.options.every((option) => option.voteCount !== undefined)
+        ? poll.options.reduce((total, option) => total + (option.voteCount ?? 0), 0)
+        : undefined,
+    }))
     );
 
     setKickbacksPreview(
@@ -284,8 +319,6 @@ export default function FamilyHomeScreen() {
         <View style={styles.infoGroup}>
           <ThemedText type="defaultSemiBold">Welcome to {groupName || 'Unknown Group'}</ThemedText>
           <ThemedText>Hello, {memberName || 'Unknown Member'}</ThemedText>
-          <ThemedText>Group ID: {groupId || 'Unknown'}</ThemedText>
-          <ThemedText>Member ID: {memberId || 'Unknown'}</ThemedText>
         </View>
 
         <DashboardSection
@@ -313,11 +346,13 @@ export default function FamilyHomeScreen() {
         />
 
         <DashboardSection
-          title="Polls"
+          title="Active Polls"
           items={pollsPreview}
           loading={loadingPreviews}
           emptyText="No polls to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/polls')}
+          onCardPress={() => router.push('/(tabs)/(main)/polls')}
+          renderCard={(item) => <PollCard item={item} />}
         />
 
         <DashboardSection
@@ -374,5 +409,68 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontSize: 16,
+  },
+  pollCard: {
+    width: 280,
+    minHeight: 134,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+  pollCardPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
+  },
+  pollHeader: {
+    minHeight: 92,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#172554',
+  },
+  pollIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5F3FF',
+  },
+  pollHeaderCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  pollEyebrow: {
+    color: '#BFDBFE',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  pollPrompt: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '700',
+  },
+  pollArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  pollDetails: {
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
