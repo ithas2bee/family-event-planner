@@ -103,7 +103,7 @@ function getStatusLabel(startDate: string, isNextUp?: boolean) {
     return 'Tomorrow';
   }
 
-  return `In ${dayDifference} Days`;
+  return `In ${dayDifference} day${dayDifference === 1 ? '' : 's'}`;
 }
 
 function getEventTone(title: string, index: number): EventTone {
