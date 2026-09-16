@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { API_BASE_URL } from '@/config/api';
+import { AnnouncementCard, type AnnouncementCardItem } from '@/components/announcement-card';
 import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
 import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
 import { FamilyMembersSection } from '@/components/family-members-section';
@@ -53,7 +54,7 @@ function mapGroups(raw: unknown): MyGroupPreview[] {
     .filter((group): group is MyGroupPreview => group !== null);
 }
 
-function toBodyPreview(text: string, maxLength = 72): string {
+function toBodyPreview(text: string, maxLength = 96): string {
   const trimmed = text.trim();
   if (trimmed.length <= maxLength) {
     return trimmed;
@@ -114,7 +115,7 @@ export default function FamilyHomeScreen() {
 
   const [myGroupsPreview, setMyGroupsPreview] = useState<DashboardCardItem[]>([]);
   const [membersPreview, setMembersPreview] = useState<GroupMember[]>([]);
-  const [announcementsPreview, setAnnouncementsPreview] = useState<DashboardCardItem[]>([]);
+  const [announcementsPreview, setAnnouncementsPreview] = useState<AnnouncementCardItem[]>([]);
   const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
   const [kickbacksPreview, setKickbacksPreview] = useState<KickbackCardItem[]>([]);
   const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
@@ -251,8 +252,8 @@ export default function FamilyHomeScreen() {
       announcementsData.slice(0, PREVIEW_LIMIT).map((announcement) => ({
         id: announcement.id,
         title: announcement.title || 'Untitled Announcement',
-        subtitle: toBodyPreview(announcement.body),
-        meta: announcement.creatorDisplayName || 'Unknown Member',
+        message: toBodyPreview(announcement.body),
+        author: announcement.creatorDisplayName?.trim() || undefined,
       }))
     );
 
@@ -337,6 +338,13 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           emptyText="No announcements to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/announcements')}
+          onCardPress={() => router.push('/(tabs)/(main)/announcements')}
+          renderCard={(item) => (
+            <AnnouncementCard
+              item={item}
+              onPress={() => router.push('/(tabs)/(main)/announcements')}
+            />
+          )}
         />
 
         <DashboardSection
