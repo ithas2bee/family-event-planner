@@ -161,9 +161,8 @@ export default function EventDetailsScreen() {
     const date = new Date(event.startDate);
     if (Number.isNaN(date.getTime())) return;
     const endDate = event.endDate ? new Date(event.endDate) : new Date(date.getTime() + 60 * 60 * 1000);
-    const calendarUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(
-      `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${event.title}\nDTSTART:${date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}\nDTEND:${endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}\nLOCATION:${event.location || ''}\nDESCRIPTION:${event.description || ''}\nEND:VEVENT\nEND:VCALENDAR`,
-    )}`;
+    const calendarDate = `${date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}/${endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}`;
+    const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${calendarDate}&location=${encodeURIComponent(event.location || '')}&details=${encodeURIComponent(event.description || '')}`;
     await Linking.openURL(calendarUrl);
   };
 
