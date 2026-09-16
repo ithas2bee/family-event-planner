@@ -205,7 +205,6 @@ export default function FamilyHomeScreen() {
         id: group.groupId,
         title: group.groupName,
         subtitle: group.groupId === groupId ? 'Active group' : 'Available group',
-        meta: group.groupId,
       }))
     );
 
@@ -214,7 +213,6 @@ export default function FamilyHomeScreen() {
         id: String(member.memberId ?? index),
         title: String(member.displayName ?? 'Unknown Member'),
         subtitle: member.isAdmin ? 'Admin' : 'Member',
-        meta: String(member.memberId ?? ''),
       }))
     );
 
