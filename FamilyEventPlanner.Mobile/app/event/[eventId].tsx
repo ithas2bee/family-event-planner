@@ -1,5 +1,3 @@
-import { EventDetailsCard } from '@/components/events/EventDetailsCard';
-import { EventHeroSection } from '@/components/events/EventHeroSection';
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
@@ -7,12 +5,14 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
+import { getEventAttendance, saveEventAttendance, AttendanceResponse } from '@/services/eventAttendanceService';
 import { Event, getEventById, updateEvent } from '@/services/eventService';
 import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 
 export default function EventDetailsScreen() {
   const { eventId } = useLocalSearchParams();
@@ -24,6 +24,10 @@ export default function EventDetailsScreen() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [groupMembers, setGroupMembers] = useState<GroupMember[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceResponse[]>([]);
+  const [selectedResponse, setSelectedResponse] = useState(0);
+  const [responseLoading, setResponseLoading] = useState(false);
+  const [responseError, setResponseError] = useState<string | null>(null);
   const [activeAssignmentIndex, setActiveAssignmentIndex] = useState<number | null>(null);
 
   useEffect(() => {
@@ -45,9 +49,13 @@ export default function EventDetailsScreen() {
         ]);
 
         let members: GroupMember[] = [];
+        let eventAttendance: AttendanceResponse[] = [];
         if (eventData.familyGroupId && session?.memberId) {
           try {
-            members = await getGroupMembers(eventData.familyGroupId, session.memberId);
+            [members, eventAttendance] = await Promise.all([
+              getGroupMembers(eventData.familyGroupId, session.memberId),
+              getEventAttendance(validEventId),
+            ]);
           } catch {
             // Keep editing usable even if member suggestions cannot be loaded.
           }
@@ -57,6 +65,8 @@ export default function EventDetailsScreen() {
           setEvent(eventData);
           setCurrentMemberId(session?.memberId || '');
           setGroupMembers(members);
+          setAttendance(eventAttendance);
+          setSelectedResponse(eventAttendance.find((item) => item.memberId === session?.memberId)?.rsvp ?? 0);
           setError(null);
         }
       } catch (err) {
@@ -107,6 +117,44 @@ export default function EventDetailsScreen() {
   };
 
   const isCreator = Boolean(event?.createdByMemberId && currentMemberId && event.createdByMemberId === currentMemberId);
+  const memberNames = new Map(
+    groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Family member']),
+  );
+  const attendees = attendance
+    .filter((item) => item.rsvp === 1)
+    .map((item) => ({ ...item, name: memberNames.get(item.memberId) || 'Family member' }));
+  const maybeCount = attendance.filter((item) => item.rsvp === 3).length;
+  const goingCount = attendees.length;
+
+  const handleResponse = async (response: number) => {
+    if (!event || !event.id || responseLoading) return;
+    setResponseLoading(true);
+    setResponseError(null);
+    try {
+      const saved = await saveEventAttendance(event.id, response);
+      setSelectedResponse(saved.rsvp);
+      setAttendance((current) => [
+        ...current.filter((item) => item.memberId !== currentMemberId),
+        saved,
+      ]);
+    } catch (err) {
+      setResponseError(err instanceof Error ? err.message : 'Unable to update your response.');
+    } finally {
+      setResponseLoading(false);
+    }
+  };
+
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return { date: 'Date to be announced', time: 'Time to be announced' };
+    return {
+      date: new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(date),
+      time: new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(date),
+    };
+  };
+
+  const getInitials = (name: string) =>
+    name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || '?';
 
   if (loading) {
     return (
@@ -178,33 +226,92 @@ export default function EventDetailsScreen() {
 
   return (
     <ScreenContainer withScroll padding={0}>
-      <EventHeroSection
-        title={event.title}
-        height={172}
-        glowScale={0.72}
-      />
-
       <View style={styles.contentContainer}>
-        <EventDetailsCard
-          title={event.title}
-          date={event.startDate ? new Date(event.startDate).toLocaleString() : 'TBD'}
-          location={event.location || 'TBD'}
-          onPressDate={() => {}}
-          onPressLocation={() => {}}
-          onPressSettings={() => setIsEditing(true)}
-          showSettings={isCreator}
-        />
+        <View style={styles.hero}>
+          {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.heroImage} /> : null}
+          <View style={styles.heroOrbLarge} />
+          <View style={styles.heroOrbSmall} />
+          <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
+          <ThemedText type="title" style={styles.heroTitle} numberOfLines={3}>{event.title || 'Family Event'}</ThemedText>
+        </View>
 
-        {event.description && (
-          <GlassCard style={styles.section} padding={Spacing.lg}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              Description
-            </ThemedText>
-            <ThemedText style={styles.sectionText}>
-              {event.description}
-            </ThemedText>
-          </GlassCard>
-        )}
+        <View style={styles.detailsCard}>
+          <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
+          <View style={styles.infoRow}>
+            <View style={styles.iconCircle}><MaterialIcons name="event" size={19} color="#087AC5" /></View>
+            <View style={styles.infoCopy}>
+              <ThemedText style={styles.infoLabel}>Date & time</ThemedText>
+              <ThemedText style={styles.infoValue}>{formatDate(event.startDate).date}</ThemedText>
+              <ThemedText style={styles.infoValue}>{formatDate(event.startDate).time}</ThemedText>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <View style={styles.iconCircle}><MaterialIcons name="place" size={19} color="#087AC5" /></View>
+            <View style={styles.infoCopy}>
+              <ThemedText style={styles.infoLabel}>Location</ThemedText>
+              <ThemedText style={styles.infoValue} numberOfLines={2}>{event.location?.trim() || 'Location to be announced'}</ThemedText>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeading}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Attendance</ThemedText>
+            <ThemedText style={styles.attendanceCount}>{goingCount} going · {maybeCount} maybe</ThemedText>
+          </View>
+          <View style={styles.responseRow}>
+            {[
+              { value: 1, label: 'Going', icon: 'check-circle' as const },
+              { value: 3, label: 'Maybe', icon: 'help' as const },
+              { value: 2, label: "Can't Go", icon: 'cancel' as const },
+            ].map((option) => (
+              <Pressable
+                key={option.value}
+                accessibilityRole="button"
+                accessibilityState={{ selected: selectedResponse === option.value }}
+                onPress={() => handleResponse(option.value)}
+                style={[styles.responseButton, selectedResponse === option.value && styles.responseButtonSelected]}>
+                <MaterialIcons name={option.icon} size={19} color={selectedResponse === option.value ? '#FFFFFF' : '#45617F'} />
+                <ThemedText style={[styles.responseText, selectedResponse === option.value && styles.responseTextSelected]}>{option.label}</ThemedText>
+              </Pressable>
+            ))}
+          </View>
+          {responseLoading ? <ActivityIndicator size="small" color="#087AC5" /> : null}
+          {responseError ? <ThemedText style={styles.errorMessage}>{responseError}</ThemedText> : null}
+        </View>
+
+        {event.description?.trim() ? (
+          <View style={styles.section}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>About this event</ThemedText>
+            <ThemedText style={styles.sectionText}>{event.description}</ThemedText>
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeading}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Attendees</ThemedText>
+            <ThemedText style={styles.attendanceCount}>{attendance.length} responded</ThemedText>
+          </View>
+          {attendees.length > 0 ? (
+            <View style={styles.attendeeList}>
+              {attendees.slice(0, 8).map((attendee, index) => (
+                <View key={attendee.memberId} style={styles.attendee}>
+                  <View style={[styles.avatar, { backgroundColor: ['#D9F0F2', '#E9E1FF', '#DDF2E8', '#FFE7D0'][index % 4] }]}>
+                    <ThemedText style={styles.avatarText}>{getInitials(attendee.name)}</ThemedText>
+                  </View>
+                  <ThemedText style={styles.attendeeName} numberOfLines={1}>{attendee.name}</ThemedText>
+                </View>
+              ))}
+            </View>
+          ) : <ThemedText style={styles.sectionText}>No attendee responses yet.</ThemedText>}
+        </View>
+
+        {isCreator ? (
+          <Pressable style={styles.settingsButton} onPress={() => setIsEditing(true)}>
+            <MaterialIcons name="settings" size={18} color="#087AC5" />
+            <ThemedText style={styles.settingsText}>Edit event details</ThemedText>
+          </Pressable>
+        ) : null}
 
         {event.dressCode && (
           <GlassCard style={styles.section} padding={Spacing.lg}>
@@ -418,6 +525,175 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     paddingVertical: Spacing.lg,
     gap: Spacing.md,
+    backgroundColor: '#F5F8FC',
+  },
+  hero: {
+    minHeight: 220,
+    marginHorizontal: Spacing.lg,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#147D8A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.xl,
+  },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.75,
+  },
+  heroOrbLarge: {
+    position: 'absolute',
+    width: 230,
+    height: 230,
+    borderRadius: 115,
+    right: -70,
+    bottom: -100,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  heroOrbSmall: {
+    position: 'absolute',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    left: -35,
+    top: -35,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    textAlign: 'center',
+    fontSize: Typography.sizes.display,
+    lineHeight: 38,
+    marginTop: Spacing.md,
+  },
+  detailsCard: {
+    marginHorizontal: Spacing.lg,
+    marginTop: -Spacing.xl,
+    borderRadius: 20,
+    padding: Spacing.xl,
+    gap: Spacing.lg,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#203B5A',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
+  },
+  title: {
+    color: '#16213A',
+    fontSize: 24,
+    lineHeight: 30,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAF5FF',
+  },
+  infoCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  infoLabel: {
+    color: '#6B7A90',
+    fontSize: Typography.sizes.xs,
+    fontWeight: '600',
+  },
+  infoValue: {
+    color: '#31435F',
+    fontSize: Typography.sizes.sm,
+    lineHeight: 19,
+  },
+  sectionHeading: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  attendanceCount: {
+    color: '#6B7A90',
+    fontSize: Typography.sizes.xs,
+  },
+  responseRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  responseButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#D8E2EE',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingHorizontal: 2,
+  },
+  responseButtonSelected: {
+    borderColor: '#087AC5',
+    backgroundColor: '#087AC5',
+  },
+  responseText: {
+    color: '#45617F',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  responseTextSelected: {
+    color: '#FFFFFF',
+  },
+  attendeeList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.md,
+  },
+  attendee: {
+    width: 64,
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  avatarText: {
+    color: '#294B68',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  attendeeName: {
+    width: '100%',
+    color: '#45617F',
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  settingsButton: {
+    marginHorizontal: Spacing.lg,
+    minHeight: 46,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#C9DDED',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  settingsText: {
+    color: '#087AC5',
+    fontSize: Typography.sizes.sm,
+    fontWeight: '700',
   },
   section: {
     marginHorizontal: Spacing.lg,
