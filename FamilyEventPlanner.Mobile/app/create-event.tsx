@@ -59,7 +59,7 @@ export default function CreateEventScreen() {
     setNotes(newNotes);
   }
 
-  const canSubmit = title.trim().length > 0 && startDate.trim().length > 0 && groupIdValue.length > 0;
+  const canSubmit = groupIdValue.length > 0;
 
   async function handleCreateEvent() {
     setError(null);
