@@ -1,4 +1,4 @@
-import { cloneElement, type ReactElement } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -19,7 +19,7 @@ type DashboardSectionProps = {
   viewAllLabel?: string;
   onViewAll: () => void;
   onCardPress?: (item: DashboardCardItem) => void;
-  renderCard?: (item: DashboardCardItem, index: number) => ReactElement;
+  renderCard?: (item: DashboardCardItem, index: number) => ReactNode;
 };
 
 export function DashboardSection<T extends DashboardCardItem>({
@@ -34,7 +34,7 @@ export function DashboardSection<T extends DashboardCardItem>({
 }: Omit<DashboardSectionProps, 'items' | 'onCardPress' | 'renderCard'> & {
   items: T[];
   onCardPress?: (item: T) => void;
-  renderCard?: (item: T, index: number) => ReactElement;
+  renderCard?: (item: T, index: number) => ReactNode;
 }) {
   return (
     <ThemedView style={styles.section}>
@@ -65,7 +65,7 @@ export function DashboardSection<T extends DashboardCardItem>({
         ) : (
           items.map((item, index) => {
             if (renderCard) {
-              return cloneElement(renderCard(item, index), { key: item.id });
+              return <Fragment key={item.id}>{renderCard(item, index)}</Fragment>;
             }
 
             const content = (

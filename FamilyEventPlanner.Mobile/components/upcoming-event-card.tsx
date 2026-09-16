@@ -80,12 +80,9 @@ function getStatusLabel(startDate: string, isNextUp?: boolean) {
   }
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const eventDay = new Date(parsedDate);
-  eventDay.setHours(0, 0, 0, 0);
-
-  const dayDifference = Math.round((eventDay.getTime() - today.getTime()) / 86400000);
+  const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const eventUtc = Date.UTC(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
+  const dayDifference = (eventUtc - todayUtc) / 86400000;
 
   if (isNextUp && dayDifference >= 0) {
     return 'Next Up';
@@ -142,7 +139,8 @@ export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardPro
       style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}
       onPress={onPress}
       android_ripple={{ color: 'rgba(53,80,112,0.08)' }}
-      accessibilityRole="button">
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title}. ${statusLabel}. ${dateParts.shortDate} at ${dateParts.time}.`}>
       <View style={[styles.header, { backgroundColor: tone.background }]}>
         <View style={[styles.headerBubbleLarge, { backgroundColor: tone.bubble }]} />
         <View style={[styles.headerBubbleSmall, { backgroundColor: tone.bubble }]} />
