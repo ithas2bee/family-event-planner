@@ -17,6 +17,17 @@ async function attendanceHeaders() {
   return headers;
 }
 
+async function responseError(response: Response, fallback: string): Promise<Error> {
+  let message = '';
+  try {
+    const payload = (await response.json()) as { message?: string; title?: string };
+    message = payload.message || payload.title || '';
+  } catch {
+    // Use the friendly fallback when the server does not return JSON.
+  }
+  return new Error(message || `${fallback} (error ${response.status}).`);
+}
+
 function mapAttendance(payload: unknown): AttendanceResponse {
   const attendance = (payload ?? {}) as Record<string, unknown>;
   return {
@@ -31,7 +42,7 @@ export async function getEventAttendance(eventId: string): Promise<AttendanceRes
   const response = await fetch(`${API_BASE_URL}/api/eventattendance/event/${eventId}`, {
     headers: await attendanceHeaders(),
   });
-  if (!response.ok) throw new Error('Unable to load attendee responses.');
+  if (!response.ok) throw await responseError(response, 'Unable to load attendee responses');
   const payload: unknown = await response.json();
   return Array.isArray(payload) ? payload.map(mapAttendance) : [];
 }
@@ -42,6 +53,6 @@ export async function saveEventAttendance(eventId: string, rsvp: number): Promis
     headers: await attendanceHeaders(),
     body: JSON.stringify({ familyEventId: eventId, rsvp }),
   });
-  if (!response.ok) throw new Error('Unable to update your response.');
+  if (!response.ok) throw await responseError(response, 'Unable to update your response');
   return mapAttendance(await response.json());
 }

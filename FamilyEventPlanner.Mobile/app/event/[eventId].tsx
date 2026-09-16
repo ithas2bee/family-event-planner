@@ -12,7 +12,7 @@ import { loadSession } from '@/services/sessionService';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
 
 export default function EventDetailsScreen() {
   const { eventId } = useLocalSearchParams();
@@ -51,14 +51,12 @@ export default function EventDetailsScreen() {
         let members: GroupMember[] = [];
         let eventAttendance: AttendanceResponse[] = [];
         if (eventData.familyGroupId && session?.memberId) {
-          try {
-            [members, eventAttendance] = await Promise.all([
-              getGroupMembers(eventData.familyGroupId, session.memberId),
-              getEventAttendance(validEventId),
-            ]);
-          } catch {
-            // Keep editing usable even if member suggestions cannot be loaded.
-          }
+          const [memberResult, attendanceResult] = await Promise.allSettled([
+            getGroupMembers(eventData.familyGroupId, session.memberId),
+            getEventAttendance(validEventId),
+          ]);
+          if (memberResult.status === 'fulfilled') members = memberResult.value;
+          if (attendanceResult.status === 'fulfilled') eventAttendance = attendanceResult.value;
         }
 
         if (!cancelled) {
@@ -121,10 +119,13 @@ export default function EventDetailsScreen() {
     groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Family member']),
   );
   const attendees = attendance
-    .filter((item) => item.rsvp === 1)
-    .map((item) => ({ ...item, name: memberNames.get(item.memberId) || 'Family member' }));
+    .map((item) => ({
+      ...item,
+      name: memberNames.get(item.memberId) || 'Family member',
+      response: item.rsvp === 1 ? 'Going' : item.rsvp === 3 ? 'Maybe' : "Can't Go",
+    }));
   const maybeCount = attendance.filter((item) => item.rsvp === 3).length;
-  const goingCount = attendees.length;
+  const goingCount = attendance.filter((item) => item.rsvp === 1).length;
 
   const handleResponse = async (response: number) => {
     if (!event || !event.id || responseLoading) return;
@@ -155,6 +156,23 @@ export default function EventDetailsScreen() {
 
   const getInitials = (name: string) =>
     name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || '?';
+
+  const handleAddToCalendar = async () => {
+    const date = new Date(event.startDate);
+    if (Number.isNaN(date.getTime())) return;
+    const endDate = event.endDate ? new Date(event.endDate) : new Date(date.getTime() + 60 * 60 * 1000);
+    const calendarUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(
+      `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${event.title}\nDTSTART:${date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}\nDTEND:${endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')}\nLOCATION:${event.location || ''}\nDESCRIPTION:${event.description || ''}\nEND:VEVENT\nEND:VCALENDAR`,
+    )}`;
+    await Linking.openURL(calendarUrl);
+  };
+
+  const handleShare = async () => {
+    await Share.share({
+      title: event.title,
+      message: `${event.title}\n${formatDate(event.startDate).date} at ${formatDate(event.startDate).time}${event.location ? `\n${event.location}` : ''}`,
+    });
+  };
 
   if (loading) {
     return (
@@ -229,10 +247,8 @@ export default function EventDetailsScreen() {
       <View style={styles.contentContainer}>
         <View style={styles.hero}>
           {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.heroImage} /> : null}
-          <View style={styles.heroOrbLarge} />
-          <View style={styles.heroOrbSmall} />
-          <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
-          <ThemedText type="title" style={styles.heroTitle} numberOfLines={3}>{event.title || 'Family Event'}</ThemedText>
+          <View style={styles.heroOverlay} />
+          {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
         </View>
 
         <View style={styles.detailsCard}>
@@ -264,6 +280,36 @@ export default function EventDetailsScreen() {
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Attendance</ThemedText>
             <ThemedText style={styles.attendanceCount}>{goingCount} going · {maybeCount} maybe · {attendance.filter((item) => item.rsvp === 2).length} can&apos;t go</ThemedText>
           </View>
+        </View>
+
+        {event.description?.trim() ? (
+          <View style={styles.section}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>About this event</ThemedText>
+            <ThemedText style={styles.sectionText}>{event.description}</ThemedText>
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeading}>
+            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Attendees</ThemedText>
+            <ThemedText style={styles.seeAll}>See All</ThemedText>
+          </View>
+          {attendance.length > 0 ? (
+            <View style={styles.attendeeList}>
+              {attendees.slice(0, 8).map((attendee, index) => (
+                <View key={attendee.memberId} style={styles.attendee}>
+                  <View style={[styles.avatar, { backgroundColor: ['#D9F0F2', '#E9E1FF', '#DDF2E8', '#FFE7D0'][index % 4] }]}>
+                    <ThemedText style={styles.avatarText}>{getInitials(attendee.name)}</ThemedText>
+                  </View>
+                  <ThemedText style={styles.attendeeName} numberOfLines={1}>{attendee.name}</ThemedText>
+                  <ThemedText style={[styles.attendeeResponse, attendee.response === 'Going' ? styles.goingText : attendee.response === 'Maybe' ? styles.maybeText : styles.cantGoText]}>{attendee.response}</ThemedText>
+                </View>
+              ))}
+            </View>
+          ) : <ThemedText style={styles.sectionText}>No attendee responses yet.</ThemedText>}
+        </View>
+
+        <View style={styles.section}>
           <View style={styles.responseRow}>
             {[
               { value: 1, label: 'Going', icon: 'check-circle' as const },
@@ -285,30 +331,24 @@ export default function EventDetailsScreen() {
           {responseError ? <ThemedText style={styles.errorMessage}>{responseError}</ThemedText> : null}
         </View>
 
-        {event.description?.trim() ? (
-          <View style={styles.section}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>About this event</ThemedText>
-            <ThemedText style={styles.sectionText}>{event.description}</ThemedText>
-          </View>
-        ) : null}
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeading}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Attendees</ThemedText>
-            <ThemedText style={styles.seeAll}>See All</ThemedText>
-          </View>
-          {attendees.length > 0 ? (
-            <View style={styles.attendeeList}>
-              {attendees.slice(0, 8).map((attendee, index) => (
-                <View key={attendee.memberId} style={styles.attendee}>
-                  <View style={[styles.avatar, { backgroundColor: ['#D9F0F2', '#E9E1FF', '#DDF2E8', '#FFE7D0'][index % 4] }]}>
-                    <ThemedText style={styles.avatarText}>{getInitials(attendee.name)}</ThemedText>
-                  </View>
-                  <ThemedText style={styles.attendeeName} numberOfLines={1}>{attendee.name}</ThemedText>
-                </View>
-              ))}
-            </View>
-          ) : <ThemedText style={styles.sectionText}>No attendee responses yet.</ThemedText>}
+        <View style={styles.actionsSection}>
+          <Pressable style={styles.actionRow} onPress={handleAddToCalendar} accessibilityRole="button">
+            <View style={styles.actionIcon}><MaterialIcons name="calendar-today" size={18} color="#355070" /></View>
+            <ThemedText style={styles.actionText}>Add to Calendar</ThemedText>
+            <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
+          </Pressable>
+          <Pressable style={styles.actionRow} onPress={handleShare} accessibilityRole="button">
+            <View style={styles.actionIcon}><MaterialIcons name="share" size={18} color="#355070" /></View>
+            <ThemedText style={styles.actionText}>Share Event</ThemedText>
+            <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
+          </Pressable>
+          {isCreator ? (
+            <Pressable style={styles.actionRow} onPress={() => setIsEditing(true)} accessibilityRole="button">
+              <View style={styles.actionIcon}><MaterialIcons name="edit" size={18} color="#355070" /></View>
+              <ThemedText style={styles.actionText}>Edit Event</ThemedText>
+              <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
+            </Pressable>
+          ) : null}
         </View>
 
         {(event.assignments?.length ?? 0) > 0 ? (
@@ -326,13 +366,6 @@ export default function EventDetailsScreen() {
               </View>
             ))}
           </View>
-        ) : null}
-
-        {isCreator ? (
-          <Pressable style={styles.settingsButton} onPress={() => setIsEditing(true)}>
-            <MaterialIcons name="settings" size={18} color="#087AC5" />
-            <ThemedText style={styles.settingsText}>Edit event details</ThemedText>
-          </Pressable>
         ) : null}
 
         {event.dressCode && (
@@ -532,9 +565,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F8FC',
   },
   hero: {
-    minHeight: 220,
-    marginHorizontal: Spacing.lg,
-    borderRadius: 24,
+    minHeight: 190,
+    marginHorizontal: 8,
+    borderRadius: 26,
     overflow: 'hidden',
     backgroundColor: '#147D8A',
     alignItems: 'center',
@@ -543,7 +576,11 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.75,
+    opacity: 1,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 32, 55, 0.16)',
   },
   heroOrbLarge: {
     position: 'absolute',
@@ -706,6 +743,46 @@ const styles = StyleSheet.create({
     color: '#45617F',
     fontSize: 10,
     textAlign: 'center',
+  },
+  attendeeResponse: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  goingText: {
+    color: '#18A978',
+  },
+  maybeText: {
+    color: '#D68C14',
+  },
+  cantGoText: {
+    color: '#E55353',
+  },
+  actionsSection: {
+    marginHorizontal: Spacing.lg,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
+  },
+  actionRow: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EDF1F6',
+  },
+  actionIcon: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionText: {
+    flex: 1,
+    color: '#31435F',
+    fontSize: Typography.sizes.sm,
+    fontWeight: '600',
   },
   settingsButton: {
     marginHorizontal: Spacing.lg,
