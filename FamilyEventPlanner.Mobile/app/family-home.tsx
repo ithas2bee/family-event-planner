@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { API_BASE_URL } from '@/config/api';
 import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
 import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
+import { FamilyMembersSection } from '@/components/family-members-section';
 import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -13,7 +14,7 @@ import { UpcomingEventCard, type UpcomingEventCardItem } from '@/components/upco
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getAnnouncementsByGroup } from '@/services/announcementService';
 import { getEventsByGroup, type Event } from '@/services/eventService';
-import { getGroupMemberByUser, getGroupMembers } from '@/services/groupMemberService';
+import { getGroupMemberByUser, getGroupMembers, type GroupMember } from '@/services/groupMemberService';
 import { getKickbacksByGroup } from '@/services/kickbackService';
 import { getPollsByGroup } from '@/services/pollService';
 import { clearSession, loadSession, setMemberInfo } from '@/services/sessionService';
@@ -112,7 +113,7 @@ export default function FamilyHomeScreen() {
   const [memberId, setMemberId] = useState(initialMemberId);
 
   const [myGroupsPreview, setMyGroupsPreview] = useState<DashboardCardItem[]>([]);
-  const [membersPreview, setMembersPreview] = useState<DashboardCardItem[]>([]);
+  const [membersPreview, setMembersPreview] = useState<GroupMember[]>([]);
   const [announcementsPreview, setAnnouncementsPreview] = useState<DashboardCardItem[]>([]);
   const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
   const [kickbacksPreview, setKickbacksPreview] = useState<KickbackCardItem[]>([]);
@@ -220,7 +221,7 @@ export default function FamilyHomeScreen() {
 
     const membersPromise = memberId
       ? getGroupMembers(groupId, memberId).catch(() => [])
-      : Promise.resolve([] as { memberId?: string; displayName?: string; isAdmin?: boolean }[]);
+      : Promise.resolve([] as GroupMember[]);
 
     const [groupsData, membersData, announcementsData, pollsData, kickbacksData, eventsData] =
       await Promise.all([
@@ -244,13 +245,7 @@ export default function FamilyHomeScreen() {
       }))
     );
 
-    setMembersPreview(
-      membersData.slice(0, PREVIEW_LIMIT).map((member, index) => ({
-        id: String(member.memberId ?? index),
-        title: String(member.displayName ?? 'Unknown Member'),
-        subtitle: member.isAdmin ? 'Admin' : 'Member',
-      }))
-    );
+    setMembersPreview(membersData.slice(0, PREVIEW_LIMIT));
 
     setAnnouncementsPreview(
       announcementsData.slice(0, PREVIEW_LIMIT).map((announcement) => ({
@@ -328,12 +323,12 @@ export default function FamilyHomeScreen() {
           onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
         />
 
-        <DashboardSection
-          title="Members"
-          items={membersPreview}
+        <FamilyMembersSection
+          members={membersPreview}
+          currentMemberId={memberId}
           loading={loadingPreviews}
-          emptyText="No members to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/members')}
+          onInvite={() => router.push('/join-group')}
         />
 
         <DashboardSection
