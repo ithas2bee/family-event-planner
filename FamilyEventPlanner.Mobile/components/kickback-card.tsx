@@ -92,6 +92,11 @@ export function KickbackCard({ item, index, onPress }: KickbackCardProps) {
           <ThemedText style={styles.detailText} numberOfLines={1}>
             {formatExpiry(item.expiresAtUtc)}
           </ThemedText>
+          {item.creator ? (
+            <ThemedText style={styles.detailText} numberOfLines={1}>
+              Posted by {item.creator}
+            </ThemedText>
+          ) : null}
           <ThemedText style={styles.detailText} numberOfLines={1}>
             {attendanceLabel}
           </ThemedText>
