@@ -7,9 +7,10 @@ import { API_BASE_URL } from '@/config/api';
 import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UpcomingEventCard, type UpcomingEventCardItem } from '@/components/upcoming-event-card';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getAnnouncementsByGroup } from '@/services/announcementService';
-import { getEventsByGroup } from '@/services/eventService';
+import { getEventsByGroup, type Event } from '@/services/eventService';
 import { getGroupMemberByUser, getGroupMembers } from '@/services/groupMemberService';
 import { getKickbacksByGroup } from '@/services/kickbackService';
 import { getPollsByGroup } from '@/services/pollService';
@@ -57,6 +58,39 @@ function toBodyPreview(text: string, maxLength = 72): string {
   return `${trimmed.slice(0, maxLength - 3)}...`;
 }
 
+function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
+  const previewEvents = events.slice(0, PREVIEW_LIMIT);
+  const nextUpEventId = previewEvents.reduce<string | null>((closestEventId, event) => {
+    const parsedDate = new Date(event.startDate);
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getTime() < Date.now()) {
+      return closestEventId;
+    }
+
+    if (!closestEventId) {
+      return event.id;
+    }
+
+    const closestEvent = previewEvents.find((previewEvent) => previewEvent.id === closestEventId);
+    const closestDate = closestEvent ? new Date(closestEvent.startDate) : null;
+
+    if (!closestDate || Number.isNaN(closestDate.getTime()) || parsedDate.getTime() < closestDate.getTime()) {
+      return event.id;
+    }
+
+    return closestEventId;
+  }, null);
+
+  return previewEvents.map((event) => ({
+    id: event.id,
+    title: event.title || 'Untitled Event',
+    startDate: event.startDate,
+    location: event.location?.trim() || undefined,
+    host: event.creatorDisplayName?.trim() || undefined,
+    participantCount: event.assignments?.length,
+    isNextUp: event.id === nextUpEventId,
+  }));
+}
+
 export default function FamilyHomeScreen() {
   const {
     groupId: contextGroupId,
@@ -80,7 +114,7 @@ export default function FamilyHomeScreen() {
   const [announcementsPreview, setAnnouncementsPreview] = useState<DashboardCardItem[]>([]);
   const [pollsPreview, setPollsPreview] = useState<DashboardCardItem[]>([]);
   const [kickbacksPreview, setKickbacksPreview] = useState<DashboardCardItem[]>([]);
-  const [eventsPreview, setEventsPreview] = useState<DashboardCardItem[]>([]);
+  const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState(false);
 
   useEffect(() => {
@@ -184,7 +218,7 @@ export default function FamilyHomeScreen() {
 
     const membersPromise = memberId
       ? getGroupMembers(groupId, memberId).catch(() => [])
-      : Promise.resolve([] as Array<{ memberId?: string; displayName?: string; isAdmin?: boolean }>);
+      : Promise.resolve([] as { memberId?: string; displayName?: string; isAdmin?: boolean }[]);
 
     const [groupsData, membersData, announcementsData, pollsData, kickbacksData, eventsData] =
       await Promise.all([
@@ -243,14 +277,7 @@ export default function FamilyHomeScreen() {
       }))
     );
 
-    setEventsPreview(
-      eventsData.slice(0, PREVIEW_LIMIT).map((event) => ({
-        id: event.id,
-        title: event.title || 'Untitled Event',
-        subtitle: event.location || 'No location set',
-        meta: event.startDate,
-      }))
-    );
+    setEventsPreview(mapUpcomingEvents(eventsData));
 
     setLoadingPreviews(false);
   }, [groupId, memberId]);
@@ -325,12 +352,19 @@ export default function FamilyHomeScreen() {
         />
 
         <DashboardSection
-          title="Events"
+          title="Upcoming Events"
           items={eventsPreview}
           loading={loadingPreviews}
           emptyText="No events to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/events')}
           onCardPress={(item) => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
+          renderCard={(item, index) => (
+            <UpcomingEventCard
+              item={item}
+              index={index}
+              onPress={() => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
+            />
+          )}
         />
 
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
