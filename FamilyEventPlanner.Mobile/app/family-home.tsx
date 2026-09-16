@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { API_BASE_URL } from '@/config/api';
+import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
 import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -112,7 +113,7 @@ export default function FamilyHomeScreen() {
   const [myGroupsPreview, setMyGroupsPreview] = useState<DashboardCardItem[]>([]);
   const [membersPreview, setMembersPreview] = useState<DashboardCardItem[]>([]);
   const [announcementsPreview, setAnnouncementsPreview] = useState<DashboardCardItem[]>([]);
-  const [pollsPreview, setPollsPreview] = useState<DashboardCardItem[]>([]);
+  const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
   const [kickbacksPreview, setKickbacksPreview] = useState<DashboardCardItem[]>([]);
   const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState(false);
@@ -263,8 +264,11 @@ export default function FamilyHomeScreen() {
       pollsData.slice(0, PREVIEW_LIMIT).map((poll) => ({
         id: poll.id,
         title: poll.question || 'Untitled Poll',
-        subtitle: `${poll.options.length} option${poll.options.length === 1 ? '' : 's'}`,
-        meta: poll.creatorDisplayName || 'Unknown Member',
+        optionCount: poll.options.length > 0 ? poll.options.length : undefined,
+        voteCount:
+          poll.options.length > 0
+            ? poll.options.reduce((total, option) => total + option.voteCount, 0)
+            : undefined,
       }))
     );
 
@@ -341,6 +345,14 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           emptyText="No polls to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/polls')}
+          onCardPress={() => router.push('/(tabs)/(main)/polls')}
+          renderCard={(item, index) => (
+            <ActivePollCard
+              item={item}
+              index={index}
+              onPress={() => router.push('/(tabs)/(main)/polls')}
+            />
+          )}
         />
 
         <DashboardSection
