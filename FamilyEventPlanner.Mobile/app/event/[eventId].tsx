@@ -10,13 +10,14 @@ import { getEventAttendance, saveEventAttendance, AttendanceResponse } from '@/s
 import { Event, getEventById, updateEvent } from '@/services/eventService';
 import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ActivityIndicator, Image, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
 
 export default function EventDetailsScreen() {
   const { eventId } = useLocalSearchParams();
+  const router = useRouter();
   const [event, setEvent] = useState<Event | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -160,6 +161,7 @@ export default function EventDetailsScreen() {
     name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || '?';
 
   const handleAddToCalendar = async () => {
+    if (!event) return;
     const date = new Date(event.startDate);
     if (Number.isNaN(date.getTime())) return;
     const endDate = event.endDate ? new Date(event.endDate) : new Date(date.getTime() + 60 * 60 * 1000);
@@ -169,6 +171,7 @@ export default function EventDetailsScreen() {
   };
 
   const handleShare = async () => {
+    if (!event) return;
     await Share.share({
       title: event.title,
       message: `${event.title}\n${formatDate(event.startDate).date} at ${formatDate(event.startDate).time}${event.location ? `\n${event.location}` : ''}`,
@@ -249,7 +252,16 @@ export default function EventDetailsScreen() {
         <View style={styles.hero}>
           {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.heroImage} /> : null}
           <View style={styles.heroOverlay} />
+          <Pressable
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <MaterialIcons name="arrow-back" size={22} color="#203B5A" />
+          </Pressable>
           {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
+          <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
         </View>
 
         <View style={styles.detailsCard}>
@@ -274,6 +286,13 @@ export default function EventDetailsScreen() {
               <ThemedText style={styles.infoValue} numberOfLines={2}>{event.location?.trim() || 'Location to be announced'}</ThemedText>
             </View>
           </View>
+          <View style={styles.infoRow}>
+            <View style={styles.iconCircle}><MaterialIcons name="people" size={19} color="#087AC5" /></View>
+            <View style={styles.infoCopy}>
+              <ThemedText style={styles.infoLabel}>Attendance</ThemedText>
+              <ThemedText style={styles.infoValue}>{goingCount} going · {maybeCount} maybe · {attendance.filter((item) => item.rsvp === 2).length} can&apos;t go</ThemedText>
+            </View>
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -283,12 +302,10 @@ export default function EventDetailsScreen() {
           </View>
         </View>
 
-        {event.description?.trim() ? (
-          <View style={styles.section}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>About this event</ThemedText>
-            <ThemedText style={styles.sectionText}>{event.description}</ThemedText>
-          </View>
-        ) : null}
+        <View style={styles.section}>
+          <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>About this event</ThemedText>
+          <ThemedText style={styles.sectionText}>{event.description?.trim() || 'No description has been added yet.'}</ThemedText>
+        </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeading}>
@@ -387,17 +404,6 @@ export default function EventDetailsScreen() {
             </ThemedText>
             <ThemedText style={styles.sectionText}>
               {event.notes}
-            </ThemedText>
-          </GlassCard>
-        )}
-
-        {event.creatorDisplayName && (
-          <GlassCard style={styles.section} padding={Spacing.lg}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              Created By
-            </ThemedText>
-            <ThemedText style={styles.sectionText}>
-              {event.creatorDisplayName}
             </ThemedText>
           </GlassCard>
         )}
@@ -668,6 +674,24 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(11, 32, 55, 0.16)',
   },
+  backButton: {
+    position: 'absolute',
+    top: Spacing.md,
+    left: Spacing.md,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+  },
+  heroLabel: {
+    color: '#FFFFFF',
+    fontSize: Typography.sizes.xs,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    marginTop: Spacing.md,
+  },
   heroOrbLarge: {
     position: 'absolute',
     width: 230,
@@ -763,7 +787,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   attendanceCount: {
-    color: '#6B7A90',
+    color: '#405673',
     fontSize: Typography.sizes.xs,
     flexShrink: 1,
     textAlign: 'right',
@@ -793,7 +817,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#087AC5',
   },
   responseText: {
-    color: '#45617F',
+    color: '#294B68',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -826,7 +850,7 @@ const styles = StyleSheet.create({
   },
   attendeeName: {
     width: '100%',
-    color: '#45617F',
+    color: '#243750',
     fontSize: 10,
     textAlign: 'center',
   },
@@ -835,13 +859,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   goingText: {
-    color: '#18A978',
+    color: '#087A55',
   },
   maybeText: {
-    color: '#D68C14',
+    color: '#9A6100',
   },
   cantGoText: {
-    color: '#E55353',
+    color: '#B42318',
   },
   actionsSection: {
     marginHorizontal: Spacing.lg,
@@ -928,12 +952,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   sectionTitle: {
-    color: Colors.text.primary,
+    color: '#16213A',
     fontSize: Typography.sizes.base,
     marginBottom: Spacing.sm,
   },
   sectionText: {
-    color: Colors.text.secondary,
+    color: '#31435F',
     fontSize: Typography.sizes.sm,
     lineHeight: 20,
   },
