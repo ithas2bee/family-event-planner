@@ -15,6 +15,11 @@ export type ActivityFeedItem = {
   createdAtUtc: string;
 };
 
+type NotificationRecord = {
+  id: string;
+  isRead: boolean;
+};
+
 async function getActivityHeaders(): Promise<Record<string, string>> {
   const headers = await getAuthHeaders();
   const session = await loadSession();
@@ -133,4 +138,33 @@ export async function getActivityByGroup(groupId: string): Promise<ActivityFeedI
   return parsedBody
     .map(mapActivity)
     .sort((a, b) => new Date(b.createdAtUtc).getTime() - new Date(a.createdAtUtc).getTime());
+}
+
+export async function markAllNotificationsRead(memberId: string): Promise<void> {
+  const headers = await getActivityHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error('Notifications could not be updated.');
+  }
+
+  const notifications = (await response.json()) as NotificationRecord[];
+  await Promise.all(
+    notifications
+      .filter((notification) => !notification.isRead)
+      .map((notification) =>
+        fetch(`${API_BASE_URL}/api/notifications/${notification.id}/read`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({ memberId }),
+        }).then((markResponse) => {
+          if (!markResponse.ok) {
+            throw new Error('Notifications could not be updated.');
+          }
+        }),
+      ),
+  );
 }
