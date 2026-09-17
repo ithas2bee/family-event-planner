@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   attendanceCount: {
-    color: '#6B7A90',
+    color: '#405673',
     fontSize: Typography.sizes.xs,
     flexShrink: 1,
     textAlign: 'right',
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#087AC5',
   },
   responseText: {
-    color: '#45617F',
+    color: '#294B68',
     fontSize: 11,
     fontWeight: '700',
   },
@@ -850,7 +850,7 @@ const styles = StyleSheet.create({
   },
   attendeeName: {
     width: '100%',
-    color: '#45617F',
+    color: '#243750',
     fontSize: 10,
     textAlign: 'center',
   },
@@ -859,13 +859,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   goingText: {
-    color: '#18A978',
+    color: '#087A55',
   },
   maybeText: {
-    color: '#D68C14',
+    color: '#9A6100',
   },
   cantGoText: {
-    color: '#E55353',
+    color: '#B42318',
   },
   actionsSection: {
     marginHorizontal: Spacing.lg,
@@ -952,12 +952,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   sectionTitle: {
-    color: Colors.text.primary,
+    color: '#16213A',
     fontSize: Typography.sizes.base,
     marginBottom: Spacing.sm,
   },
   sectionText: {
-    color: Colors.text.secondary,
+    color: '#31435F',
     fontSize: Typography.sizes.sm,
     lineHeight: 20,
   },
