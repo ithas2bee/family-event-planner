@@ -345,10 +345,6 @@ export default function FamilyHomeScreen() {
 
   const closeMenu = () => setMenuVisible(false);
 
-  const openUnavailableAction = () => {
-    closeMenu();
-  };
-
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -557,7 +553,10 @@ export default function FamilyHomeScreen() {
             <Pressable
               accessibilityLabel="Settings"
               accessibilityRole="button"
-              onPress={openUnavailableAction}
+              onPress={() => {
+                closeMenu();
+                router.push('/settings');
+              }}
               style={styles.menuItem}
             >
               <View style={[styles.menuIcon, { backgroundColor: '#F5EEFF' }]}>
@@ -573,7 +572,10 @@ export default function FamilyHomeScreen() {
             <Pressable
               accessibilityLabel="Help & Support"
               accessibilityRole="button"
-              onPress={openUnavailableAction}
+              onPress={() => {
+                closeMenu();
+                router.push('/help-support');
+              }}
               style={styles.menuItem}
             >
               <View style={[styles.menuIcon, { backgroundColor: '#EAFBF7' }]}>
