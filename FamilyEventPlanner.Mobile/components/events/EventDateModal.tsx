@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, DateData } from 'react-native-calendars';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemedText } from '../themed-text';
 
 interface EventDateModalProps {
@@ -14,7 +15,6 @@ interface EventDateModalProps {
 type PickerSection = 'start' | 'end';
 type AmPm = 'AM' | 'PM';
 
-const hours = Array.from({ length: 12 }, (_, index) => index + 1);
 const minutes = [0, 15, 30, 45];
 
 function getTimeParts(value: Date | null): { hour: number; minute: number; amPm: AmPm } {
@@ -119,18 +119,22 @@ export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, e
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modal}>
+          <View style={styles.handle} />
           <View style={styles.header}>
+            <View style={styles.calendarIcon}>
+              <MaterialIcons name="event" size={28} color="#1678E8" />
+            </View>
             <View>
-              <ThemedText style={styles.eyebrow}>EVENT SCHEDULE</ThemedText>
-              <ThemedText type="title" style={styles.title}>Select date & time</ThemedText>
+              <ThemedText type="title" style={styles.title}>Select Date & Time</ThemedText>
+              <ThemedText style={styles.subtitle}>Choose when your event will take place.</ThemedText>
             </View>
             <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close date and time picker">
-              <ThemedText style={styles.close}>×</ThemedText>
+              <MaterialIcons name="close" size={30} color="#62708D" />
             </Pressable>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-            <View style={styles.sectionTabs}>
+            {showEndPicker && <View style={styles.sectionTabs}>
               <Pressable style={[styles.sectionTab, section === 'start' && styles.sectionTabActive]} onPress={() => setSection('start')}>
                 <ThemedText style={[styles.sectionTabText, section === 'start' && styles.sectionTabTextActive]}>Start</ThemedText>
                 <ThemedText style={styles.summary}>{formatDate(selectedStart)} · {formatTime(selectedStart ? withTime(selectedStart, startTime.hour, startTime.minute, startTime.amPm) : null)}</ThemedText>
@@ -139,9 +143,12 @@ export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, e
                 <ThemedText style={[styles.sectionTabText, section === 'end' && styles.sectionTabTextActive]}>End</ThemedText>
                 <ThemedText style={styles.summary}>{showEndPicker ? `${formatDate(selectedEnd)} · ${formatTime(selectedEnd ? withTime(selectedEnd, endTime.hour, endTime.minute, endTime.amPm) : null)}` : 'Optional'}</ThemedText>
               </Pressable>
-            </View>
+            </View>}
 
-            <View style={styles.calendarCard}>
+            <View style={styles.pickerColumns}>
+              <View style={styles.dateColumn}>
+                <ThemedText style={styles.panelTitle}>{showEndPicker ? (section === 'start' ? 'Select Start Date' : 'Select End Date') : 'Select Date'}</ThemedText>
+                <View style={styles.calendarCard}>
               <Calendar
                 current={(activeDate ?? new Date()).toISOString().slice(0, 10)}
                 onDayPress={handleDayPress}
@@ -160,38 +167,40 @@ export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, e
                   textDayHeaderFontSize: 11,
                 }}
               />
+                </View>
             </View>
 
-            <ThemedText style={styles.timeLabel}>Time</ThemedText>
-            <View style={styles.timeSelector}>
-              <View style={styles.timeColumn}>
-                <ThemedText style={styles.columnLabel}>HOUR</ThemedText>
-                <View style={styles.choiceGrid}>
-                  {hours.map((hour) => (
-                    <Pressable key={hour} onPress={() => updateTime(hour, selectedTime.minute, selectedTime.amPm)} style={[styles.choice, selectedTime.hour === hour && styles.choiceSelected]}>
-                      <ThemedText style={[styles.choiceText, selectedTime.hour === hour && styles.choiceTextSelected]}>{hour}</ThemedText>
-                    </Pressable>
-                  ))}
+              <View style={styles.timeColumnLarge}>
+                <ThemedText style={styles.panelTitle}>Select Time</ThemedText>
+                <ThemedText style={styles.timeLabel}>Time</ThemedText>
+                <View style={styles.timeInputs}>
+                  <Pressable style={styles.timeInput} onPress={() => updateTime(selectedTime.hour === 12 ? 1 : selectedTime.hour + 1, selectedTime.minute, selectedTime.amPm)}>
+                    <ThemedText style={styles.timeValue}>{selectedTime.hour}</ThemedText>
+                    <MaterialIcons name="keyboard-arrow-down" size={23} color="#62708D" />
+                  </Pressable>
+                  <ThemedText style={styles.colon}>:</ThemedText>
+                  <Pressable style={styles.timeInput} onPress={() => updateTime(selectedTime.hour, minutes[(minutes.indexOf(selectedTime.minute) + 1) % minutes.length], selectedTime.amPm)}>
+                    <ThemedText style={styles.timeValue}>{String(selectedTime.minute).padStart(2, '0')}</ThemedText>
+                    <MaterialIcons name="keyboard-arrow-down" size={23} color="#62708D" />
+                  </Pressable>
                 </View>
-              </View>
-              <View style={styles.timeColumn}>
-                <ThemedText style={styles.columnLabel}>MIN</ThemedText>
-                <View style={styles.choiceGrid}>
-                  {minutes.map((minute) => (
-                    <Pressable key={minute} onPress={() => updateTime(selectedTime.hour, minute, selectedTime.amPm)} style={[styles.choice, selectedTime.minute === minute && styles.choiceSelected]}>
-                      <ThemedText style={[styles.choiceText, selectedTime.minute === minute && styles.choiceTextSelected]}>{String(minute).padStart(2, '0')}</ThemedText>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.timeColumn}>
-                <ThemedText style={styles.columnLabel}>AM/PM</ThemedText>
-                <View style={styles.choiceGrid}>
+                <ThemedText style={styles.timeLabel}>AM/PM</ThemedText>
+                <View style={styles.ampmToggle}>
                   {(['AM', 'PM'] as AmPm[]).map((amPm) => (
-                    <Pressable key={amPm} onPress={() => updateTime(selectedTime.hour, selectedTime.minute, amPm)} style={[styles.choice, selectedTime.amPm === amPm && styles.choiceSelected]}>
-                      <ThemedText style={[styles.choiceText, selectedTime.amPm === amPm && styles.choiceTextSelected]}>{amPm}</ThemedText>
+                    <Pressable key={amPm} onPress={() => updateTime(selectedTime.hour, selectedTime.minute, amPm)} style={[styles.ampmOption, selectedTime.amPm === amPm && styles.ampmSelected]}>
+                      <ThemedText style={[styles.ampmText, selectedTime.amPm === amPm && styles.ampmTextSelected]}>{amPm}</ThemedText>
                     </Pressable>
                   ))}
+                </View>
+                <View style={styles.quickTimes}>
+                  <ThemedText style={styles.quickTitle}>Quick Times</ThemedText>
+                  <View style={styles.quickGrid}>
+                    {[['9:00 AM', 9, 0, 'AM'], ['12:00 PM', 12, 0, 'PM'], ['3:00 PM', 3, 0, 'PM'], ['6:00 PM', 6, 0, 'PM']].map(([label, hour, minute, amPm]) => (
+                      <Pressable key={String(label)} style={styles.quickButton} onPress={() => updateTime(Number(hour), Number(minute), amPm as AmPm)}>
+                        <ThemedText style={styles.quickText}>{label}</ThemedText>
+                      </Pressable>
+                    ))}
+                  </View>
                 </View>
               </View>
             </View>
@@ -203,6 +212,13 @@ export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, e
               ) : (
                 <Pressable onPress={clearEnd}><ThemedText style={styles.utilityText}>Clear end</ThemedText></Pressable>
               )}
+            </View>
+            <View style={styles.selectedSummary}>
+              <View style={styles.summaryIcon}><MaterialIcons name="event" size={24} color="#1678E8" /></View>
+              <View>
+                <ThemedText style={styles.selectedLabel}>Selected Date & Time</ThemedText>
+                <ThemedText style={styles.selectedValue}>{formatDate(activeDate)} at {formatTime(activeDate ? withTime(activeDate, selectedTime.hour, selectedTime.minute, selectedTime.amPm) : null)}</ThemedText>
+              </View>
             </View>
             {validationError ? <ThemedText style={styles.errorText}>{validationError}</ThemedText> : null}
           </ScrollView>
@@ -219,11 +235,12 @@ export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, e
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(19, 43, 70, 0.35)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '94%', paddingTop: 22 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 22, paddingBottom: 12 },
-  eyebrow: { color: '#087AC5', fontSize: 10, fontWeight: '700', letterSpacing: 1.2 },
-  title: { color: '#111A30', fontSize: 24, marginTop: 4 },
-  close: { color: '#71829C', fontSize: 30, lineHeight: 28 },
+  modal: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '96%', paddingTop: 16 },
+  handle: { alignSelf: 'center', width: 78, height: 7, borderRadius: 4, backgroundColor: '#BAC6DC', marginBottom: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 22, paddingBottom: 16 },
+  calendarIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6F0FF' },
+  title: { color: '#111A30', fontSize: 24 },
+  subtitle: { color: '#71829C', fontSize: 14, marginTop: 3 },
   content: { paddingHorizontal: 18, paddingBottom: 14 },
   sectionTabs: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   sectionTab: { flex: 1, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 12, padding: 11 },
@@ -231,19 +248,33 @@ const styles = StyleSheet.create({
   sectionTabText: { color: '#45617F', fontSize: 14, fontWeight: '700' },
   sectionTabTextActive: { color: '#087AC5' },
   summary: { color: '#71829C', fontSize: 10, marginTop: 4 },
-  calendarCard: { borderWidth: 1, borderColor: '#E3EAF2', borderRadius: 16, overflow: 'hidden' },
-  timeLabel: { color: '#16213A', fontSize: 14, fontWeight: '700', marginTop: 16, marginBottom: 8 },
-  timeSelector: { flexDirection: 'row', gap: 8 },
-  timeColumn: { flex: 1 },
-  columnLabel: { color: '#8CA0B8', fontSize: 9, fontWeight: '700', marginBottom: 6, textAlign: 'center' },
-  choiceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' },
-  choice: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F8FC', borderRadius: 8, minWidth: 35, minHeight: 36, paddingHorizontal: 5 },
-  choiceSelected: { backgroundColor: '#087AC5' },
-  choiceText: { color: '#45617F', fontSize: 12, fontWeight: '600' },
-  choiceTextSelected: { color: '#FFFFFF' },
+  pickerColumns: { flexDirection: 'row', gap: 12 },
+  dateColumn: { flex: 1.45 },
+  timeColumnLarge: { flex: 1 },
+  panelTitle: { color: '#111A30', fontSize: 18, fontWeight: '700', marginBottom: 14 },
+  calendarCard: { borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 16, overflow: 'hidden' },
+  timeLabel: { color: '#17213D', fontSize: 13, fontWeight: '600', marginTop: 11, marginBottom: 7 },
+  timeInputs: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeInput: { flex: 1, minHeight: 64, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' },
+  timeValue: { color: '#17213D', fontSize: 21, fontWeight: '600' },
+  colon: { color: '#17213D', fontSize: 20 },
+  ampmToggle: { flexDirection: 'row', backgroundColor: '#F1F6FD', borderRadius: 20, padding: 3 },
+  ampmOption: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 17 },
+  ampmSelected: { backgroundColor: '#1678E8' },
+  ampmText: { color: '#62708D', fontSize: 14, fontWeight: '700' },
+  ampmTextSelected: { color: '#FFFFFF' },
+  quickTimes: { backgroundColor: '#F4F8FE', borderRadius: 15, padding: 12, marginTop: 17 },
+  quickTitle: { color: '#17213D', fontSize: 13, fontWeight: '700', marginBottom: 9 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  quickButton: { width: '47%', borderWidth: 1, borderColor: '#D5E1F1', borderRadius: 17, paddingVertical: 9, alignItems: 'center' },
+  quickText: { color: '#62708D', fontSize: 11, fontWeight: '600' },
   utilityRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
   utilityText: { color: '#087AC5', fontSize: 12, fontWeight: '600' },
   errorText: { color: '#C0392B', fontSize: 12, marginTop: 10 },
+  selectedSummary: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F2F7FE', borderRadius: 16, padding: 14, marginTop: 15 },
+  summaryIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E0EDFF' },
+  selectedLabel: { color: '#62708D', fontSize: 12 },
+  selectedValue: { color: '#111A30', fontSize: 14, fontWeight: '700', marginTop: 4 },
   footer: { flexDirection: 'row', gap: 10, borderTopWidth: 1, borderTopColor: '#E8EEF6', padding: 18 },
   cancelButton: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 46 },
   cancelText: { color: '#56708E', fontSize: 14, fontWeight: '600' },
