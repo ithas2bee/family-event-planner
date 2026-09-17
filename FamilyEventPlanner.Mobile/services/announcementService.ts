@@ -20,6 +20,21 @@ export type CreateAnnouncementRequest = {
   expiresAt?: string;
 };
 
+export function formatAnnouncementDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Date unavailable';
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 async function getAnnouncementHeaders(): Promise<Record<string, string>> {
   const headers = await getAuthHeaders();
   const session = await loadSession();
