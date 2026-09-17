@@ -29,6 +29,7 @@ export default function RootLayout() {
           <Stack.Screen name="create-announcement" options={{ title: 'Create Announcement' }} />
           <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
           <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
+          <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
           <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
           <Stack.Screen name="event/[eventId]" options={{ title: '' }} />
         </Stack>

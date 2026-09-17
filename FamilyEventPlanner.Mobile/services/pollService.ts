@@ -16,6 +16,8 @@ export type Poll = {
   createdByMemberId?: string;
   creatorDisplayName?: string;
   createdAt: string;
+  isClosed?: boolean;
+  status?: string;
   currentMemberSelectedOptionId?: string;
   options: PollOption[];
 };
@@ -94,6 +96,8 @@ function mapPoll(payload: unknown): Poll {
     createdByMemberId?: string;
     creatorDisplayName?: string;
     createdAt?: string;
+    isClosed?: boolean;
+    status?: string;
     currentMemberSelectedOptionId?: string;
     options?: unknown[];
   };
@@ -106,6 +110,8 @@ function mapPoll(payload: unknown): Poll {
     createdByMemberId: poll.createdByMemberId != null ? String(poll.createdByMemberId) : undefined,
     creatorDisplayName: poll.creatorDisplayName != null ? String(poll.creatorDisplayName) : undefined,
     createdAt: String(poll.createdAt ?? ''),
+    isClosed: poll.isClosed,
+    status: poll.status,
     currentMemberSelectedOptionId:
       poll.currentMemberSelectedOptionId != null
         ? String(poll.currentMemberSelectedOptionId)
@@ -128,6 +134,27 @@ export async function getPollsByGroup(groupId: string): Promise<Poll[]> {
       payload = await response.json();
     } catch {
       // ignore parse failure
+    }
+
+    export async function getPollById(pollId: string): Promise<Poll> {
+      const headers = await getPollHeaders();
+      const response = await fetch(`${API_BASE_URL}/api/polls/${pollId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        let payload: unknown = null;
+        try {
+          payload = await response.json();
+        } catch {
+          // ignore parse failure
+        }
+
+        throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
+      }
+
+      return mapPoll(await response.json());
     }
 
     const serverMessage = extractServerMessage(payload);
