@@ -1,1 +1,1 @@
-export { default } from '../../../polls';
+export { default } from '../../polls';

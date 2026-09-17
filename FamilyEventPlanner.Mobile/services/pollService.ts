@@ -136,27 +136,6 @@ export async function getPollsByGroup(groupId: string): Promise<Poll[]> {
       // ignore parse failure
     }
 
-    export async function getPollById(pollId: string): Promise<Poll> {
-      const headers = await getPollHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/polls/${pollId}`, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        let payload: unknown = null;
-        try {
-          payload = await response.json();
-        } catch {
-          // ignore parse failure
-        }
-
-        throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
-      }
-
-      return mapPoll(await response.json());
-    }
-
     const serverMessage = extractServerMessage(payload);
     throw new Error(resolveErrorMessage(response.status, serverMessage));
   }
@@ -164,6 +143,27 @@ export async function getPollsByGroup(groupId: string): Promise<Poll[]> {
   const data: unknown = await response.json();
   const items = Array.isArray(data) ? data : [];
   return items.map(mapPoll);
+}
+
+export async function getPollById(pollId: string): Promise<Poll> {
+  const headers = await getPollHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/polls/${pollId}`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // ignore parse failure
+    }
+
+    throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
+  }
+
+  return mapPoll(await response.json());
 }
 
 export type CreatePollRequest = {
