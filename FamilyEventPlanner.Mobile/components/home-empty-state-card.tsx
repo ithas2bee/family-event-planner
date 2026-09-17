@@ -1,5 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Pressable, StyleSheet, View, type ComponentProps } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import type { ComponentProps } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 
