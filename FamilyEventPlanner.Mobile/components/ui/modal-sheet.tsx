@@ -10,7 +10,7 @@ import {
     View,
 } from 'react-native';
 import { ThemedText } from '../themed-text';
-import { Colors, Radius, Spacing, Typography } from './design-system';
+import { Radius, Spacing, Typography } from './design-system';
 
 interface ModalSheetProps extends Omit<ModalProps, 'transparent'> {
   title: string;
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   modal: {
-    backgroundColor: Colors.modal,
+    backgroundColor: '#F5F8FC',
     borderTopLeftRadius: Radius.xxl,
     borderTopRightRadius: Radius.xxl,
     height: '85%',
@@ -97,16 +97,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.1)',
+    borderBottomColor: '#DCE6F2',
   },
   title: {
     fontSize: Typography.sizes.xl,
-    color: Colors.text.primary,
+    color: '#111A30',
     flex: 1,
   },
   close: {
     fontSize: Typography.sizes.lg,
-    color: Colors.text.muted,
+    color: '#687A96',
     padding: Spacing.md,
   },
   content: {
@@ -121,6 +121,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: '#DCE6F2',
   },
 });
