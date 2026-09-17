@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import DatePickerOverlay from './DatePickerOverlay';
-import TimePickerModal from './TimePickerModal';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Calendar, DateData } from 'react-native-calendars';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedText } from '../themed-text';
-import { PillButton } from '../ui/pill-button';
 
 interface EventDateModalProps {
   visible: boolean;
@@ -13,161 +11,205 @@ interface EventDateModalProps {
   onClose: () => void;
 }
 
+type PickerSection = 'start' | 'end';
+type AmPm = 'AM' | 'PM';
+
+const hours = Array.from({ length: 12 }, (_, index) => index + 1);
+const minutes = [0, 15, 30, 45];
+
+function getTimeParts(value: Date | null): { hour: number; minute: number; amPm: AmPm } {
+  if (!value) return { hour: 12, minute: 0, amPm: 'PM' };
+  const hour = value.getHours();
+  return {
+    hour: ((hour + 11) % 12) + 1,
+    minute: minutes.reduce((closest, option) =>
+      Math.abs(option - value.getMinutes()) < Math.abs(closest - value.getMinutes()) ? option : closest, 0),
+    amPm: hour >= 12 ? 'PM' : 'AM',
+  };
+}
+
+function withTime(date: Date, hour: number, minute: number, amPm: AmPm) {
+  const result = new Date(date);
+  let hours24 = hour % 12;
+  if (amPm === 'PM') hours24 += 12;
+  result.setHours(hours24, minute, 0, 0);
+  return result;
+}
+
+function formatDate(value: Date | null) {
+  return value?.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) ?? 'Select date';
+}
+
+function formatTime(value: Date | null) {
+  return value?.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) ?? 'Select time';
+}
+
 export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, endDate, onChange, onClose }) => {
-  const [validationError, setValidationError] = useState<string | null>(null);
   const [selectedStart, setSelectedStart] = useState<Date | null>(null);
   const [selectedEnd, setSelectedEnd] = useState<Date | null>(null);
+  const [startTime, setStartTime] = useState(getTimeParts(null));
+  const [endTime, setEndTime] = useState(getTimeParts(null));
+  const [section, setSection] = useState<PickerSection>('start');
   const [showEndPicker, setShowEndPicker] = useState(false);
-  // time components for start
-  const [startHour, setStartHour] = useState<number>(12);
-  const [startMinute, setStartMinute] = useState<number>(0);
-  const [startAmPm, setStartAmPm] = useState<'AM' | 'PM'>('PM');
-  const [activeOverlay, setActiveOverlay] = useState<null | 'startDate' | 'startTime' | 'endDate' | 'endTime'>(null);
-  // time components for end
-  const [endHour, setEndHour] = useState<number>(12);
-  const [endMinute, setEndMinute] = useState<number>(0);
-  const [endAmPm, setEndAmPm] = useState<'AM' | 'PM'>('PM');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!visible) {
-      return;
-    }
+    if (!visible) return;
+    setSelectedStart(date);
+    setSelectedEnd(endDate);
+    setStartTime(getTimeParts(date));
+    setEndTime(getTimeParts(endDate));
+    setShowEndPicker(endDate !== null);
+    setSection('start');
     setValidationError(null);
-    setSelectedStart(date ?? null);
-    setSelectedEnd(endDate ?? null);
-    if (date) {
-      const h = date.getHours();
-      setStartAmPm(h >= 12 ? 'PM' : 'AM');
-      setStartHour(((h + 11) % 12) + 1);
-      setStartMinute(date.getMinutes());
-    }
-    if (endDate) {
-      const eh = endDate.getHours();
-      setEndAmPm(eh >= 12 ? 'PM' : 'AM');
-      setEndHour(((eh + 11) % 12) + 1);
-      setEndMinute(endDate.getMinutes());
-      setShowEndPicker(true);
-    }
   }, [visible, date, endDate]);
 
-  function buildDateFromSelected(date: Date | null, hour: number, minute: number, ampm: 'AM' | 'PM') {
-    if (!date) return null;
-    let h = hour % 12;
-    if (ampm === 'PM') h += 12;
-    const d = new Date(date);
-    d.setHours(h, minute, 0, 0);
-    return d;
+  const activeDate = section === 'start' ? selectedStart : selectedEnd;
+  const markedDates = useMemo(() => {
+    const marked: Record<string, { selected: boolean; selectedColor: string }> = {};
+    if (selectedStart) marked[selectedStart.toISOString().slice(0, 10)] = { selected: true, selectedColor: '#087AC5' };
+    if (selectedEnd) marked[selectedEnd.toISOString().slice(0, 10)] = { selected: true, selectedColor: '#5B8DEF' };
+    return marked;
+  }, [selectedStart, selectedEnd]);
+
+  function handleDayPress(day: DateData) {
+    const current = activeDate ?? new Date();
+    const [year, month, dayNumber] = day.dateString.split('-').map(Number);
+    const nextDate = new Date(year, month - 1, dayNumber, current.getHours(), current.getMinutes(), 0, 0);
+    if (section === 'start') setSelectedStart(nextDate);
+    else setSelectedEnd(nextDate);
   }
 
-  function handleApply() {
-    const builtStart = buildDateFromSelected(selectedStart, startHour, startMinute, startAmPm);
-    const builtEnd = showEndPicker ? buildDateFromSelected(selectedEnd, endHour, endMinute, endAmPm) : null;
-
-    if (!builtStart) {
-      setValidationError('Select a valid start date and time.');
-      return;
-    }
-
-    if (builtEnd && builtEnd.getTime() < builtStart.getTime()) {
-      setValidationError('End date/time must be after start date/time.');
-      return;
-    }
-
-    onChange(builtStart, builtEnd);
-    onClose();
+  function updateTime(hour: number, minute: number, amPm: AmPm) {
+    if (section === 'start') setStartTime({ hour, minute, amPm });
+    else setEndTime({ hour, minute, amPm });
   }
 
   function setNow() {
     const now = new Date();
     setSelectedStart(now);
-    const h = now.getHours();
-    setStartAmPm(h >= 12 ? 'PM' : 'AM');
-    setStartHour(((h + 11) % 12) + 1);
-    setStartMinute(now.getMinutes());
+    setStartTime(getTimeParts(now));
+    setSection('start');
   }
 
   function clearEnd() {
     setSelectedEnd(null);
     setShowEndPicker(false);
-    setEndHour(12);
-    setEndMinute(0);
-    setEndAmPm('PM');
+    setValidationError(null);
   }
+
+  function handleApply() {
+    const builtStart = selectedStart ? withTime(selectedStart, startTime.hour, startTime.minute, startTime.amPm) : null;
+    const builtEnd = showEndPicker && selectedEnd ? withTime(selectedEnd, endTime.hour, endTime.minute, endTime.amPm) : null;
+    if (!builtStart) {
+      setValidationError('Select a valid start date and time.');
+      return;
+    }
+    if (builtEnd && builtEnd.getTime() < builtStart.getTime()) {
+      setValidationError('End date/time must be after start date/time.');
+      return;
+    }
+    onChange(builtStart, builtEnd);
+    onClose();
+  }
+
+  const selectedTime = section === 'start' ? startTime : endTime;
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <ThemedText type="title" style={styles.title}>Select Date & Time</ThemedText>
-          <ThemedText style={styles.label}>Start</ThemedText>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <PillButton onPress={() => setActiveOverlay('startDate')}>{selectedStart ? new Date(selectedStart).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select Date'}</PillButton>
-            <PillButton onPress={() => setActiveOverlay('startTime')}>{selectedStart ? new Date(buildDateFromSelected(selectedStart,startHour??12,startMinute??0,startAmPm??'PM') as Date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Select Time'}</PillButton>
-          </View>
-          <View style={styles.actionRow}>
-            <Pressable onPress={setNow} style={styles.actionButton}>
-              <ThemedText style={styles.actionText}>Use Now</ThemedText>
-            </Pressable>
-          </View>
-
-          <ThemedText style={styles.label}>Ends</ThemedText>
-          {!showEndPicker ? (
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <PillButton onPress={() => setShowEndPicker(true)} size="small">Add End Time</PillButton>
+          <View style={styles.header}>
+            <View>
+              <ThemedText style={styles.eyebrow}>EVENT SCHEDULE</ThemedText>
+              <ThemedText type="title" style={styles.title}>Select date & time</ThemedText>
             </View>
-          ) : (
-            <>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <PillButton onPress={() => setActiveOverlay('endDate')}>{selectedEnd ? new Date(selectedEnd).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select Date'}</PillButton>
-                <PillButton onPress={() => setActiveOverlay('endTime')}>{selectedEnd ? new Date(buildDateFromSelected(selectedEnd,endHour??12,endMinute??0,endAmPm??'PM') as Date).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : 'Select Time'}</PillButton>
-              </View>
-              <View style={styles.actionRow}>
-                <Pressable onPress={clearEnd} style={styles.actionButton}>
-                  <ThemedText style={styles.actionText}>Clear End</ThemedText>
-                </Pressable>
-              </View>
-            </>
-          )}
-
-          <DatePickerOverlay visible={activeOverlay==='startDate' || activeOverlay==='endDate'} value={activeOverlay==='startDate' ? selectedStart ?? date : selectedEnd ?? endDate} onChange={(d) => {
-            if (activeOverlay==='startDate') {
-              setSelectedStart(d);
-              const h = d.getHours();
-              setStartAmPm(h >= 12 ? 'PM' : 'AM');
-              setStartHour(((h + 11) % 12) + 1);
-              setStartMinute(d.getMinutes());
-            } else {
-              setSelectedEnd(d);
-              const h = d.getHours();
-              setEndAmPm(h >= 12 ? 'PM' : 'AM');
-              setEndHour(((h + 11) % 12) + 1);
-              setEndMinute(d.getMinutes());
-            }
-            setActiveOverlay(null);
-          }} onClose={() => setActiveOverlay(null)} />
-
-          <TimePickerModal visible={activeOverlay==='startTime' || activeOverlay==='endTime'} initialHour={activeOverlay==='startTime' ? startHour : endHour} initialMinute={activeOverlay==='startTime' ? startMinute : endMinute} initialAmPm={activeOverlay==='startTime' ? startAmPm : endAmPm} onCancel={() => setActiveOverlay(null)} onDone={(h,m,ap) => {
-            if (activeOverlay==='startTime') {
-              setStartHour(h);
-              setStartMinute(m);
-              setStartAmPm(ap);
-            } else {
-              setEndHour(h);
-              setEndMinute(m);
-              setEndAmPm(ap);
-            }
-            setActiveOverlay(null);
-          }} />
-
-          {validationError ? <ThemedText style={styles.errorText}>{validationError}</ThemedText> : null}
-
-          <View style={styles.footerRow}>
-            <Pressable onPress={onClose}>
-              <ThemedText style={styles.close}>Cancel</ThemedText>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close date and time picker">
+              <ThemedText style={styles.close}>×</ThemedText>
             </Pressable>
-            <Pressable onPress={handleApply}>
-              <ThemedText style={styles.closePrimary}>Apply</ThemedText>
-            </Pressable>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+            <View style={styles.sectionTabs}>
+              <Pressable style={[styles.sectionTab, section === 'start' && styles.sectionTabActive]} onPress={() => setSection('start')}>
+                <ThemedText style={[styles.sectionTabText, section === 'start' && styles.sectionTabTextActive]}>Start</ThemedText>
+                <ThemedText style={styles.summary}>{formatDate(selectedStart)} · {formatTime(selectedStart ? withTime(selectedStart, startTime.hour, startTime.minute, startTime.amPm) : null)}</ThemedText>
+              </Pressable>
+              <Pressable style={[styles.sectionTab, section === 'end' && styles.sectionTabActive]} onPress={() => showEndPicker && setSection('end')}>
+                <ThemedText style={[styles.sectionTabText, section === 'end' && styles.sectionTabTextActive]}>End</ThemedText>
+                <ThemedText style={styles.summary}>{showEndPicker ? `${formatDate(selectedEnd)} · ${formatTime(selectedEnd ? withTime(selectedEnd, endTime.hour, endTime.minute, endTime.amPm) : null)}` : 'Optional'}</ThemedText>
+              </Pressable>
+            </View>
+
+            <View style={styles.calendarCard}>
+              <Calendar
+                current={(activeDate ?? new Date()).toISOString().slice(0, 10)}
+                onDayPress={handleDayPress}
+                markedDates={markedDates}
+                enableSwipeMonths
+                theme={{
+                  backgroundColor: '#FFFFFF',
+                  calendarBackground: '#FFFFFF',
+                  textSectionTitleColor: '#71829C',
+                  dayTextColor: '#17213D',
+                  todayTextColor: '#087AC5',
+                  arrowColor: '#087AC5',
+                  monthTextColor: '#17213D',
+                  textMonthFontWeight: '700',
+                  textDayFontSize: 14,
+                  textDayHeaderFontSize: 11,
+                }}
+              />
+            </View>
+
+            <ThemedText style={styles.timeLabel}>Time</ThemedText>
+            <View style={styles.timeSelector}>
+              <View style={styles.timeColumn}>
+                <ThemedText style={styles.columnLabel}>HOUR</ThemedText>
+                <View style={styles.choiceGrid}>
+                  {hours.map((hour) => (
+                    <Pressable key={hour} onPress={() => updateTime(hour, selectedTime.minute, selectedTime.amPm)} style={[styles.choice, selectedTime.hour === hour && styles.choiceSelected]}>
+                      <ThemedText style={[styles.choiceText, selectedTime.hour === hour && styles.choiceTextSelected]}>{hour}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.timeColumn}>
+                <ThemedText style={styles.columnLabel}>MIN</ThemedText>
+                <View style={styles.choiceGrid}>
+                  {minutes.map((minute) => (
+                    <Pressable key={minute} onPress={() => updateTime(selectedTime.hour, minute, selectedTime.amPm)} style={[styles.choice, selectedTime.minute === minute && styles.choiceSelected]}>
+                      <ThemedText style={[styles.choiceText, selectedTime.minute === minute && styles.choiceTextSelected]}>{String(minute).padStart(2, '0')}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.timeColumn}>
+                <ThemedText style={styles.columnLabel}>AM/PM</ThemedText>
+                <View style={styles.choiceGrid}>
+                  {(['AM', 'PM'] as AmPm[]).map((amPm) => (
+                    <Pressable key={amPm} onPress={() => updateTime(selectedTime.hour, selectedTime.minute, amPm)} style={[styles.choice, selectedTime.amPm === amPm && styles.choiceSelected]}>
+                      <ThemedText style={[styles.choiceText, selectedTime.amPm === amPm && styles.choiceTextSelected]}>{amPm}</ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.utilityRow}>
+              <Pressable onPress={setNow}><ThemedText style={styles.utilityText}>Use current time</ThemedText></Pressable>
+              {!showEndPicker ? (
+                <Pressable onPress={() => { setShowEndPicker(true); setSection('end'); }}><ThemedText style={styles.utilityText}>+ Add end time</ThemedText></Pressable>
+              ) : (
+                <Pressable onPress={clearEnd}><ThemedText style={styles.utilityText}>Clear end</ThemedText></Pressable>
+              )}
+            </View>
+            {validationError ? <ThemedText style={styles.errorText}>{validationError}</ThemedText> : null}
+          </ScrollView>
+
+          <View style={styles.footer}>
+            <Pressable onPress={onClose} style={styles.cancelButton}><ThemedText style={styles.cancelText}>Cancel</ThemedText></Pressable>
+            <Pressable onPress={handleApply} style={styles.applyButton}><ThemedText style={styles.applyText}>Apply</ThemedText></Pressable>
           </View>
         </View>
       </View>
@@ -176,76 +218,35 @@ export const EventDateModal: React.FC<EventDateModalProps> = ({ visible, date, e
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modal: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 24,
-    width: '90%',
-    alignItems: 'stretch',
-  },
-  title: {
-    color: '#111A30',
-    fontSize: 22,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  hint: {
-    color: '#71829C',
-    fontSize: 13,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  label: {
-    color: '#243750',
-    fontSize: 16,
-    marginTop: 14,
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: '#F5F8FC',
-    color: '#17213D',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-  },
-  actionButton: {
-    borderRadius: 10,
-    backgroundColor: '#EAF2FC',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  actionText: {
-    color: '#45617F',
-    fontSize: 13,
-  },
-  errorText: {
-    color: '#C0392B',
-    marginTop: 12,
-    fontSize: 13,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  close: {
-    color: '#687A96',
-    fontSize: 18,
-  },
-  closePrimary: {
-    color: '#1678E8',
-    fontSize: 18,
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(19, 43, 70, 0.35)', justifyContent: 'flex-end' },
+  modal: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '94%', paddingTop: 22 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 22, paddingBottom: 12 },
+  eyebrow: { color: '#087AC5', fontSize: 10, fontWeight: '700', letterSpacing: 1.2 },
+  title: { color: '#111A30', fontSize: 24, marginTop: 4 },
+  close: { color: '#71829C', fontSize: 30, lineHeight: 28 },
+  content: { paddingHorizontal: 18, paddingBottom: 14 },
+  sectionTabs: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  sectionTab: { flex: 1, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 12, padding: 11 },
+  sectionTabActive: { borderColor: '#087AC5', backgroundColor: '#F2F8FE' },
+  sectionTabText: { color: '#45617F', fontSize: 14, fontWeight: '700' },
+  sectionTabTextActive: { color: '#087AC5' },
+  summary: { color: '#71829C', fontSize: 10, marginTop: 4 },
+  calendarCard: { borderWidth: 1, borderColor: '#E3EAF2', borderRadius: 16, overflow: 'hidden' },
+  timeLabel: { color: '#16213A', fontSize: 14, fontWeight: '700', marginTop: 16, marginBottom: 8 },
+  timeSelector: { flexDirection: 'row', gap: 8 },
+  timeColumn: { flex: 1 },
+  columnLabel: { color: '#8CA0B8', fontSize: 9, fontWeight: '700', marginBottom: 6, textAlign: 'center' },
+  choiceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' },
+  choice: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F8FC', borderRadius: 8, minWidth: 35, minHeight: 36, paddingHorizontal: 5 },
+  choiceSelected: { backgroundColor: '#087AC5' },
+  choiceText: { color: '#45617F', fontSize: 12, fontWeight: '600' },
+  choiceTextSelected: { color: '#FFFFFF' },
+  utilityRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
+  utilityText: { color: '#087AC5', fontSize: 12, fontWeight: '600' },
+  errorText: { color: '#C0392B', fontSize: 12, marginTop: 10 },
+  footer: { flexDirection: 'row', gap: 10, borderTopWidth: 1, borderTopColor: '#E8EEF6', padding: 18 },
+  cancelButton: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 46 },
+  cancelText: { color: '#56708E', fontSize: 14, fontWeight: '600' },
+  applyButton: { alignItems: 'center', justifyContent: 'center', flex: 1, minHeight: 46, borderRadius: 11, backgroundColor: '#087AC5' },
+  applyText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });
