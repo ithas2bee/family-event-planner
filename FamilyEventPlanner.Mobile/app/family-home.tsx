@@ -29,7 +29,7 @@ const PREVIEW_LIMIT = 5;
 type MyGroupPreview = {
   groupId: string;
   groupName: string;
-  inviteCode?: string;
+  inviteCode: string | undefined;
 };
 
 function mapGroups(raw: unknown): MyGroupPreview[] {
@@ -265,7 +265,7 @@ export default function FamilyHomeScreen() {
       return;
     }
 
-    const activeGroup = groupsData.find((group) => group.groupId === groupId) ?? groupsData[0];
+    const activeGroup = groupsData.find((group) => group.groupId === groupId);
     setMyGroupsPreview(
       activeGroup
         ? [

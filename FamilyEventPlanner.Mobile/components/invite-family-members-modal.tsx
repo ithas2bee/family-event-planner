@@ -170,13 +170,14 @@ const styles = StyleSheet.create({
   codeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 16,
     marginTop: 8,
   },
   code: {
     color: '#102A65',
-    fontSize: 40,
+    fontSize: 34,
     fontWeight: '800',
     letterSpacing: 2,
   },
