@@ -1,7 +1,8 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -25,6 +26,7 @@ function isPollClosed(poll: Poll): boolean {
 
 export default function PollDetailsScreen() {
   const { pollId } = useLocalSearchParams<{ pollId: string }>();
+  const insets = useSafeAreaInsets();
   const [poll, setPoll] = useState<Poll | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
@@ -73,9 +75,8 @@ export default function PollDetailsScreen() {
 
   if (!poll || error) {
     return (
-      <ThemedView style={styles.centered}>
+      <ThemedView style={[styles.centered, { paddingTop: insets.top + 24 }]}>
         <ThemedText style={styles.feedback}>{error || 'Poll not found.'}</ThemedText>
-        <Pressable style={styles.backButton} onPress={() => router.back()}><ThemedText style={styles.backButtonText}>Go Back</ThemedText></Pressable>
       </ThemedView>
     );
   }
@@ -86,13 +87,9 @@ export default function PollDetailsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}>
         <View style={styles.navRow}>
-          <Pressable onPress={() => router.back()} style={styles.backIcon} accessibilityLabel="Go back">
-            <MaterialIcons name="arrow-back-ios" size={21} color="#10255B" />
-          </Pressable>
           <ThemedText type="subtitle" style={styles.navTitle}>Poll Details</ThemedText>
-          <View style={styles.navSpacer} />
         </View>
 
         <View style={styles.heroCard}>
@@ -150,10 +147,8 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 36, gap: 14 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, backgroundColor: '#F5F9FF' },
   feedback: { color: '#617DAA', textAlign: 'center' },
-  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-  backIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  navRow: { alignItems: 'center', marginBottom: 2 },
   navTitle: { color: '#10255B', fontSize: 22 },
-  navSpacer: { width: 40 },
   heroCard: { gap: 16, borderRadius: 20, padding: 18, backgroundColor: '#FFFFFF', shadowColor: '#17477D', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   pollIcon: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E5F2FF' },
@@ -189,6 +184,4 @@ const styles = StyleSheet.create({
   yourVote: { color: '#087CF2', fontSize: 12, fontWeight: '700' },
   closedMessage: { color: '#7654C4', textAlign: 'center', marginTop: 4 },
   votedMessage: { color: '#159157', textAlign: 'center', marginTop: 4 },
-  backButton: { borderRadius: 12, backgroundColor: '#087CF2', paddingHorizontal: 20, paddingVertical: 11 },
-  backButtonText: { color: '#FFFFFF', fontWeight: '700' },
 });

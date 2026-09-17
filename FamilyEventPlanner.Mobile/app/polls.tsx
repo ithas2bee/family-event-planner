@@ -148,7 +148,12 @@ export default function PollsScreen() {
           return (
             <Pressable
               style={({ pressed }) => [styles.pollCard, pressed && styles.cardPressed]}
-              onPress={() => router.push({ pathname: '/poll/[pollId]', params: { pollId: item.id } })}
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/(main)/poll/[pollId]',
+                  params: { pollId: item.id },
+                })
+              }
               accessibilityRole="button"
               accessibilityLabel={`Open poll: ${item.question || 'Untitled Poll'}`}>
               <View style={styles.pollIcon}><MaterialIcons name="poll" size={25} color="#087CF2" /></View>
