@@ -96,6 +96,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 {
                     groupId = m.FamilyGroupId,
                     groupName = m.FamilyGroup.Name,
+                    inviteCode = m.FamilyGroup.InviteCode,
                     isAdmin = m.IsAdmin,
                     memberId = m.Id,
                     joinedAt = m.JoinedAt
