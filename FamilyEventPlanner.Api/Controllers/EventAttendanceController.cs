@@ -10,7 +10,7 @@ namespace FamilyEventPlanner.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Microsoft.AspNetCore.Authorization.Authorize]
+    [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
     public class EventAttendanceController : ControllerBase
     {
         private readonly AppDbContext _context;
