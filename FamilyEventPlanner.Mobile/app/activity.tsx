@@ -249,16 +249,17 @@ export default function ActivityScreen() {
       router.push('/my-groups');
     }
 
-    async function markAllRead() {
-      if (markingRead || memberIdValue.length === 0) return;
-      setMarkingRead(true);
-      try {
-        await markAllNotificationsRead(memberIdValue);
-      } catch {
-        setError('Notifications could not be updated.');
-      } finally {
-        setMarkingRead(false);
-      }
+  }
+
+  async function markAllRead() {
+    if (markingRead || memberIdValue.length === 0) return;
+    setMarkingRead(true);
+    try {
+      await markAllNotificationsRead(memberIdValue);
+    } catch {
+      setError('Notifications could not be updated.');
+    } finally {
+      setMarkingRead(false);
     }
   }
 
@@ -320,7 +321,11 @@ export default function ActivityScreen() {
                 <ThemedText style={styles.groupTitle}>{label}</ThemedText>
                 {items.map((item) => {
                   const details = getActivityDetails(item);
-                  const canNavigate = Boolean(item.relatedEntityId);
+                  const canNavigate =
+                    Boolean(item.relatedEntityId) &&
+                    ['Event', 'Kickback', 'Poll', 'Announcement', 'Group'].includes(
+                      item.relatedEntityType ?? '',
+                    );
                   return (
                     <Pressable
                       key={item.id}
