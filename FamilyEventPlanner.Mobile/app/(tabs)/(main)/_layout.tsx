@@ -91,6 +91,13 @@ export default function MainTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="poll/[pollId]"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
         name="members"
         options={{
           href: null,
