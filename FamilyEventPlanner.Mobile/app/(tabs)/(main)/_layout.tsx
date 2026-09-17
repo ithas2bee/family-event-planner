@@ -77,6 +77,13 @@ export default function MainTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="announcement/[announcementId]"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
         name="polls"
         options={{
           href: null,
