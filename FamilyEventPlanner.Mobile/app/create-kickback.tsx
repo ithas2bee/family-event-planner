@@ -1,21 +1,30 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createKickback } from '@/services/kickbackService';
 
-const vibeOptions = ['BBQ', 'Game On', 'Drinks', 'Bonfire', 'Chill', 'Pool', 'Music', 'Food'];
-const durationOptions = ['2 Hours', 'Tonight', 'Until Midnight'] as const;
+export const vibeOptions = ['BBQ', 'Game On', 'Drinks', 'Bonfire', 'Chill', 'Pool', 'Music', 'Food', 'Other'] as const;
+export const durationOptions = ['2 Hours', 'Tonight', 'Until Midnight', 'Custom'] as const;
 
 type DurationOption = (typeof durationOptions)[number];
 
-function resolveExpiresAtUtc(duration: DurationOption): string {
+export function resolveExpiresAtUtc(duration: DurationOption): string {
   const now = new Date();
 
-  if (duration === '2 Hours') {
+  if (duration === '2 Hours' || duration === 'Custom') {
     return new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
   }
 
@@ -41,10 +50,14 @@ export default function CreateKickbackScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = selectedVibe.trim().length > 0 && groupIdValue.length > 0 && !loading;
+  const canSubmit = groupIdValue.length > 0 && !loading;
 
   async function handleCreateKickback() {
     setError(null);
+    if (selectedVibe.length === 0) {
+      setError('Choose a vibe to continue.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -75,170 +88,155 @@ export default function CreateKickbackScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <ThemedText type="title" style={styles.title}>
-        Create Kickback
-      </ThemedText>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.header}>
+            <ThemedText type="title" style={styles.title}>Create a Kickback</ThemedText>
+            <ThemedText style={styles.subtitle}>
+              A quick way to get the family together. Pick a vibe and let&apos;s go.
+            </ThemedText>
+          </View>
 
-      <ThemedView style={styles.fieldGroup}>
-        <ThemedText type="defaultSemiBold" style={styles.label}>
-          Vibe
-        </ThemedText>
-        <View style={styles.buttonGrid}>
-          {vibeOptions.map((vibe) => (
-            <Pressable
-              key={vibe}
-              style={[styles.choiceButton, selectedVibe === vibe && styles.choiceButtonSelected]}
-              onPress={() => setSelectedVibe(vibe)}>
-              <ThemedText
-                type="defaultSemiBold"
-                style={[
-                  styles.choiceButtonText,
-                  selectedVibe === vibe && styles.choiceButtonTextSelected,
-                ]}>
-                {vibe}
-              </ThemedText>
-            </Pressable>
-          ))}
-        </View>
-      </ThemedView>
+          <View style={styles.fieldGroup}>
+            <ThemedText style={styles.sectionTitle}>What&apos;s the vibe?</ThemedText>
+            <View style={styles.buttonGrid}>
+              {vibeOptions.map((vibe) => {
+                const selected = selectedVibe === vibe;
+                return (
+                  <Pressable
+                    key={vibe}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${vibe} vibe`}
+                    style={[styles.choiceButton, selected && styles.choiceButtonSelected]}
+                    onPress={() => {
+                      setSelectedVibe(vibe);
+                      setError(null);
+                    }}>
+                    <ThemedText style={[styles.choiceButtonText, selected && styles.choiceButtonTextSelected]}>
+                      {vibe}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
 
-      <ThemedView style={styles.fieldGroup}>
-        <ThemedText type="defaultSemiBold" style={styles.label}>
-          Note
-        </ThemedText>
-        <TextInput
-          style={styles.input}
-          value={note}
-          onChangeText={setNote}
-          placeholder="Optional note"
-          multiline
-        />
-      </ThemedView>
+          <View style={styles.fieldGroup}>
+            <ThemedText style={styles.sectionTitle}>Add a note <ThemedText style={styles.optional}>Optional</ThemedText></ThemedText>
+            <TextInput
+              style={styles.input}
+              value={note}
+              onChangeText={setNote}
+              placeholder="What should everyone know?"
+              placeholderTextColor="#8CA0B8"
+              multiline
+              maxLength={500}
+              textAlignVertical="top"
+              accessibilityLabel="Optional note"
+            />
+          </View>
 
-      <ThemedView style={styles.fieldGroup}>
-        <ThemedText type="defaultSemiBold" style={styles.label}>
-          Duration
-        </ThemedText>
-        <View style={styles.durationGroup}>
-          {durationOptions.map((duration) => (
-            <Pressable
-              key={duration}
-              style={[
-                styles.durationButton,
-                selectedDuration === duration && styles.durationButtonSelected,
-              ]}
-              onPress={() => setSelectedDuration(duration)}>
-              <ThemedText
-                type="defaultSemiBold"
-                style={[
-                  styles.durationButtonText,
-                  selectedDuration === duration && styles.durationButtonTextSelected,
-                ]}>
-                {duration}
-              </ThemedText>
-            </Pressable>
-          ))}
-        </View>
-      </ThemedView>
+          <View style={styles.fieldGroup}>
+            <ThemedText style={styles.sectionTitle}>How long?</ThemedText>
+            <View style={styles.durationGroup}>
+              {durationOptions.map((duration) => {
+                const selected = selectedDuration === duration;
+                return (
+                  <Pressable
+                    key={duration}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`${duration} duration`}
+                    style={[styles.durationButton, selected && styles.durationButtonSelected]}
+                    onPress={() => setSelectedDuration(duration)}>
+                    <ThemedText style={[styles.durationButtonText, selected && styles.durationButtonTextSelected]}>
+                      {duration}
+                    </ThemedText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
 
-      {error !== null && <ThemedText style={styles.feedbackError}>{error}</ThemedText>}
+          {error !== null && <ThemedText accessibilityLiveRegion="polite" style={styles.feedbackError}>{error}</ThemedText>}
 
-      <Pressable
-        style={[styles.primaryButton, !canSubmit && styles.buttonDisabled]}
-        onPress={handleCreateKickback}
-        disabled={!canSubmit}>
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-            Post Kickback
-          </ThemedText>
-        )}
-      </Pressable>
-    </ScrollView>
+          <Pressable
+            style={[styles.primaryButton, !canSubmit && styles.buttonDisabled]}
+            onPress={handleCreateKickback}
+            disabled={!canSubmit}
+            accessibilityRole="button"
+            accessibilityLabel="Create Kickback">
+            {loading ? <ActivityIndicator color="#fff" /> : <ThemedText style={styles.primaryButtonText}>Create Kickback</ThemedText>}
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    gap: 16,
-  },
-  title: {
-    marginBottom: 8,
-  },
-  fieldGroup: {
-    gap: 8,
-  },
-  label: {
-    marginBottom: 4,
-  },
-  buttonGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  safeArea: { flex: 1, backgroundColor: '#F5F8FC' },
+  flex: { flex: 1 },
+  container: { padding: 20, paddingBottom: 36, gap: 28 },
+  header: { gap: 8 },
+  title: { color: '#111A30', fontSize: 28, lineHeight: 34 },
+  subtitle: { color: '#56708E', fontSize: 15, lineHeight: 22 },
+  fieldGroup: { gap: 12 },
+  sectionTitle: { color: '#111A30', fontSize: 17, fontWeight: '700' },
+  optional: { color: '#8CA0B8', fontSize: 13, fontWeight: '400' },
+  buttonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   choiceButton: {
+    minWidth: '29%',
     borderWidth: 1,
-    borderColor: '#0A7EA4',
-    borderRadius: 8,
-    paddingVertical: 10,
+    borderColor: '#D3DFEC',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 13,
     paddingHorizontal: 12,
-  },
-  choiceButtonSelected: {
-    backgroundColor: '#0A7EA4',
-  },
-  choiceButtonText: {
-    color: '#0A7EA4',
-  },
-  choiceButtonTextSelected: {
-    color: '#FFFFFF',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 16,
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
-  durationGroup: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  durationButton: {
-    borderWidth: 1,
-    borderColor: '#0A7EA4',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  durationButtonSelected: {
-    backgroundColor: '#0A7EA4',
-  },
-  durationButtonText: {
-    color: '#0A7EA4',
-  },
-  durationButtonTextSelected: {
-    color: '#FFFFFF',
-  },
-  feedbackError: {
-    color: '#C0392B',
-  },
-  primaryButton: {
-    backgroundColor: '#0A7EA4',
-    paddingVertical: 14,
-    borderRadius: 10,
     alignItems: 'center',
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  choiceButtonSelected: { backgroundColor: '#087AC5', borderColor: '#087AC5' },
+  choiceButtonText: { color: '#45617F', fontSize: 14, fontWeight: '600' },
+  choiceButtonTextSelected: { color: '#FFFFFF' },
+  input: {
+    borderWidth: 1,
+    borderColor: '#D3DFEC',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    fontSize: 15,
+    minHeight: 94,
+    color: '#111A30',
   },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  durationGroup: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  durationButton: {
+    flex: 1,
+    minWidth: '44%',
+    borderWidth: 1,
+    borderColor: '#D3DFEC',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+    alignItems: 'center',
   },
+  durationButtonSelected: { backgroundColor: '#E6F3FB', borderColor: '#087AC5', borderWidth: 2 },
+  durationButtonText: { color: '#45617F', fontSize: 14, fontWeight: '600' },
+  durationButtonTextSelected: { color: '#087AC5' },
+  feedbackError: { color: '#C0392B', fontSize: 14 },
+  primaryButton: {
+    backgroundColor: '#087AC5',
+    paddingVertical: 17,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  buttonDisabled: { opacity: 0.5 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
 });
