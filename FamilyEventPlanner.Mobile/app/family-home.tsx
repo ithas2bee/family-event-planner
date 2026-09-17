@@ -8,8 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '@/config/api';
 import { AnnouncementCard, type AnnouncementCardItem } from '@/components/announcement-card';
 import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
-import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
+import { DashboardSection } from '@/components/dashboard-section';
 import { FamilyMembersSection } from '@/components/family-members-section';
+import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
 import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -129,7 +130,7 @@ export default function FamilyHomeScreen() {
   const [memberName, setMemberName] = useState(initialMemberName);
   const [memberId, setMemberId] = useState(initialMemberId);
 
-  const [myGroupsPreview, setMyGroupsPreview] = useState<DashboardCardItem[]>([]);
+  const [myGroupsPreview, setMyGroupsPreview] = useState<GroupSummaryCardItem[]>([]);
   const [membersPreview, setMembersPreview] = useState<GroupMember[]>([]);
   const [announcementsPreview, setAnnouncementsPreview] = useState<AnnouncementCardItem[]>([]);
   const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
@@ -258,12 +259,22 @@ export default function FamilyHomeScreen() {
       return;
     }
 
+    const activeGroup = groupsData.find((group) => group.groupId === groupId) ?? groupsData[0];
     setMyGroupsPreview(
-      groupsData.slice(0, PREVIEW_LIMIT).map((group) => ({
-        id: group.groupId,
-        title: group.groupName,
-        subtitle: group.groupId === groupId ? 'Active group' : 'Available group',
-      }))
+      activeGroup
+        ? [
+            {
+              id: activeGroup.groupId,
+              title: activeGroup.groupName,
+              subtitle: 'Active group',
+              members: membersData,
+              memberCount: membersData.length > 0 ? membersData.length : undefined,
+              eventCount: eventsData.length > 0 ? eventsData.length : undefined,
+              announcementCount: announcementsData.length > 0 ? announcementsData.length : undefined,
+              pollCount: pollsData.length > 0 ? pollsData.length : undefined,
+            },
+          ]
+        : []
     );
 
     setMembersPreview(membersData.slice(0, PREVIEW_LIMIT));
@@ -391,6 +402,23 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           emptyText="No groups to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
+          onCardPress={(item) =>
+            router.push({
+              pathname: '/(tabs)/family-home',
+              params: { groupId: item.id, groupName: item.title },
+            })
+          }
+          renderCard={(item) => (
+            <GroupSummaryCard
+              item={item}
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/family-home',
+                  params: { groupId: item.id, groupName: item.title },
+                })
+              }
+            />
+          )}
         />
 
         <DashboardSection
