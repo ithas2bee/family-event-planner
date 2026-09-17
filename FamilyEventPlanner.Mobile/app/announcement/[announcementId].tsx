@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -19,20 +19,10 @@ export default function AnnouncementDetailsScreen() {
   const author = String(params.creatorDisplayName ?? 'Unknown member');
   const createdAt = String(params.createdAt ?? '');
   const expiresAt = String(params.expiresAt ?? '');
-  const goBackToAnnouncements = () => {
-    router.replace('/(tabs)/(main)/announcements');
-  };
-
   return (
     <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={styles.container}>
       <View style={styles.navigation}>
-        <Pressable
-          onPress={goBackToAnnouncements}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel="Back to announcements">
-          <MaterialIcons name="arrow-back" size={27} color="#102653" />
-        </Pressable>
+        <View style={styles.navigationSpacer} />
         <ThemedText type="defaultSemiBold" style={styles.navigationTitle}>
           Announcement
         </ThemedText>
@@ -83,7 +73,7 @@ export default function AnnouncementDetailsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
-  navigation: { height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  navigation: { height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   navigationTitle: { color: '#102653', fontSize: 20 },
   navigationSpacer: { width: 27 },
   scrollContent: { paddingVertical: 18, paddingBottom: 32 },
