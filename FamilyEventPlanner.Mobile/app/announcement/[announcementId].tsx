@@ -19,11 +19,18 @@ export default function AnnouncementDetailsScreen() {
   const author = String(params.creatorDisplayName ?? 'Unknown member');
   const createdAt = String(params.createdAt ?? '');
   const expiresAt = String(params.expiresAt ?? '');
+  const goBackToAnnouncements = () => {
+    router.replace('/(tabs)/(main)/announcements');
+  };
 
   return (
     <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={styles.container}>
       <View style={styles.navigation}>
-        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel="Go back">
+        <Pressable
+          onPress={goBackToAnnouncements}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Back to announcements">
           <MaterialIcons name="arrow-back" size={27} color="#102653" />
         </Pressable>
         <ThemedText type="defaultSemiBold" style={styles.navigationTitle}>
