@@ -141,7 +141,7 @@ export default function AnnouncementsScreen() {
               item={item}
               onPress={() =>
                 router.push({
-                  pathname: '/announcement/[announcementId]',
+                  pathname: '/(tabs)/(main)/announcement/[announcementId]',
                   params: {
                     announcementId: item.id,
                     title: item.title,
