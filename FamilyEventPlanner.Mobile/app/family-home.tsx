@@ -2,7 +2,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { API_BASE_URL } from '@/config/api';
@@ -136,6 +136,7 @@ export default function FamilyHomeScreen() {
   const [kickbacksPreview, setKickbacksPreview] = useState<KickbackCardItem[]>([]);
   const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     const update: { groupId?: string; groupName?: string; memberId?: string; memberName?: string } = {};
@@ -318,15 +319,32 @@ export default function FamilyHomeScreen() {
   );
 
   const handleLogout = async () => {
+    setMenuVisible(false);
     await clearSession();
     await clearActiveGroup();
     router.replace('/auth');
+  };
+
+  const closeMenu = () => setMenuVisible(false);
+
+  const openUnavailableAction = () => {
+    closeMenu();
   };
 
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
+          <Pressable
+            accessibilityLabel="Open home menu"
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => setMenuVisible(true)}
+            style={styles.iconButton}
+          >
+            <MaterialIcons name="menu" size={28} color="#174B5C" />
+          </Pressable>
+
           <View style={styles.headerCopy}>
             <ThemedText type="title" style={styles.title}>
               Family Home
@@ -438,12 +456,118 @@ export default function FamilyHomeScreen() {
           )}
         />
 
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <ThemedText type="defaultSemiBold" style={styles.logoutButtonText}>
-            Logout
-          </ThemedText>
-        </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={menuVisible}
+        animationType="fade"
+        transparent
+        statusBarTranslucent
+        onRequestClose={closeMenu}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable accessibilityLabel="Close home menu" style={StyleSheet.absoluteFill} onPress={closeMenu} />
+          <View style={[styles.menuCard, { marginTop: Math.max(insets.top, 16) }]}>
+            <View style={styles.menuHeader}>
+              <ThemedText type="title" style={styles.menuTitle}>Home Menu</ThemedText>
+              <Pressable
+                accessibilityLabel="Close home menu"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={closeMenu}
+                style={styles.menuCloseButton}
+              >
+                <MaterialIcons name="close" size={24} color="#174B5C" />
+              </Pressable>
+            </View>
+
+            <Pressable
+              accessibilityLabel="Join a Group"
+              accessibilityRole="button"
+              onPress={() => {
+                closeMenu();
+                router.push('/join-group');
+              }}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#EAF5FF' }]}>
+                <MaterialIcons name="group-add" size={24} color="#1687D9" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Join a Group</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Connect with another family</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Notifications"
+              accessibilityRole="button"
+              onPress={() => {
+                closeMenu();
+                router.push('/(tabs)/(main)/activity');
+              }}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#FFF5E9' }]}>
+                <MaterialIcons name="notifications-none" size={24} color="#ED7B12" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Notifications</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>See your latest updates</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Settings"
+              accessibilityRole="button"
+              onPress={openUnavailableAction}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#F5EEFF' }]}>
+                <MaterialIcons name="settings" size={24} color="#6841D8" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Settings</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Manage your preferences</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Help & Support"
+              accessibilityRole="button"
+              onPress={openUnavailableAction}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#EAFBF7' }]}>
+                <MaterialIcons name="help-outline" size={24} color="#0D9F7A" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Help & Support</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Get answers and assistance</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Sign Out"
+              accessibilityRole="button"
+              onPress={handleLogout}
+              style={[styles.menuItem, styles.signOutItem]}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#FFF0F2' }]}>
+                <MaterialIcons name="logout" size={24} color="#D9364D" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={[styles.menuItemTitle, styles.signOutText]}>Sign Out</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Sign out of this account</ThemedText>
+              </View>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -504,14 +628,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-  logoutButton: {
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BCC3CC',
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 27, 48, 0.48)',
+    paddingHorizontal: 16,
   },
-  logoutButtonText: {
-    fontSize: 16,
+  menuCard: {
+    width: '88%',
+    maxWidth: 420,
+    borderRadius: 28,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#17345D',
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  menuTitle: {
+    color: '#10264C',
+    fontSize: 26,
+  },
+  menuCloseButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5FA',
+  },
+  menuItem: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E4EAF2',
+  },
+  menuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuItemCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  menuItemTitle: {
+    color: '#17345D',
+    fontSize: 17,
+  },
+  menuItemDescription: {
+    color: '#71819A',
+    fontSize: 13,
+  },
+  signOutItem: {
+    borderBottomWidth: 0,
+    marginTop: 4,
+  },
+  signOutText: {
+    color: '#D9364D',
   },
 });
