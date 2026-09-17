@@ -11,6 +11,7 @@ import { ActivePollCard, type ActivePollCardItem } from '@/components/active-pol
 import { DashboardSection } from '@/components/dashboard-section';
 import { FamilyMembersSection } from '@/components/family-members-section';
 import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
+import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
 import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -28,6 +29,7 @@ const PREVIEW_LIMIT = 5;
 type MyGroupPreview = {
   groupId: string;
   groupName: string;
+  inviteCode?: string;
 };
 
 function mapGroups(raw: unknown): MyGroupPreview[] {
@@ -41,6 +43,7 @@ function mapGroups(raw: unknown): MyGroupPreview[] {
         familyGroupId?: string;
         groupName?: string;
         name?: string;
+        inviteCode?: string;
       };
 
       const id = String(entry.groupId ?? entry.familyGroupId ?? entry.id ?? '').trim();
@@ -52,6 +55,7 @@ function mapGroups(raw: unknown): MyGroupPreview[] {
       return {
         groupId: id,
         groupName: name || 'Unnamed Group',
+        inviteCode: entry.inviteCode,
       };
     })
     .filter((group): group is MyGroupPreview => group !== null);
@@ -138,6 +142,8 @@ export default function FamilyHomeScreen() {
   const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   useEffect(() => {
     const update: { groupId?: string; groupName?: string; memberId?: string; memberName?: string } = {};
@@ -276,6 +282,7 @@ export default function FamilyHomeScreen() {
           ]
         : []
     );
+    setInviteCode(activeGroup?.inviteCode ?? null);
 
     setMembersPreview(membersData.slice(0, PREVIEW_LIMIT));
 
@@ -393,7 +400,7 @@ export default function FamilyHomeScreen() {
           currentMemberId={memberId}
           loading={loadingPreviews}
           onViewAll={() => router.push('/(tabs)/(main)/members')}
-          onInvite={() => router.push('/join-group')}
+          onInvite={() => setInviteModalVisible(true)}
         />
 
         <DashboardSection
@@ -596,6 +603,11 @@ export default function FamilyHomeScreen() {
           </View>
         </View>
       </Modal>
+      <InviteFamilyMembersModal
+        visible={inviteModalVisible}
+        inviteCode={inviteCode}
+        onClose={() => setInviteModalVisible(false)}
+      />
     </ThemedView>
   );
 }
