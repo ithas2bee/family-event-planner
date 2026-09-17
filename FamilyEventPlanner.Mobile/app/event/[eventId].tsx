@@ -1,4 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
+import { EventDateModal } from '@/components/events/EventDateModal';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -29,6 +30,7 @@ export default function EventDetailsScreen() {
   const [responseLoading, setResponseLoading] = useState(false);
   const [responseError, setResponseError] = useState<string | null>(null);
   const [activeAssignmentIndex, setActiveAssignmentIndex] = useState<number | null>(null);
+  const [dateModalVisible, setDateModalVisible] = useState(false);
 
   useEffect(() => {
     if (!eventId || typeof eventId !== 'string') {
@@ -409,32 +411,92 @@ export default function EventDetailsScreen() {
           title="Edit Event"
           onClose={() => setIsEditing(false)}
         >
-          <View>
+          <View style={styles.editForm}>
+            <View style={styles.editSection}>
+              <View style={styles.editSectionHeader}>
+                <View style={[styles.editIcon, styles.editIconBlue]}>
+                  <MaterialIcons name="event" size={22} color="#1678E8" />
+                </View>
+                <View>
+                  <ThemedText style={styles.editSectionTitle}>Event Details</ThemedText>
+                  <ThemedText style={styles.editSectionHint}>Tell your family about this event</ThemedText>
+                </View>
+              </View>
             <FormInput
+              label="Event Title"
               value={event.title}
               onChangeText={(text) => setEvent({ ...event, title: text })}
-              placeholder="Event Title"
+              placeholder="Family Game Night"
               autoCapitalize="words"
               maxLength={60}
+              style={styles.lightInput}
             />
             <FormInput
+              label="Description"
               value={event.description || ''}
               onChangeText={(text) => setEvent({ ...event, description: text })}
-              placeholder="Description"
+              placeholder="Add more details about your event..."
               multiline
               maxLength={200}
+              style={[styles.lightInput, styles.descriptionInput]}
             />
+            </View>
+
+            <View style={styles.editSection}>
+              <View style={styles.editSectionHeader}>
+                <View style={[styles.editIcon, styles.editIconPurple]}>
+                  <MaterialIcons name="place" size={22} color="#635BDB" />
+                </View>
+                <ThemedText style={styles.editSectionTitle}>Location</ThemedText>
+              </View>
             <FormInput
+              label="Where is it happening?"
               value={event.location || ''}
               onChangeText={(text) => setEvent({ ...event, location: text })}
-              placeholder="Location"
+              placeholder="Add a location"
+              style={styles.lightInput}
             />
+            </View>
 
-            {/* Assignments Editing Section */}
-            <View style={styles.advSettingsSection}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                Assignments
-              </ThemedText>
+            <View style={styles.editSection}>
+              <View style={styles.editSectionHeader}>
+                <View style={[styles.editIcon, styles.editIconGreen]}>
+                  <MaterialIcons name="calendar-today" size={22} color="#159B82" />
+                </View>
+                <View>
+                  <ThemedText style={styles.editSectionTitle}>Date &amp; Time</ThemedText>
+                  <ThemedText style={styles.editSectionHint}>Choose when your event starts</ThemedText>
+                </View>
+              </View>
+              <Pressable
+                style={styles.dateTimeField}
+                onPress={() => setDateModalVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Edit date and time"
+              >
+                <View style={styles.dateTimeCopy}>
+                  <ThemedText style={styles.dateTimeValue}>
+                    {formatDate(event.startDate).date} at {formatDate(event.startDate).time}
+                  </ThemedText>
+                  <ThemedText style={styles.dateTimeHint}>Tap to change date or time</ThemedText>
+                </View>
+                <MaterialIcons name="chevron-right" size={26} color="#687A96" />
+              </Pressable>
+            </View>
+
+            <View style={styles.assignmentEditSection}>
+              <View style={styles.assignmentHeader}>
+                <View style={[styles.editIcon, styles.editIconPink]}>
+                  <MaterialIcons name="group" size={23} color="#C62865" />
+                </View>
+                <View style={styles.assignmentHeaderCopy}>
+                  <ThemedText style={styles.editSectionTitle}>Assignments</ThemedText>
+                  <ThemedText style={styles.editSectionHint}>Assign tasks to family members</ThemedText>
+                </View>
+                <View style={styles.assignmentCount}>
+                  <ThemedText style={styles.assignmentCountText}>{event.assignments?.length ?? 0}</ThemedText>
+                </View>
+              </View>
               {(event.assignments && event.assignments.length > 0) ? (
                 event.assignments.map((assignment, idx) => {
                   const suggestions = getMemberSuggestions(assignment.memberName);
@@ -444,8 +506,27 @@ export default function EventDetailsScreen() {
                     suggestions.length > 0;
 
                   return (
-                    <View key={idx} style={styles.assignmentEditRow}>
+                    <View key={idx} style={styles.assignmentEditCard}>
+                      <View style={styles.assignmentCardHeader}>
+                        <View style={styles.assignmentAvatar}>
+                          <ThemedText style={styles.assignmentAvatarText}>{getInitials(assignment.memberName || 'Family member')}</ThemedText>
+                        </View>
+                        <ThemedText style={styles.assignmentNumber}>Assignment {idx + 1}</ThemedText>
+                        <Pressable
+                          onPress={() => {
+                            const updated = (event.assignments || []).filter((_, i) => i !== idx);
+                            setEvent({ ...event, assignments: updated });
+                            setActiveAssignmentIndex(null);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove assignment ${idx + 1}`}
+                          hitSlop={8}
+                        >
+                          <MaterialIcons name="delete-outline" size={23} color="#E55353" />
+                        </Pressable>
+                      </View>
                       <FormInput
+                        label="Family member"
                         value={assignment.memberName}
                         onFocus={() => setActiveAssignmentIndex(idx)}
                         onChangeText={text => {
@@ -454,8 +535,8 @@ export default function EventDetailsScreen() {
                           setEvent({ ...event, assignments: updated });
                           setActiveAssignmentIndex(idx);
                         }}
-                        placeholder="Name"
-                        style={styles.assignmentInput}
+                        placeholder="Select a family member"
+                        style={styles.lightInput}
                         maxLength={32}
                       />
                       {showSuggestions && (
@@ -481,6 +562,7 @@ export default function EventDetailsScreen() {
                         </View>
                       )}
                       <FormInput
+                        label="Task"
                         value={assignment.task}
                         onFocus={() => setActiveAssignmentIndex(null)}
                         onChangeText={text => {
@@ -488,46 +570,36 @@ export default function EventDetailsScreen() {
                           updated[idx] = { ...assignment, task: text };
                           setEvent({ ...event, assignments: updated });
                         }}
-                        placeholder="Item/Task"
-                        style={styles.assignmentInput}
-                        maxLength={32}
+                        placeholder="What should they bring or do?"
+                        style={styles.lightInput}
+                        maxLength={100}
                       />
-                      <ImmersiveButton
-                        variant="tertiary"
-                        size="small"
-                        style={styles.assignmentRemoveBtn}
-                        onPress={() => {
-                          const updated = (event.assignments || []).filter((_, i) => i !== idx);
-                          setEvent({ ...event, assignments: updated });
-                          setActiveAssignmentIndex(null);
-                        }}
-                      >
-                        Remove
-                      </ImmersiveButton>
                     </View>
                   );
                 })
               ) : (
-                <ThemedText style={styles.sectionText}>No assignments yet.</ThemedText>
+                <ThemedText style={styles.emptyAssignments}>No assignments yet. Add one below.</ThemedText>
               )}
-              <ImmersiveButton
-                variant="secondary"
-                size="small"
-                style={styles.assignmentAddBtn}
+              <Pressable
+                style={styles.addAssignmentButton}
                 onPress={() => {
                   const updated = event.assignments ? [...event.assignments] : [];
                   updated.push({ memberName: '', task: '', memberId: undefined });
                   setEvent({ ...event, assignments: updated });
                   setActiveAssignmentIndex(updated.length - 1);
                 }}
+                accessibilityRole="button"
+                accessibilityLabel="Add assignment"
               >
-                Add Assignment
-              </ImmersiveButton>
+                <MaterialIcons name="add-circle-outline" size={25} color="#1678E8" />
+                <ThemedText style={styles.addAssignmentText}>Add Assignment</ThemedText>
+              </Pressable>
             </View>
 
             <ImmersiveButton
               variant="primary"
               size="large"
+              style={styles.saveChangesButton}
               onPress={() => handleEdit(event)}
               loading={editLoading}
             >
@@ -539,6 +611,21 @@ export default function EventDetailsScreen() {
           </View>
         </ModalSheet>
       )}
+      <EventDateModal
+        visible={dateModalVisible}
+        date={new Date(event.startDate)}
+        endDate={event.endDate ? new Date(event.endDate) : null}
+        onChange={(startDate, endDate) => {
+          if (startDate) {
+            setEvent({
+              ...event,
+              startDate: startDate.toISOString(),
+              endDate: endDate ? endDate.toISOString() : undefined,
+            });
+          }
+        }}
+        onClose={() => setDateModalVisible(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -854,6 +941,169 @@ const styles = StyleSheet.create({
     marginTop: Spacing.lg,
     marginBottom: Spacing.lg,
     gap: Spacing.xs,
+  },
+  editForm: {
+    gap: Spacing.md,
+    paddingBottom: Spacing.md,
+  },
+  saveChangesButton: {
+    backgroundColor: '#1678E8',
+    minHeight: 56,
+    marginTop: Spacing.sm,
+  },
+  editSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: Spacing.lg,
+    shadowColor: '#54708F',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  editSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  editIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editIconBlue: { backgroundColor: '#E4F0FF' },
+  editIconPurple: { backgroundColor: '#EEE9FF' },
+  editIconGreen: { backgroundColor: '#DFF7F0' },
+  editIconPink: { backgroundColor: '#FFE4EE' },
+  editSectionTitle: {
+    color: '#111A30',
+    fontSize: Typography.sizes.lg,
+    fontWeight: '700',
+  },
+  editSectionHint: {
+    color: '#71829C',
+    fontSize: Typography.sizes.xs,
+    marginTop: 2,
+  },
+  lightInput: {
+    backgroundColor: '#FFFFFF',
+    color: '#17213D',
+    borderWidth: 1,
+    borderColor: '#D3DEED',
+    borderRadius: 12,
+    marginBottom: Spacing.md,
+  },
+  descriptionInput: {
+    minHeight: 84,
+    textAlignVertical: 'top',
+  },
+  dateTimeField: {
+    minHeight: 68,
+    borderWidth: 1,
+    borderColor: '#D3DEED',
+    borderRadius: 12,
+    paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateTimeCopy: { flex: 1, gap: 3 },
+  dateTimeValue: {
+    color: '#17213D',
+    fontSize: Typography.sizes.base,
+    fontWeight: '600',
+  },
+  dateTimeHint: {
+    color: '#71829C',
+    fontSize: Typography.sizes.xs,
+  },
+  assignmentEditSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: Spacing.lg,
+    shadowColor: '#54708F',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+  assignmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: Spacing.md,
+  },
+  assignmentHeaderCopy: { flex: 1 },
+  assignmentCount: {
+    minWidth: 32,
+    height: 30,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: 15,
+    backgroundColor: '#E4F0FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assignmentCountText: {
+    color: '#1678E8',
+    fontWeight: '700',
+  },
+  assignmentEditCard: {
+    borderWidth: 1,
+    borderColor: '#DCE6F2',
+    borderRadius: 14,
+    padding: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  assignmentCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  assignmentAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#DDF2FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assignmentAvatarText: {
+    color: '#23618B',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  assignmentNumber: {
+    flex: 1,
+    color: '#536782',
+    fontSize: Typography.sizes.xs,
+    fontWeight: '600',
+  },
+  emptyAssignments: {
+    color: '#71829C',
+    fontSize: Typography.sizes.sm,
+    paddingVertical: Spacing.sm,
+  },
+  addAssignmentButton: {
+    minHeight: 52,
+    marginTop: Spacing.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#9AC7F7',
+    borderRadius: 14,
+    backgroundColor: '#F1F7FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+  },
+  addAssignmentText: {
+    color: '#1678E8',
+    fontSize: Typography.sizes.base,
+    fontWeight: '700',
   },
   assignmentEditRow: {
     width: '100%',

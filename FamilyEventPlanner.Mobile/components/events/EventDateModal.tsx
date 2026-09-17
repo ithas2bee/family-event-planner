@@ -183,33 +183,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modal: {
-    backgroundColor: '#23232b',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 24,
     width: '90%',
     alignItems: 'stretch',
   },
   title: {
-    color: '#fff',
+    color: '#111A30',
     fontSize: 22,
     marginBottom: 16,
     textAlign: 'center',
   },
   hint: {
-    color: '#b7bfcc',
+    color: '#71829C',
     fontSize: 13,
     marginBottom: 8,
     textAlign: 'center',
   },
   label: {
-    color: '#fff',
+    color: '#243750',
     fontSize: 16,
     marginTop: 14,
     marginBottom: 4,
   },
   input: {
-    backgroundColor: '#18181f',
-    color: '#fff',
+    backgroundColor: '#F5F8FC',
+    color: '#17213D',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -222,16 +222,16 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: '#EAF2FC',
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   actionText: {
-    color: '#d6dded',
+    color: '#45617F',
     fontSize: 13,
   },
   errorText: {
-    color: '#f28b82',
+    color: '#C0392B',
     marginTop: 12,
     fontSize: 13,
   },
@@ -241,11 +241,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   close: {
-    color: '#aeb7c9',
+    color: '#687A96',
     fontSize: 18,
   },
   closePrimary: {
-    color: '#4f8cff',
+    color: '#1678E8',
     fontSize: 18,
   },
 });
