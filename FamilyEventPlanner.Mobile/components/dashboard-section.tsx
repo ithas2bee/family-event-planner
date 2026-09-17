@@ -16,6 +16,7 @@ type DashboardSectionProps = {
   items: DashboardCardItem[];
   loading?: boolean;
   emptyText?: string;
+  emptyState?: ReactNode;
   viewAllLabel?: string;
   onViewAll: () => void;
   onCardPress?: (item: DashboardCardItem) => void;
@@ -27,6 +28,7 @@ export function DashboardSection<T extends DashboardCardItem>({
   items,
   loading = false,
   emptyText = 'Nothing to preview yet.',
+  emptyState,
   viewAllLabel = 'View All',
   onViewAll,
   onCardPress,
@@ -59,9 +61,11 @@ export function DashboardSection<T extends DashboardCardItem>({
             <ThemedText style={styles.placeholderText}>Loading...</ThemedText>
           </ThemedView>
         ) : items.length === 0 ? (
-          <ThemedView style={[styles.card, styles.placeholderCard]}>
-            <ThemedText style={styles.placeholderText}>{emptyText}</ThemedText>
-          </ThemedView>
+          emptyState ?? (
+            <ThemedView style={[styles.card, styles.placeholderCard]}>
+              <ThemedText style={styles.placeholderText}>{emptyText}</ThemedText>
+            </ThemedView>
+          )
         ) : (
           items.map((item, index) => {
             if (renderCard) {
