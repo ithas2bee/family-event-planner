@@ -15,6 +15,11 @@ export type ActivityFeedItem = {
   createdAtUtc: string;
 };
 
+type NotificationRecord = {
+  id: string;
+  isRead: boolean;
+};
+
 async function getActivityHeaders(): Promise<Record<string, string>> {
   const headers = await getAuthHeaders();
   const session = await loadSession();
@@ -108,6 +113,35 @@ export async function getActivityByGroup(groupId: string): Promise<ActivityFeedI
     });
   } catch {
     throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  export async function markAllNotificationsRead(memberId: string): Promise<void> {
+    const headers = await getActivityHeaders();
+    const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error('Notifications could not be updated.');
+    }
+
+    const notifications = (await response.json()) as NotificationRecord[];
+    await Promise.all(
+      notifications
+        .filter((notification) => !notification.isRead)
+        .map((notification) =>
+          fetch(`${API_BASE_URL}/api/notifications/${notification.id}/read`, {
+            method: 'PUT',
+            headers,
+            body: JSON.stringify({ memberId }),
+          }).then((markResponse) => {
+            if (!markResponse.ok) {
+              throw new Error('Notifications could not be updated.');
+            }
+          }),
+        ),
+    );
   }
 
   const rawBody = await response.text();
