@@ -11,6 +11,7 @@ import { ActivePollCard, type ActivePollCardItem } from '@/components/active-pol
 import { DashboardSection } from '@/components/dashboard-section';
 import { FamilyMembersSection } from '@/components/family-members-section';
 import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
+import { HomeEmptyStateCard } from '@/components/home-empty-state-card';
 import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
 import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
@@ -428,7 +429,17 @@ export default function FamilyHomeScreen() {
           title="Announcements"
           items={announcementsPreview}
           loading={loadingPreviews}
-          emptyText="No announcements to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Announcements"
+              message="No announcements yet."
+              supportingText="Be the first to share an update with your family!"
+              actionLabel="Create Announcement"
+              icon="campaign"
+              colors={{ background: '#F7F0FF', iconBackground: '#E7D9FF', icon: '#7040D8', action: '#5D32D6' }}
+              onCreate={() => router.push('/create-announcement')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/announcements')}
           onCardPress={() => router.push('/(tabs)/(main)/announcements')}
           renderCard={(item) => (
@@ -443,7 +454,17 @@ export default function FamilyHomeScreen() {
           title="Polls"
           items={pollsPreview}
           loading={loadingPreviews}
-          emptyText="No polls to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Polls"
+              message="No polls to preview yet."
+              supportingText="Create a poll to get your family's opinions!"
+              actionLabel="Create Poll"
+              icon="poll"
+              colors={{ background: '#EEF7FF', iconBackground: '#D8EBFF', icon: '#1678E8', action: '#1678E8' }}
+              onCreate={() => router.push('/create-poll')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/polls')}
           onCardPress={() => router.push('/(tabs)/(main)/polls')}
           renderCard={(item, index) => (
@@ -459,7 +480,17 @@ export default function FamilyHomeScreen() {
           title="Recent Kickbacks"
           items={kickbacksPreview}
           loading={loadingPreviews}
-          emptyText="No kickbacks to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Recent Kickbacks"
+              message="No kickbacks to preview yet."
+              supportingText="Plan a casual get-together with your family!"
+              actionLabel="Create Kickback"
+              icon="groups"
+              colors={{ background: '#EEFBF6', iconBackground: '#D5F5E7', icon: '#0D9F7A', action: '#0D9F7A' }}
+              onCreate={() => router.push('/create-kickback')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/kickbacks')}
           onCardPress={() => router.push('/(tabs)/(main)/kickbacks')}
           renderCard={(item, index) => (
@@ -475,7 +506,17 @@ export default function FamilyHomeScreen() {
           title="Upcoming Events"
           items={eventsPreview}
           loading={loadingPreviews}
-          emptyText="No events to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Upcoming Events"
+              message="No upcoming events yet."
+              supportingText="Create an event to bring everyone together!"
+              actionLabel="Create Event"
+              icon="event"
+              colors={{ background: '#FFF8ED', iconBackground: '#FFE9C5', icon: '#ED7B12', action: '#ED7B12' }}
+              onCreate={() => router.push('/create-event')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/events')}
           onCardPress={(item) => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
           renderCard={(item, index) => (
