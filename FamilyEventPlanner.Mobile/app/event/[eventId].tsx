@@ -3,7 +3,6 @@ import { EventDateModal } from '@/components/events/EventDateModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
-import { GlassCard } from '@/components/ui/glass-card';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
@@ -411,27 +410,53 @@ export default function EventDetailsScreen() {
           </View>
         ) : null}
 
-        {event.dressCode && (
-          <GlassCard style={styles.section} padding={Spacing.lg}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              Dress Code
-            </ThemedText>
-            <ThemedText style={styles.sectionText}>
-              {event.dressCode}
-            </ThemedText>
-          </GlassCard>
-        )}
-
-        {event.notes && (
-          <GlassCard style={styles.section} padding={Spacing.lg}>
-            <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-              Notes
-            </ThemedText>
-            <ThemedText style={styles.sectionText}>
-              {event.notes}
-            </ThemedText>
-          </GlassCard>
-        )}
+        {(event.dressCode?.trim() || event.notes?.trim()) ? (
+          <View style={styles.additionalDetailsSection}>
+            <View style={styles.additionalDetailsHeader}>
+              <View style={styles.additionalDetailsHeading}>
+                <ThemedText type="title" style={styles.additionalDetailsTitle}>Additional Details</ThemedText>
+                <ThemedText style={styles.additionalDetailsDescription}>
+                  Extra details to help your family know what to expect.
+                </ThemedText>
+              </View>
+              {isCreator ? (
+                <Pressable
+                  style={styles.additionalDetailsEdit}
+                  onPress={() => setSettingsModalVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit additional details"
+                >
+                  <MaterialIcons name="edit" size={18} color="#2879E8" />
+                  <ThemedText style={styles.additionalDetailsEditText}>Edit</ThemedText>
+                </Pressable>
+              ) : null}
+            </View>
+            <View style={styles.additionalDetailsCards}>
+              {event.dressCode?.trim() ? (
+                <View style={styles.additionalDetailsCard}>
+                  <View style={[styles.additionalDetailsIcon, styles.additionalDetailsIconPurple]}>
+                    <MaterialIcons name="checkroom" size={30} color="#5A43D6" />
+                  </View>
+                  <View style={styles.additionalDetailsCopy}>
+                    <ThemedText style={styles.additionalDetailsLabel}>Dress Code</ThemedText>
+                    <ThemedText style={styles.additionalDetailsValue}>{event.dressCode.trim()}</ThemedText>
+                  </View>
+                </View>
+              ) : null}
+              {event.notes?.trim() ? (
+                <View style={styles.additionalDetailsCard}>
+                  <View style={[styles.additionalDetailsIcon, styles.additionalDetailsIconGreen]}>
+                    <MaterialIcons name="description" size={30} color="#0B9D6E" />
+                  </View>
+                  <View style={styles.additionalDetailsCopy}>
+                    <ThemedText style={styles.additionalDetailsLabel}>Notes</ThemedText>
+                    <ThemedText style={styles.additionalDetailsValue}>{event.notes.trim()}</ThemedText>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
 
       </View>
 
@@ -993,6 +1018,91 @@ const styles = StyleSheet.create({
     color: '#31435F',
     fontSize: Typography.sizes.sm,
     lineHeight: 20,
+  },
+  additionalDetailsSection: {
+    marginHorizontal: Spacing.lg,
+    gap: Spacing.md,
+  },
+  additionalDetailsHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+  },
+  additionalDetailsHeading: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  additionalDetailsTitle: {
+    color: '#111A30',
+    fontSize: 30,
+    lineHeight: 36,
+  },
+  additionalDetailsDescription: {
+    color: '#61738F',
+    fontSize: Typography.sizes.sm,
+    lineHeight: 21,
+  },
+  additionalDetailsEdit: {
+    minHeight: 42,
+    borderRadius: 22,
+    paddingHorizontal: Spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: '#E8F1FF',
+  },
+  additionalDetailsEditText: {
+    color: '#2879E8',
+    fontSize: Typography.sizes.sm,
+    fontWeight: '700',
+  },
+  additionalDetailsCards: {
+    gap: Spacing.md,
+  },
+  additionalDetailsCard: {
+    minHeight: 132,
+    borderRadius: 24,
+    padding: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#54708F',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  additionalDetailsIcon: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  additionalDetailsIconPurple: {
+    backgroundColor: '#F0EDFF',
+  },
+  additionalDetailsIconGreen: {
+    backgroundColor: '#DDF8EE',
+  },
+  additionalDetailsCopy: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  additionalDetailsLabel: {
+    color: '#111A30',
+    fontSize: Typography.sizes.lg,
+    lineHeight: 26,
+    fontWeight: '700',
+  },
+  additionalDetailsValue: {
+    color: '#61738F',
+    fontSize: Typography.sizes.base,
+    lineHeight: 23,
   },
   advSettingsSection: {
     marginTop: Spacing.lg,
