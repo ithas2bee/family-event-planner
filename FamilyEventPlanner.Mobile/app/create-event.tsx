@@ -216,7 +216,7 @@ export default function CreateEventScreen() {
       </KeyboardAvoidingView>
       <EventDateModal visible={dateModalVisible} date={dateObj} endDate={endDateObj} onChange={handleDateChange} onClose={() => setDateModalVisible(false)} />
       <EventLocationModal visible={locationModalVisible} location={location} onChange={handleLocationChange} onClose={() => setLocationModalVisible(false)} />
-      <EventSettingsModal visible={settingsModalVisible} dressCode={dressCode} notes={notes} onChange={handleSettingsChange} onClose={() => setSettingsModalVisible(false)} />
+      <EventSettingsModal key={`${dressCode}:${notes}`} visible={settingsModalVisible} dressCode={dressCode} notes={notes} onChange={handleSettingsChange} onClose={() => setSettingsModalVisible(false)} />
     </SafeAreaView>
   );
 }

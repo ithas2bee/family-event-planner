@@ -658,6 +658,7 @@ export default function EventDetailsScreen() {
         onClose={() => setDateModalVisible(false)}
       />
       <EventSettingsModal
+        key={`${event.dressCode || ''}:${event.notes || ''}`}
         visible={settingsModalVisible}
         dressCode={event.dressCode || ''}
         notes={event.notes || ''}

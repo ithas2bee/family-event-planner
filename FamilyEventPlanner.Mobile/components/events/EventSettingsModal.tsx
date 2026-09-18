@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -30,13 +30,6 @@ export const EventSettingsModal: React.FC<EventSettingsModalProps> = ({
 }) => {
   const [localDressCode, setLocalDressCode] = useState(dressCode);
   const [localNotes, setLocalNotes] = useState(notes);
-
-  useEffect(() => {
-    if (visible) {
-      setLocalDressCode(dressCode);
-      setLocalNotes(notes);
-    }
-  }, [visible, dressCode, notes]);
 
   const handleSave = () => {
     onChange(localDressCode, localNotes);
