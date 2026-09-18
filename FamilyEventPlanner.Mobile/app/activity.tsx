@@ -7,6 +7,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -152,6 +153,7 @@ function getTimeGroup(createdAtUtc: string): 'Today' | 'Yesterday' | 'This Week'
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
   const {
     groupId: contextGroupId,
@@ -266,7 +268,7 @@ export default function ActivityScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: 24 + insets.top }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
