@@ -275,18 +275,18 @@ export default function ActivityScreen() {
             <ThemedText type="title" style={styles.title}>
               Notifications
             </ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Mark all read"
+              accessibilityState={{ busy: markingRead }}
+              disabled={markingRead}
+              onPress={() => void markAllRead()}
+              style={styles.markReadButton}>
+              <MaterialIcons name="done-all" size={19} color="#1677E8" />
+              <ThemedText style={styles.markReadText}>Mark all read</ThemedText>
+            </Pressable>
             <ThemedText style={styles.subtitle}>Stay up to date with your family. 💙</ThemedText>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mark all read"
-            accessibilityState={{ busy: markingRead }}
-            disabled={markingRead}
-            onPress={() => void markAllRead()}
-            style={styles.markReadButton}>
-            <MaterialIcons name="done-all" size={19} color="#1677E8" />
-            <ThemedText style={styles.markReadText}>Mark all read</ThemedText>
-          </Pressable>
         </View>
 
         <ScrollView
@@ -371,10 +371,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
   },
   title: {
     color: '#10284A',
@@ -388,10 +385,12 @@ const styles = StyleSheet.create({
   },
   markReadButton: {
     alignItems: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: '#E5F1FF',
     borderRadius: 24,
     flexDirection: 'row',
     gap: 6,
+    marginTop: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
