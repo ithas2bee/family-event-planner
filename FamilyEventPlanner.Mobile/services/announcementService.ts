@@ -1,5 +1,4 @@
-const API_BASE_URL = 'http://10.0.0.115:5249';
-
+import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
 
@@ -20,6 +19,21 @@ export type CreateAnnouncementRequest = {
   body: string;
   expiresAt?: string;
 };
+
+export function formatAnnouncementDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Date unavailable';
+  }
+
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
 
 async function getAnnouncementHeaders(): Promise<Record<string, string>> {
   const headers = await getAuthHeaders();

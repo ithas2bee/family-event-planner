@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -15,20 +16,28 @@ type DashboardSectionProps = {
   items: DashboardCardItem[];
   loading?: boolean;
   emptyText?: string;
+  emptyState?: ReactNode;
   viewAllLabel?: string;
   onViewAll: () => void;
   onCardPress?: (item: DashboardCardItem) => void;
+  renderCard?: (item: DashboardCardItem, index: number) => ReactNode;
 };
 
-export function DashboardSection({
+export function DashboardSection<T extends DashboardCardItem>({
   title,
   items,
   loading = false,
   emptyText = 'Nothing to preview yet.',
+  emptyState,
   viewAllLabel = 'View All',
   onViewAll,
   onCardPress,
-}: DashboardSectionProps) {
+  renderCard,
+}: Omit<DashboardSectionProps, 'items' | 'onCardPress' | 'renderCard'> & {
+  items: T[];
+  onCardPress?: (item: T) => void;
+  renderCard?: (item: T, index: number) => ReactNode;
+}) {
   return (
     <ThemedView style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -52,11 +61,17 @@ export function DashboardSection({
             <ThemedText style={styles.placeholderText}>Loading...</ThemedText>
           </ThemedView>
         ) : items.length === 0 ? (
-          <ThemedView style={[styles.card, styles.placeholderCard]}>
-            <ThemedText style={styles.placeholderText}>{emptyText}</ThemedText>
-          </ThemedView>
+          emptyState ?? (
+            <ThemedView style={[styles.card, styles.placeholderCard]}>
+              <ThemedText style={styles.placeholderText}>{emptyText}</ThemedText>
+            </ThemedView>
+          )
         ) : (
-          items.map((item) => {
+          items.map((item, index) => {
+            if (renderCard) {
+              return <Fragment key={item.id}>{renderCard(item, index)}</Fragment>;
+            }
+
             const content = (
               <>
                 <ThemedText type="defaultSemiBold" style={styles.cardTitle} numberOfLines={2}>

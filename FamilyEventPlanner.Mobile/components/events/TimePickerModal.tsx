@@ -64,7 +64,7 @@ const TimePickerModal: React.FC<Props> = ({ visible, initialHour, initialMinute,
               }} showsVerticalScrollIndicator={false} style={styles.wheel}>
                 {hours.map((h) => (
                   <Pressable key={`wheel-h-${h}`} onPress={() => { setHour(h); hourRef.current?.scrollTo({ y: hours.indexOf(h) * ITEM_HEIGHT, animated: true }); }} style={[styles.wheelItem, hour===h && styles.wheelItemActive]}>
-                    <ThemedText style={[{ color: hour===h ? '#fff' : '#b7bfcc' }]}>{String(h)}</ThemedText>
+                    <ThemedText style={[{ color: hour===h ? '#1678E8' : '#71829C' }]}>{String(h)}</ThemedText>
                   </Pressable>
                 ))}
               </ScrollView>
@@ -80,7 +80,7 @@ const TimePickerModal: React.FC<Props> = ({ visible, initialHour, initialMinute,
               }} showsVerticalScrollIndicator={false} style={styles.wheel}>
                 {minutes.map((m) => (
                   <Pressable key={`wheel-m-${m}`} onPress={() => { setMinute(m); minuteRef.current?.scrollTo({ y: minutes.indexOf(m) * ITEM_HEIGHT, animated: true }); }} style={[styles.wheelItem, minute===m && styles.wheelItemActive]}>
-                    <ThemedText style={[{ color: minute===m ? '#fff' : '#b7bfcc' }]}>{m.toString().padStart(2,'0')}</ThemedText>
+                    <ThemedText style={[{ color: minute===m ? '#1678E8' : '#71829C' }]}>{m.toString().padStart(2,'0')}</ThemedText>
                   </Pressable>
                 ))}
               </ScrollView>
@@ -96,7 +96,7 @@ const TimePickerModal: React.FC<Props> = ({ visible, initialHour, initialMinute,
               }} showsVerticalScrollIndicator={false} style={styles.wheel}>
                 {(['AM','PM'] as const).map((ap) => (
                   <Pressable key={`wheel-ap-${ap}`} onPress={() => { setAmPm(ap); apRef.current?.scrollTo({ y: (ap==='AM'?0:1) * ITEM_HEIGHT, animated: true }); }} style={[styles.wheelItem, ampm===ap && styles.wheelItemActive]}>
-                    <ThemedText style={[{ color: ampm===ap ? '#fff' : '#b7bfcc' }]}>{ap}</ThemedText>
+                    <ThemedText style={[{ color: ampm===ap ? '#1678E8' : '#71829C' }]}>{ap}</ThemedText>
                   </Pressable>
                 ))}
               </ScrollView>
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   card: {
     width: '92%',
     maxHeight: '80%',
-    backgroundColor: '#23232b',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 12,
   },
@@ -128,10 +128,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  title: { color: '#fff' },
-  cancel: { color: '#aeb7c9' },
-  done: { color: '#4f8cff' },
-  sectionLabel: { color: '#b7bfcc', marginTop: 8, marginBottom: 6 },
+  title: { color: '#111A30' },
+  cancel: { color: '#687A96' },
+  done: { color: '#1678E8' },
+  sectionLabel: { color: '#71829C', marginTop: 8, marginBottom: 6 },
   wheelRow: { flexDirection: 'row', justifyContent: 'space-between' },
   wheelColumn: { width: '30%' },
   wheel: { height: 48 * 4 },

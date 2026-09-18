@@ -38,12 +38,12 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '92%',
-    backgroundColor: '#23232b',
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 12,
   },
   title: {
-    color: '#fff',
+    color: '#111A30',
     textAlign: 'center',
     marginBottom: 8,
   },

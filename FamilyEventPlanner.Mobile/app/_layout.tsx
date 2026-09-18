@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -27,7 +27,9 @@ export default function RootLayout() {
           <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
           <Stack.Screen name="create-event" options={{ title: 'Create Event' }} />
           <Stack.Screen name="create-announcement" options={{ title: 'Create Announcement' }} />
+          <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
           <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
+          <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
           <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
           <Stack.Screen name="event/[eventId]" options={{ title: '' }} />
         </Stack>
