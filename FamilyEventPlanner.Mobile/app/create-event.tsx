@@ -96,12 +96,9 @@ export default function CreateEventScreen() {
     }
   }
 
-  const formattedDate = dateObj
-    ? dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : 'Select date';
-  const formattedTime = dateObj
-    ? dateObj.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-    : 'Select time';
+  const formattedDateTime = dateObj
+    ? `${dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} · ${dateObj.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`
+    : 'Select date and time';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -163,23 +160,17 @@ export default function CreateEventScreen() {
               accessibilityLabel="Description"
             />
 
-            <ThemedText style={styles.label}>Date &amp; Time</ThemedText>
-            <View style={styles.dateRow}>
-              <Pressable style={[styles.detailInput, styles.dateInput]} onPress={() => setDateModalVisible(true)} accessibilityRole="button" accessibilityLabel="Select date">
-                <MaterialIcons name="event" size={20} color="#56708E" />
-                <View>
-                  <ThemedText style={styles.detailCaption}>Date <ThemedText style={styles.required}>*</ThemedText></ThemedText>
-                  <ThemedText style={styles.detailValue}>{formattedDate}</ThemedText>
-                </View>
-              </Pressable>
-              <Pressable style={[styles.detailInput, styles.dateInput]} onPress={() => setDateModalVisible(true)} accessibilityRole="button" accessibilityLabel="Select time">
-                <MaterialIcons name="schedule" size={20} color="#56708E" />
-                <View>
-                  <ThemedText style={styles.detailCaption}>Time <ThemedText style={styles.required}>*</ThemedText></ThemedText>
-                  <ThemedText style={styles.detailValue}>{formattedTime}</ThemedText>
-                </View>
-              </Pressable>
-            </View>
+            <ThemedText style={styles.label}>Date &amp; Time <ThemedText style={styles.required}>*</ThemedText></ThemedText>
+            <Pressable
+              style={styles.detailInput}
+              onPress={() => setDateModalVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Select date and time"
+            >
+              <MaterialIcons name="event" size={21} color="#56708E" />
+              <ThemedText style={[styles.detailValue, !dateObj && styles.placeholder]}>{formattedDateTime}</ThemedText>
+              <MaterialIcons name="chevron-right" size={22} color="#56708E" />
+            </Pressable>
 
             <ThemedText style={styles.label}>Location</ThemedText>
             <Pressable style={styles.locationInput} onPress={() => setLocationModalVisible(true)} accessibilityRole="button" accessibilityLabel="Add a location">
@@ -243,11 +234,8 @@ const styles = StyleSheet.create({
   required: { color: '#087AC5' },
   input: { minHeight: 42, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 9, paddingHorizontal: 10, color: '#16213A', fontSize: 13 },
   descriptionInput: { minHeight: 53, paddingTop: 10 },
-  dateRow: { flexDirection: 'row', gap: 8 },
   detailInput: { minHeight: 54, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 9 },
-  dateInput: { flex: 1 },
-  detailCaption: { color: '#45617F', fontSize: 10, fontWeight: '600' },
-  detailValue: { color: '#56708E', fontSize: 12, marginTop: 3 },
+  detailValue: { flex: 1, color: '#56708E', fontSize: 12 },
   locationInput: { minHeight: 44, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10 },
   placeholder: { flex: 1, color: '#8CA0B8' },
   imagePlaceholder: { minHeight: 77, borderWidth: 1, borderStyle: 'dashed', borderColor: '#B7C9DC', borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
