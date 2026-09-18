@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { EventDateModal } from '@/components/events/EventDateModal';
+import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -32,6 +33,7 @@ export default function EventDetailsScreen() {
   const [responseError, setResponseError] = useState<string | null>(null);
   const [activeAssignmentIndex, setActiveAssignmentIndex] = useState<number | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
 
   useEffect(() => {
     if (!eventId || typeof eventId !== 'string') {
@@ -176,6 +178,22 @@ export default function EventDetailsScreen() {
       title: event.title,
       message: `${event.title}\n${formatDate(event.startDate).date} at ${formatDate(event.startDate).time}${event.location ? `\n${event.location}` : ''}`,
     });
+  };
+
+  const handleSettingsChange = async (dressCode: string, notes: string) => {
+    if (!eventId || typeof eventId !== 'string') return;
+
+    setEditError(null);
+    try {
+      await updateEvent(eventId, { dressCode: dressCode.trim() || undefined, notes: notes.trim() || undefined });
+      setEvent((currentEvent) =>
+        currentEvent
+          ? { ...currentEvent, dressCode: dressCode.trim() || undefined, notes: notes.trim() || undefined }
+          : currentEvent,
+      );
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update event details.');
+    }
   };
 
   if (loading) {
@@ -360,6 +378,13 @@ export default function EventDetailsScreen() {
             <ThemedText style={styles.actionText}>Share Event</ThemedText>
             <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
           </Pressable>
+          {isCreator ? (
+            <Pressable style={styles.actionRow} onPress={() => setSettingsModalVisible(true)} accessibilityRole="button">
+              <View style={styles.actionIcon}><MaterialIcons name="tune" size={18} color="#355070" /></View>
+              <ThemedText style={styles.actionText}>Additional details</ThemedText>
+              <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
+            </Pressable>
+          ) : null}
           {isCreator ? (
             <Pressable style={styles.actionRow} onPress={() => setIsEditing(true)} accessibilityRole="button">
               <View style={styles.actionIcon}><MaterialIcons name="edit" size={18} color="#355070" /></View>
@@ -631,6 +656,14 @@ export default function EventDetailsScreen() {
           }
         }}
         onClose={() => setDateModalVisible(false)}
+      />
+      <EventSettingsModal
+        key={`${event.dressCode || ''}:${event.notes || ''}`}
+        visible={settingsModalVisible}
+        dressCode={event.dressCode || ''}
+        notes={event.notes || ''}
+        onChange={handleSettingsChange}
+        onClose={() => setSettingsModalVisible(false)}
       />
     </ScreenContainer>
   );
