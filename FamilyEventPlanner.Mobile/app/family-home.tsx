@@ -1,25 +1,36 @@
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from "expo-router/react-navigation";
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DashboardSection, type DashboardCardItem } from '@/components/dashboard-section';
+import { API_BASE_URL } from '@/config/api';
+import { AnnouncementCard, type AnnouncementCardItem } from '@/components/announcement-card';
+import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
+import { DashboardSection } from '@/components/dashboard-section';
+import { FamilyMembersSection } from '@/components/family-members-section';
+import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
+import { HomeEmptyStateCard } from '@/components/home-empty-state-card';
+import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
+import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { UpcomingEventCard, type UpcomingEventCardItem } from '@/components/upcoming-event-card';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getAnnouncementsByGroup } from '@/services/announcementService';
-import { getEventsByGroup } from '@/services/eventService';
-import { getGroupMemberByUser, getGroupMembers } from '@/services/groupMemberService';
+import { getEventsByGroup, type Event } from '@/services/eventService';
+import { getGroupMemberByUser, getGroupMembers, type GroupMember } from '@/services/groupMemberService';
 import { getKickbacksByGroup } from '@/services/kickbackService';
 import { getPollsByGroup } from '@/services/pollService';
 import { clearSession, loadSession, setMemberInfo } from '@/services/sessionService';
 
-const API_BASE_URL = 'http://10.0.0.115:5249';
 const PREVIEW_LIMIT = 5;
 
 type MyGroupPreview = {
   groupId: string;
   groupName: string;
+  inviteCode: string | undefined;
 };
 
 function mapGroups(raw: unknown): MyGroupPreview[] {
@@ -33,6 +44,7 @@ function mapGroups(raw: unknown): MyGroupPreview[] {
         familyGroupId?: string;
         groupName?: string;
         name?: string;
+        inviteCode?: string;
       };
 
       const id = String(entry.groupId ?? entry.familyGroupId ?? entry.id ?? '').trim();
@@ -44,12 +56,13 @@ function mapGroups(raw: unknown): MyGroupPreview[] {
       return {
         groupId: id,
         groupName: name || 'Unnamed Group',
+        inviteCode: entry.inviteCode,
       };
     })
     .filter((group): group is MyGroupPreview => group !== null);
 }
 
-function toBodyPreview(text: string, maxLength = 72): string {
+function toBodyPreview(text: string, maxLength = 96): string {
   const trimmed = text.trim();
   if (trimmed.length <= maxLength) {
     return trimmed;
@@ -57,7 +70,54 @@ function toBodyPreview(text: string, maxLength = 72): string {
   return `${trimmed.slice(0, maxLength - 3)}...`;
 }
 
+function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
+  const previewEvents = events.slice(0, PREVIEW_LIMIT);
+  const nextUpEventId = previewEvents.reduce<string | null>((closestEventId, event) => {
+    const parsedDate = new Date(event.startDate);
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getTime() < Date.now()) {
+      return closestEventId;
+    }
+
+    if (!closestEventId) {
+      return event.id;
+    }
+
+    const closestEvent = previewEvents.find((previewEvent) => previewEvent.id === closestEventId);
+    const closestDate = closestEvent ? new Date(closestEvent.startDate) : null;
+
+    if (!closestDate || Number.isNaN(closestDate.getTime()) || parsedDate.getTime() < closestDate.getTime()) {
+      return event.id;
+    }
+
+    return closestEventId;
+  }, null);
+
+  return previewEvents.map((event) => ({
+    id: event.id,
+    title: event.title || 'Untitled Event',
+    startDate: event.startDate,
+    location: event.location?.trim() || undefined,
+    host: event.creatorDisplayName?.trim() || undefined,
+    participantCount: event.assignments?.length,
+    isNextUp: event.id === nextUpEventId,
+  }));
+}
+
+function getInitials(name: string): string {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return initials || '?';
+}
+
 export default function FamilyHomeScreen() {
+  const insets = useSafeAreaInsets();
   const {
     groupId: contextGroupId,
     groupName: contextGroupName,
@@ -75,13 +135,16 @@ export default function FamilyHomeScreen() {
   const [memberName, setMemberName] = useState(initialMemberName);
   const [memberId, setMemberId] = useState(initialMemberId);
 
-  const [myGroupsPreview, setMyGroupsPreview] = useState<DashboardCardItem[]>([]);
-  const [membersPreview, setMembersPreview] = useState<DashboardCardItem[]>([]);
-  const [announcementsPreview, setAnnouncementsPreview] = useState<DashboardCardItem[]>([]);
-  const [pollsPreview, setPollsPreview] = useState<DashboardCardItem[]>([]);
-  const [kickbacksPreview, setKickbacksPreview] = useState<DashboardCardItem[]>([]);
-  const [eventsPreview, setEventsPreview] = useState<DashboardCardItem[]>([]);
+  const [myGroupsPreview, setMyGroupsPreview] = useState<GroupSummaryCardItem[]>([]);
+  const [membersPreview, setMembersPreview] = useState<GroupMember[]>([]);
+  const [announcementsPreview, setAnnouncementsPreview] = useState<AnnouncementCardItem[]>([]);
+  const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
+  const [kickbacksPreview, setKickbacksPreview] = useState<KickbackCardItem[]>([]);
+  const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
   const [loadingPreviews, setLoadingPreviews] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [inviteModalVisible, setInviteModalVisible] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   useEffect(() => {
     const update: { groupId?: string; groupName?: string; memberId?: string; memberName?: string } = {};
@@ -109,17 +172,20 @@ export default function FamilyHomeScreen() {
     let cancelled = false;
 
     async function resolveMember() {
-      if (!groupId) return;
-
       const session = await loadSession();
       if (!session) {
         router.replace('/auth');
         return;
       }
 
+      if (!memberName && session.displayName) {
+        setMemberName(session.displayName);
+      }
+
+      if (!groupId) return;
+
       // If we already have a memberId from params/session, keep it
       if (memberId) {
-        if (!memberName && session.displayName) setMemberName(session.displayName);
         return;
       }
 
@@ -184,7 +250,7 @@ export default function FamilyHomeScreen() {
 
     const membersPromise = memberId
       ? getGroupMembers(groupId, memberId).catch(() => [])
-      : Promise.resolve([] as Array<{ memberId?: string; displayName?: string; isAdmin?: boolean }>);
+      : Promise.resolve([] as GroupMember[]);
 
     const [groupsData, membersData, announcementsData, pollsData, kickbacksData, eventsData] =
       await Promise.all([
@@ -200,30 +266,33 @@ export default function FamilyHomeScreen() {
       return;
     }
 
+    const activeGroup = groupsData.find((group) => group.groupId === groupId);
     setMyGroupsPreview(
-      groupsData.slice(0, PREVIEW_LIMIT).map((group) => ({
-        id: group.groupId,
-        title: group.groupName,
-        subtitle: group.groupId === groupId ? 'Active group' : 'Available group',
-        meta: group.groupId,
-      }))
+      activeGroup
+        ? [
+            {
+              id: activeGroup.groupId,
+              title: activeGroup.groupName,
+              subtitle: 'Active group',
+              members: membersData,
+              memberCount: membersData.length > 0 ? membersData.length : undefined,
+              eventCount: eventsData.length > 0 ? eventsData.length : undefined,
+              announcementCount: announcementsData.length > 0 ? announcementsData.length : undefined,
+              pollCount: pollsData.length > 0 ? pollsData.length : undefined,
+            },
+          ]
+        : []
     );
+    setInviteCode(activeGroup?.inviteCode ?? null);
 
-    setMembersPreview(
-      membersData.slice(0, PREVIEW_LIMIT).map((member, index) => ({
-        id: String(member.memberId ?? index),
-        title: String(member.displayName ?? 'Unknown Member'),
-        subtitle: member.isAdmin ? 'Admin' : 'Member',
-        meta: String(member.memberId ?? ''),
-      }))
-    );
+    setMembersPreview(membersData.slice(0, PREVIEW_LIMIT));
 
     setAnnouncementsPreview(
       announcementsData.slice(0, PREVIEW_LIMIT).map((announcement) => ({
         id: announcement.id,
         title: announcement.title || 'Untitled Announcement',
-        subtitle: toBodyPreview(announcement.body),
-        meta: announcement.creatorDisplayName || 'Unknown Member',
+        message: toBodyPreview(announcement.body),
+        author: announcement.creatorDisplayName?.trim() || undefined,
       }))
     );
 
@@ -231,8 +300,11 @@ export default function FamilyHomeScreen() {
       pollsData.slice(0, PREVIEW_LIMIT).map((poll) => ({
         id: poll.id,
         title: poll.question || 'Untitled Poll',
-        subtitle: `${poll.options.length} option${poll.options.length === 1 ? '' : 's'}`,
-        meta: poll.creatorDisplayName || 'Unknown Member',
+        optionCount: poll.options.length > 0 ? poll.options.length : undefined,
+        voteCount:
+          poll.options.length > 0
+            ? poll.options.reduce((total, option) => total + option.voteCount, 0)
+            : undefined,
       }))
     );
 
@@ -240,19 +312,16 @@ export default function FamilyHomeScreen() {
       kickbacksData.slice(0, PREVIEW_LIMIT).map((kickback) => ({
         id: kickback.id,
         title: kickback.vibe || 'Kickback',
-        subtitle: toBodyPreview(kickback.note ?? 'No note yet.'),
-        meta: `${kickback.pullingUpCount} pulling up | ${kickback.maybeCount} maybe`,
+        note: toBodyPreview(kickback.note ?? 'No note yet.'),
+        expiresAtUtc: kickback.expiresAtUtc,
+        creator: kickback.creatorDisplayName?.trim() || undefined,
+        pullingUpCount: kickback.pullingUpCount,
+        maybeCount: kickback.maybeCount,
+        currentMemberResponse: kickback.currentMemberResponse,
       }))
     );
 
-    setEventsPreview(
-      eventsData.slice(0, PREVIEW_LIMIT).map((event) => ({
-        id: event.id,
-        title: event.title || 'Untitled Event',
-        subtitle: event.location || 'No location set',
-        meta: event.startDate,
-      }))
-    );
+    setEventsPreview(mapUpcomingEvents(eventsData));
 
     setLoadingPreviews(false);
   }, [groupId, memberId]);
@@ -269,24 +338,67 @@ export default function FamilyHomeScreen() {
   );
 
   const handleLogout = async () => {
+    setMenuVisible(false);
     await clearSession();
     await clearActiveGroup();
     router.replace('/auth');
   };
 
+  const closeMenu = () => setMenuVisible(false);
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <ThemedText type="title" style={styles.title}>
-          Family Home
-        </ThemedText>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 8) }]}>
+          <Pressable
+            accessibilityLabel="Open home menu"
+            accessibilityRole="button"
+            hitSlop={10}
+            onPress={() => setMenuVisible(true)}
+            style={styles.iconButton}
+          >
+            <MaterialIcons name="menu" size={28} color="#174B5C" />
+          </Pressable>
 
-        <View style={styles.infoGroup}>
-          <ThemedText type="defaultSemiBold">Welcome to {groupName || 'Unknown Group'}</ThemedText>
-          <ThemedText>Hello, {memberName || 'Unknown Member'}</ThemedText>
-          <ThemedText>Group ID: {groupId || 'Unknown'}</ThemedText>
-          <ThemedText>Member ID: {memberId || 'Unknown'}</ThemedText>
+          <View style={styles.headerCopy}>
+            <ThemedText type="title" style={styles.title}>
+              Family Home
+            </ThemedText>
+            <ThemedText type="subtitle" style={styles.greeting}>
+              Good morning, {memberName || 'there'}!
+            </ThemedText>
+            <ThemedText style={styles.supportingMessage}>Great families make great memories 💙</ThemedText>
+          </View>
+
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityLabel="Open notifications"
+              accessibilityRole="button"
+              hitSlop={10}
+              onPress={() => router.push('/(tabs)/(main)/activity')}
+              style={styles.iconButton}
+            >
+              <MaterialIcons name="notifications-none" size={26} color="#174B5C" />
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Open profile"
+              accessibilityRole="button"
+              hitSlop={6}
+              onPress={() => router.push('/(tabs)/(main)/my-groups')}
+              style={styles.profileButton}
+            >
+              <ThemedText style={styles.profileInitials}>{getInitials(memberName)}</ThemedText>
+            </Pressable>
+          </View>
         </View>
+
+        <FamilyMembersSection
+          members={membersPreview}
+          currentMemberId={memberId}
+          loading={loadingPreviews}
+          onViewAll={() => router.push('/(tabs)/(main)/members')}
+          onInvite={() => setInviteModalVisible(true)}
+        />
 
         <DashboardSection
           title="My Groups"
@@ -294,55 +406,251 @@ export default function FamilyHomeScreen() {
           loading={loadingPreviews}
           emptyText="No groups to preview yet."
           onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
-        />
-
-        <DashboardSection
-          title="Members"
-          items={membersPreview}
-          loading={loadingPreviews}
-          emptyText="No members to preview yet."
-          onViewAll={() => router.push('/(tabs)/(main)/members')}
+          onCardPress={(item) =>
+            router.push({
+              pathname: '/(tabs)/family-home',
+              params: { groupId: item.id, groupName: item.title },
+            })
+          }
+          renderCard={(item) => (
+            <GroupSummaryCard
+              item={item}
+              onPress={() =>
+                router.push({
+                  pathname: '/(tabs)/family-home',
+                  params: { groupId: item.id, groupName: item.title },
+                })
+              }
+            />
+          )}
         />
 
         <DashboardSection
           title="Announcements"
           items={announcementsPreview}
           loading={loadingPreviews}
-          emptyText="No announcements to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Announcements"
+              message="No announcements yet."
+              supportingText="Be the first to share an update with your family!"
+              actionLabel="Create Announcement"
+              icon="campaign"
+              colors={{ background: '#F7F0FF', iconBackground: '#E7D9FF', icon: '#7040D8', action: '#5D32D6' }}
+              onCreate={() => router.push('/create-announcement')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/announcements')}
+          onCardPress={() => router.push('/(tabs)/(main)/announcements')}
+          renderCard={(item) => (
+            <AnnouncementCard
+              item={item}
+              onPress={() => router.push('/(tabs)/(main)/announcements')}
+            />
+          )}
         />
 
         <DashboardSection
           title="Polls"
           items={pollsPreview}
           loading={loadingPreviews}
-          emptyText="No polls to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Polls"
+              message="No polls to preview yet."
+              supportingText="Create a poll to get your family's opinions!"
+              actionLabel="Create Poll"
+              icon="poll"
+              colors={{ background: '#EEF7FF', iconBackground: '#D8EBFF', icon: '#1678E8', action: '#1678E8' }}
+              onCreate={() => router.push('/create-poll')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/polls')}
+          onCardPress={() => router.push('/(tabs)/(main)/polls')}
+          renderCard={(item, index) => (
+            <ActivePollCard
+              item={item}
+              index={index}
+              onPress={() => router.push('/(tabs)/(main)/polls')}
+            />
+          )}
         />
 
         <DashboardSection
-          title="Kickbacks"
+          title="Recent Kickbacks"
           items={kickbacksPreview}
           loading={loadingPreviews}
-          emptyText="No kickbacks to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Recent Kickbacks"
+              message="No kickbacks to preview yet."
+              supportingText="Plan a casual get-together with your family!"
+              actionLabel="Create Kickback"
+              icon="groups"
+              colors={{ background: '#EEFBF6', iconBackground: '#D5F5E7', icon: '#0D9F7A', action: '#0D9F7A' }}
+              onCreate={() => router.push('/create-kickback')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/kickbacks')}
+          onCardPress={() => router.push('/(tabs)/(main)/kickbacks')}
+          renderCard={(item, index) => (
+            <KickbackCard
+              item={item}
+              index={index}
+              onPress={() => router.push('/(tabs)/(main)/kickbacks')}
+            />
+          )}
         />
 
         <DashboardSection
-          title="Events"
+          title="Upcoming Events"
           items={eventsPreview}
           loading={loadingPreviews}
-          emptyText="No events to preview yet."
+          emptyState={
+            <HomeEmptyStateCard
+              title="Upcoming Events"
+              message="No upcoming events yet."
+              supportingText="Create an event to bring everyone together!"
+              actionLabel="Create Event"
+              icon="event"
+              colors={{ background: '#FFF8ED', iconBackground: '#FFE9C5', icon: '#ED7B12', action: '#ED7B12' }}
+              onCreate={() => router.push('/create-event')}
+            />
+          }
           onViewAll={() => router.push('/(tabs)/(main)/events')}
           onCardPress={(item) => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
+          renderCard={(item, index) => (
+            <UpcomingEventCard
+              item={item}
+              index={index}
+              onPress={() => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
+            />
+          )}
         />
 
-        <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <ThemedText type="defaultSemiBold" style={styles.logoutButtonText}>
-            Logout
-          </ThemedText>
-        </Pressable>
       </ScrollView>
+
+      <Modal
+        visible={menuVisible}
+        animationType="fade"
+        transparent
+        statusBarTranslucent
+        onRequestClose={closeMenu}
+      >
+        <View style={styles.menuOverlay}>
+          <Pressable accessibilityLabel="Close home menu" style={StyleSheet.absoluteFill} onPress={closeMenu} />
+          <View style={[styles.menuCard, { marginTop: Math.max(insets.top, 16) }]}>
+            <View style={styles.menuHeader}>
+              <ThemedText type="title" style={styles.menuTitle}>Home Menu</ThemedText>
+              <Pressable
+                accessibilityLabel="Close home menu"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={closeMenu}
+                style={styles.menuCloseButton}
+              >
+                <MaterialIcons name="close" size={24} color="#174B5C" />
+              </Pressable>
+            </View>
+
+            <Pressable
+              accessibilityLabel="Join a Group"
+              accessibilityRole="button"
+              onPress={() => {
+                closeMenu();
+                router.push('/join-group');
+              }}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#EAF5FF' }]}>
+                <MaterialIcons name="group-add" size={24} color="#1687D9" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Join a Group</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Connect with another family</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Notifications"
+              accessibilityRole="button"
+              onPress={() => {
+                closeMenu();
+                router.push('/(tabs)/(main)/activity');
+              }}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#FFF5E9' }]}>
+                <MaterialIcons name="notifications-none" size={24} color="#ED7B12" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Notifications</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>See your latest updates</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Settings"
+              accessibilityRole="button"
+              onPress={() => {
+                closeMenu();
+                router.push('/settings');
+              }}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#F5EEFF' }]}>
+                <MaterialIcons name="settings" size={24} color="#6841D8" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Settings</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Manage your preferences</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Help & Support"
+              accessibilityRole="button"
+              onPress={() => {
+                closeMenu();
+                router.push('/help-support');
+              }}
+              style={styles.menuItem}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#EAFBF7' }]}>
+                <MaterialIcons name="help-outline" size={24} color="#0D9F7A" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Help & Support</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Get answers and assistance</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
+            </Pressable>
+
+            <Pressable
+              accessibilityLabel="Sign Out"
+              accessibilityRole="button"
+              onPress={handleLogout}
+              style={[styles.menuItem, styles.signOutItem]}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: '#FFF0F2' }]}>
+                <MaterialIcons name="logout" size={24} color="#D9364D" />
+              </View>
+              <View style={styles.menuItemCopy}>
+                <ThemedText type="defaultSemiBold" style={[styles.menuItemTitle, styles.signOutText]}>Sign Out</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Sign out of this account</ThemedText>
+              </View>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+      <InviteFamilyMembersModal
+        visible={inviteModalVisible}
+        inviteCode={inviteCode}
+        onClose={() => setInviteModalVisible(false)}
+      />
     </ThemedView>
   );
 }
@@ -356,23 +664,121 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 28,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  headerCopy: {
+    flex: 1,
+    gap: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 4,
+  },
   title: {
     textAlign: 'left',
-    fontSize: 30,
-    lineHeight: 34,
+    fontSize: 32,
+    lineHeight: 36,
   },
-  infoGroup: {
-    alignItems: 'flex-start',
-    gap: 4,
+  greeting: {
+    fontSize: 20,
+    lineHeight: 26,
   },
-  logoutButton: {
-    borderRadius: 10,
-    paddingVertical: 14,
+  supportingMessage: {
+    color: '#687076',
+  },
+  iconButton: {
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#BCC3CC',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
   },
-  logoutButtonText: {
-    fontSize: 16,
+  profileButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#DCEAF0',
+  },
+  profileInitials: {
+    color: '#174B5C',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 27, 48, 0.48)',
+    paddingHorizontal: 16,
+  },
+  menuCard: {
+    width: '88%',
+    maxWidth: 420,
+    borderRadius: 28,
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#17345D',
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  menuTitle: {
+    color: '#10264C',
+    fontSize: 26,
+  },
+  menuCloseButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5FA',
+  },
+  menuItem: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E4EAF2',
+  },
+  menuIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuItemCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  menuItemTitle: {
+    color: '#17345D',
+    fontSize: 17,
+  },
+  menuItemDescription: {
+    color: '#71819A',
+    fontSize: 13,
+  },
+  signOutItem: {
+    borderBottomWidth: 0,
+    marginTop: 4,
+  },
+  signOutText: {
+    color: '#D9364D',
   },
 });

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://10.0.0.115:5249';
+import { API_BASE_URL } from '@/config/api';
 
 export type RegisterRequest = {
   email: string;

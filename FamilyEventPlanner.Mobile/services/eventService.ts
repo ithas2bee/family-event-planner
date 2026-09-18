@@ -1,5 +1,4 @@
-const API_BASE_URL = 'http://10.0.0.115:5249';
-
+import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
 
@@ -13,6 +12,7 @@ export type Event = {
   id: string;
   familyGroupId: string;
   title: string;
+  imageUrl?: string;
   description?: string;
   startDate: string;
   endDate?: string;
@@ -39,6 +39,7 @@ export type CreateEventRequest = {
 
 export type UpdateEventRequest = {
   title?: string;
+  imageUrl?: string;
   description?: string;
   startDate?: string;
   endDate?: string;
@@ -104,6 +105,7 @@ function mapEvent(payload: unknown): Event {
     id?: string;
     familyGroupId?: string;
     title?: string;
+    imageUrl?: string;
     description?: string;
     startDate?: string;
     endDate?: string;
@@ -136,6 +138,7 @@ function mapEvent(payload: unknown): Event {
     id: String(event.id ?? ''),
     familyGroupId: String(event.familyGroupId ?? ''),
     title: String(event.title ?? ''),
+    imageUrl: typeof event.imageUrl === 'string' ? event.imageUrl : undefined,
     description: event.description,
     startDate: String(event.startDate ?? ''),
     endDate: event.endDate,

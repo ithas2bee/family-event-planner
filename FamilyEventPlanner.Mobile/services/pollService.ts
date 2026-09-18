@@ -1,5 +1,4 @@
-const API_BASE_URL = 'http://10.0.0.115:5249';
-
+import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
 
@@ -17,6 +16,8 @@ export type Poll = {
   createdByMemberId?: string;
   creatorDisplayName?: string;
   createdAt: string;
+  isClosed?: boolean;
+  status?: string;
   currentMemberSelectedOptionId?: string;
   options: PollOption[];
 };
@@ -95,6 +96,8 @@ function mapPoll(payload: unknown): Poll {
     createdByMemberId?: string;
     creatorDisplayName?: string;
     createdAt?: string;
+    isClosed?: boolean;
+    status?: string;
     currentMemberSelectedOptionId?: string;
     options?: unknown[];
   };
@@ -107,6 +110,8 @@ function mapPoll(payload: unknown): Poll {
     createdByMemberId: poll.createdByMemberId != null ? String(poll.createdByMemberId) : undefined,
     creatorDisplayName: poll.creatorDisplayName != null ? String(poll.creatorDisplayName) : undefined,
     createdAt: String(poll.createdAt ?? ''),
+    isClosed: poll.isClosed,
+    status: poll.status,
     currentMemberSelectedOptionId:
       poll.currentMemberSelectedOptionId != null
         ? String(poll.currentMemberSelectedOptionId)
@@ -138,6 +143,27 @@ export async function getPollsByGroup(groupId: string): Promise<Poll[]> {
   const data: unknown = await response.json();
   const items = Array.isArray(data) ? data : [];
   return items.map(mapPoll);
+}
+
+export async function getPollById(pollId: string): Promise<Poll> {
+  const headers = await getPollHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/polls/${pollId}`, {
+    method: 'GET',
+    headers,
+  });
+
+  if (!response.ok) {
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // ignore parse failure
+    }
+
+    throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
+  }
+
+  return mapPoll(await response.json());
 }
 
 export type CreatePollRequest = {
