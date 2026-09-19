@@ -7,6 +7,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -152,6 +153,7 @@ function getTimeGroup(createdAtUtc: string): 'Today' | 'Yesterday' | 'This Week'
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
   const {
     groupId: contextGroupId,
@@ -266,25 +268,25 @@ export default function ActivityScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: 24 + insets.top }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
             <ThemedText type="title" style={styles.title}>
               Notifications
             </ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Mark all read"
+              accessibilityState={{ busy: markingRead }}
+              disabled={markingRead}
+              onPress={() => void markAllRead()}
+              style={styles.markReadButton}>
+              <MaterialIcons name="done-all" size={19} color="#1677E8" />
+              <ThemedText style={styles.markReadText}>Mark all read</ThemedText>
+            </Pressable>
             <ThemedText style={styles.subtitle}>Stay up to date with your family. 💙</ThemedText>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mark all read"
-            accessibilityState={{ busy: markingRead }}
-            disabled={markingRead}
-            onPress={() => void markAllRead()}
-            style={styles.markReadButton}>
-            <MaterialIcons name="done-all" size={19} color="#1677E8" />
-            <ThemedText style={styles.markReadText}>Mark all read</ThemedText>
-          </Pressable>
         </View>
 
         <ScrollView
@@ -369,10 +371,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
   },
   title: {
     color: '#10284A',
@@ -386,10 +385,12 @@ const styles = StyleSheet.create({
   },
   markReadButton: {
     alignItems: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: '#E5F1FF',
     borderRadius: 24,
     flexDirection: 'row',
     gap: 6,
+    marginTop: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
