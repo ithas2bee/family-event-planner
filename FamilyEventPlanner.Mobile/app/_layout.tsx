@@ -21,7 +21,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ title: 'Login' }} />
+          <Stack.Screen name="login" options={{ title: 'Sign In' }} />
           <Stack.Screen name="create-account" options={{ title: 'Create Account' }} />
           <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
           <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
