@@ -1,8 +1,11 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
 using FamilyEventPlanner.Api.Models.Auth;
 using FamilyEventPlanner.Api.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +17,7 @@ namespace FamilyEventPlanner.Api.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ITokenService _tokenService;
+        private readonly PasswordHasher<User> _passwordHasher = new();
 
         public AuthController(AppDbContext context, ITokenService tokenService)
         {
@@ -24,33 +28,30 @@ namespace FamilyEventPlanner.Api.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            System.Diagnostics.Debug.WriteLine($"[REGISTER] Called with email: {request?.Email}, displayName: {request?.DisplayName}");
             try
             {
                 if (!ModelState.IsValid)
                 {
-                    System.Diagnostics.Debug.WriteLine("[REGISTER] ModelState invalid");
                     return BadRequest(ModelState);
                 }
 
-                var exists = await _context.Users.AnyAsync(u => u.Email == request.Email);
+                var email = request.Email.Trim().ToLowerInvariant();
+                var exists = await _context.Users.AnyAsync(u => u.Email == email);
                 if (exists)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[REGISTER] Email already registered: {request.Email}");
                     return Conflict(new { message = "An account with this email already exists." });
                 }
 
                 var user = new User
                 {
                     Id = Guid.NewGuid(),
-                    Email = request.Email,
-                    DisplayName = request.DisplayName,
-                    PasswordHash = request.Password, // TEMP: plain text for now
+                    Email = email,
+                    DisplayName = request.DisplayName.Trim(),
                     CreatedAt = DateTime.UtcNow
                 };
+                user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
-                System.Diagnostics.Debug.WriteLine($"[REGISTER] User created: {user.Id}");
 
                 var token = _tokenService.GenerateToken(user.Id, user.Email, user.DisplayName);
 
@@ -64,8 +65,7 @@ namespace FamilyEventPlanner.Api.Controllers
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[REGISTER] Exception: {ex.Message}");
-                return StatusCode(500, new { error = "Internal server error", message = ex.Message });
+                return StatusCode(500, new { message = "Unable to create the account right now." });
             }
         }
 
@@ -75,20 +75,30 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+            var email = request.Email.Trim().ToLowerInvariant();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
-            {
-                System.Diagnostics.Debug.WriteLine($"[LOGIN] User not found for email: {request.Email}");
                 return Unauthorized(new { message = "Invalid email or password." });
+
+            var verification = user.PasswordHash is null
+                ? PasswordVerificationResult.Failed
+                : _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+
+            // Legacy accounts stored the password directly. Upgrade them after a successful
+            // login so existing users keep their account and group memberships.
+            if (verification == PasswordVerificationResult.Failed &&
+                user.PasswordHash is { } legacyHash &&
+                FixedTimeEquals(legacyHash, request.Password))
+            {
+                user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+                verification = PasswordVerificationResult.SuccessRehashNeeded;
             }
 
-            if (user.PasswordHash != request.Password)
-            {
-                System.Diagnostics.Debug.WriteLine($"[LOGIN] Invalid password for user: {request.Email}");
+            if (verification == PasswordVerificationResult.Failed)
                 return Unauthorized(new { message = "Invalid email or password." });
-            }
 
-            System.Diagnostics.Debug.WriteLine($"[LOGIN] User authenticated: {user.Id}");
+            user.LastLoginAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
 
             var token = _tokenService.GenerateToken(user.Id, user.Email, user.DisplayName);
 
@@ -99,6 +109,14 @@ namespace FamilyEventPlanner.Api.Controllers
                 displayName = user.DisplayName,
                 authToken = token
             });
+        }
+
+        private static bool FixedTimeEquals(string left, string right)
+        {
+            var leftBytes = Encoding.UTF8.GetBytes(left);
+            var rightBytes = Encoding.UTF8.GetBytes(right);
+            return leftBytes.Length == rightBytes.Length &&
+                   CryptographicOperations.FixedTimeEquals(leftBytes, rightBytes);
         }
     }
 }

@@ -71,8 +71,6 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
   const url = `${API_BASE_URL}${endpoint}`;
   const requestBody = JSON.stringify(payload);
 
-  console.log('[Auth] Request', { endpoint, url, body: requestBody });
-
   try {
     response = await fetch(url, {
       method: 'POST',
@@ -86,10 +84,7 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
     throw new Error('Could not reach the server. Check your network connection.');
   }
 
-  console.log('[Auth] Response status', { endpoint, status: response.status, ok: response.ok });
-
   const rawBody = await response.text();
-  console.log('[Auth] Response text', { endpoint, body: rawBody });
 
   let parsedBody: unknown = null;
   if (rawBody.length > 0) {
@@ -99,8 +94,6 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
       parsedBody = rawBody;
     }
   }
-
-  console.log('[Auth] Parsed response', { endpoint, parsedBody });
 
   if (!response.ok) {
     const serverMessage = extractServerMessage(parsedBody);
