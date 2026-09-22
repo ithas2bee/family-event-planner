@@ -180,8 +180,8 @@ export default function MyGroupsScreen() {
   );
 
   const handleLogout = useCallback(async () => {
-    await clearSession();
     await clearActiveGroup();
+    await clearSession();
     router.replace('/auth');
   }, [clearActiveGroup]);
 

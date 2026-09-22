@@ -63,6 +63,7 @@ function NavigationGate() {
       <Stack.Screen name="login" options={{ title: 'Sign In' }} />
       <Stack.Screen name="create-account" options={{ title: 'Create Account' }} />
       <Stack.Screen name="group-required" options={{ headerShown: false }} />
+      <Stack.Screen name="my-groups" options={{ headerShown: false }} />
       <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
       <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
       <Stack.Screen name="create-event" options={{ title: 'Create Event' }} />

@@ -38,7 +38,7 @@ export default function GroupRequiredScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Go to My Groups"
-          onPress={() => router.replace('/my-groups')}
+          onPress={() => router.replace('/(tabs)/(main)/my-groups')}
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >
           <ThemedText type="defaultSemiBold" style={styles.buttonText}>
