@@ -251,7 +251,7 @@ export default function MyGroupsScreen() {
         </View>
 
         <ThemedText style={styles.footer}>Family. Friends. Moments. Together.</ThemedText>
-        <Pressable accessibilityRole="button" onPress={() => void handleLogout} style={styles.logout}>
+        <Pressable accessibilityRole="button" onPress={() => void handleLogout()} style={styles.logout}>
           <ThemedText style={styles.logoutText}>Log Out</ThemedText>
         </Pressable>
       </ScrollView>
