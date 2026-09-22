@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router/react-navigation';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -106,44 +107,49 @@ function ActionCard({
 }
 
 export default function MyGroupsScreen() {
-  const { setActiveGroup, clearActiveGroup } = useActiveGroupContext();
+  const { setActiveGroup, clearActiveGroup, refreshMembership } = useActiveGroupContext();
   const [session, setSession] = useState<AppSession | null>(null);
   const [groups, setGroups] = useState<MyGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
   const [groupsError, setGroupsError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadGroups() {
-      const existingSession = await loadSession();
-      if (!existingSession) {
-        router.replace('/auth');
-        return;
-      }
-      if (!cancelled) setSession(existingSession);
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/familygroups/my/${existingSession.userId}`, {
-          headers: { Accept: 'application/json' },
-        });
-        if (!response.ok) throw new Error(`Failed to load groups (error ${response.status}).`);
-        const mapped = mapGroups(await response.json());
-        if (!cancelled) setGroups(mapped);
-      } catch (error) {
-        if (!cancelled) {
-          setGroupsError(error instanceof Error ? error.message : 'Could not load your groups.');
-        }
-      } finally {
-        if (!cancelled) setLoadingGroups(false);
-      }
+  const loadGroups = useCallback(async (cancelled: () => boolean) => {
+    const existingSession = await loadSession();
+    if (!existingSession) {
+      router.replace('/auth');
+      return;
     }
+    if (cancelled()) return;
+    setSession(existingSession);
 
-    void loadGroups();
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/familygroups/my/${existingSession.userId}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error(`Failed to load groups (error ${response.status}).`);
+      const mapped = mapGroups(await response.json());
+      if (!cancelled()) setGroups(mapped);
+    } catch (error) {
+      if (!cancelled()) {
+        setGroupsError(error instanceof Error ? error.message : 'Could not load your groups.');
+      }
+    } finally {
+      if (!cancelled()) setLoadingGroups(false);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      setLoadingGroups(true);
+      setGroupsError(null);
+      void refreshMembership();
+      void loadGroups(() => cancelled);
+      return () => {
+        cancelled = true;
+      };
+    }, [loadGroups, refreshMembership])
+  );
 
   const handleOpenGroup = useCallback(
     async (group: MyGroup) => {

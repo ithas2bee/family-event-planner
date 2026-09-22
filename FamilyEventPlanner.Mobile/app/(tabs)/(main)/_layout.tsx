@@ -5,9 +5,11 @@ import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 
 export default function MainTabLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const { hasGroups } = useActiveGroupContext();
 
   return (
     <Tabs
@@ -16,6 +18,7 @@ export default function MainTabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarStyle: hasGroups ? undefined : { display: 'none' },
       }}>
       <Tabs.Screen
         name="family-home"

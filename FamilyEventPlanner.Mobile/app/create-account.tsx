@@ -5,10 +5,12 @@ import { ActivityIndicator, Pressable, SafeAreaView, ScrollView, StyleSheet, Tex
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { saveSession } from '@/services/sessionService';
 import { registerUser } from '@/services/userService';
 
 export default function CreateAccountScreen() {
+  const { refreshMembership } = useActiveGroupContext();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,6 +26,7 @@ export default function CreateAccountScreen() {
     try {
       const user = await registerUser({ displayName: username.trim(), email: email.trim(), password });
       await saveSession({ userId: user.userId, displayName: user.displayName, email: user.email, authToken: user.authToken ?? null });
+      await refreshMembership();
       router.replace('/(tabs)/(main)/my-groups');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to create account.');
