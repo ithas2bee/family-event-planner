@@ -24,7 +24,7 @@ export default function RootLayout() {
   );
 }
 
-const setupRoutes = new Set([
+const unrestrictedRoutes = new Set([
   'index',
   'auth',
   'login',
@@ -46,7 +46,7 @@ function NavigationGate() {
       !isAuthenticated ||
       isResolvingGroups ||
       hasGroups ||
-      (currentRoute !== undefined && setupRoutes.has(currentRoute))
+      (currentRoute !== undefined && unrestrictedRoutes.has(currentRoute))
     ) {
       return;
     }

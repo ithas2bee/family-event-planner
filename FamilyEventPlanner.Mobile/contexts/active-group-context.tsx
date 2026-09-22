@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { API_BASE_URL } from '@/config/api';
 import { getGroupMemberByUser } from '@/services/groupMemberService';
@@ -50,12 +50,17 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
   const [isResolvingMember, setIsResolvingMember] = useState(false);
   const [isResolvingGroups, setIsResolvingGroups] = useState(false);
   const [hasGroups, setHasGroups] = useState(false);
+  const membershipRequest = useRef(0);
 
   const refreshMembership = useCallback(async (): Promise<boolean> => {
+    const requestId = membershipRequest.current + 1;
+    membershipRequest.current = requestId;
     const session = await loadSession();
     if (!session) {
-      setIsAuthenticated(false);
-      setHasGroups(false);
+      if (membershipRequest.current === requestId) {
+        setIsAuthenticated(false);
+        setHasGroups(false);
+      }
       return false;
     }
 
@@ -71,13 +76,19 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
 
       const groups = await response.json();
       const hasMembership = Array.isArray(groups) && groups.length > 0;
-      setHasGroups(hasMembership);
+      if (membershipRequest.current === requestId) {
+        setHasGroups(hasMembership);
+      }
       return hasMembership;
     } catch {
-      setHasGroups(false);
+      if (membershipRequest.current === requestId) {
+        setHasGroups(false);
+      }
       return false;
     } finally {
-      setIsResolvingGroups(false);
+      if (membershipRequest.current === requestId) {
+        setIsResolvingGroups(false);
+      }
     }
   }, []);
 
@@ -100,6 +111,8 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
         : update.memberName ?? session?.memberName ?? state.memberName,
     };
 
+    membershipRequest.current += 1;
+    setIsResolvingGroups(false);
     setState(nextState);
     if (nextState.groupId) {
       setHasGroups(true);
