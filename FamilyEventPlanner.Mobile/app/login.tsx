@@ -37,11 +37,11 @@ export default function LoginScreen() {
         memberName: canRestoreActiveSelection ? existingSession?.memberName : undefined,
         authToken: user.authToken ?? null,
       });
-      await refreshMembership();
+      const hasGroups = await refreshMembership();
 
-      router.replace(canRestoreActiveSelection && existingSession?.groupId
+      router.replace(hasGroups || (canRestoreActiveSelection && existingSession?.groupId)
         ? '/(tabs)/(main)/family-home'
-        : '/(tabs)/(main)/my-groups');
+        : '/group-required');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to sign in.');
     } finally {

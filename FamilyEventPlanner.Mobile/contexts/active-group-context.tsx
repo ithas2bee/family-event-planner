@@ -13,6 +13,14 @@ type ActiveGroupState = {
 
 type ActiveGroupUpdate = Partial<ActiveGroupState>;
 
+type MembershipRecord = {
+  groupId?: string;
+  familyGroupId?: string;
+  id?: string;
+  groupName?: string;
+  name?: string;
+};
+
 type ActiveGroupContextValue = ActiveGroupState & {
   isReady: boolean;
   isAuthenticated: boolean;
@@ -75,9 +83,37 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
       }
 
       const groups = await response.json();
-      const hasMembership = Array.isArray(groups) && groups.length > 0;
+      const memberships = Array.isArray(groups) ? (groups as MembershipRecord[]) : [];
+      const firstMembership = memberships[0];
+      const firstGroupId = String(
+        firstMembership?.groupId ?? firstMembership?.familyGroupId ?? firstMembership?.id ?? ''
+      ).trim();
+      const firstGroupName = String(firstMembership?.groupName ?? firstMembership?.name ?? '').trim();
+      const hasMembership = firstGroupId.length > 0;
       if (membershipRequest.current === requestId) {
         setHasGroups(hasMembership);
+        if (hasMembership) {
+          const membershipIds = new Set(
+            memberships
+              .map((membership) =>
+                String(membership.groupId ?? membership.familyGroupId ?? membership.id ?? '').trim()
+              )
+              .filter(Boolean)
+          );
+          setState((current) => {
+            if (current.groupId && membershipIds.has(current.groupId)) {
+              return current;
+            }
+
+            return {
+              ...current,
+              groupId: firstGroupId,
+              groupName: firstGroupName,
+              memberId: '',
+              memberName: '',
+            };
+          });
+        }
       }
       return hasMembership;
     } catch {
