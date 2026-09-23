@@ -166,20 +166,23 @@ const styles = StyleSheet.create({
   codeLabel: {
     color: '#536A8B',
     fontSize: 18,
+    textAlign: 'center',
   },
   codeRow: {
-    flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 16,
+    justifyContent: 'center',
+    gap: 12,
     marginTop: 8,
   },
   code: {
+    maxWidth: '100%',
     color: '#102A65',
-    fontSize: 34,
+    fontSize: 30,
+    lineHeight: 38,
     fontWeight: '800',
-    letterSpacing: 2,
+    letterSpacing: 1.5,
+    textAlign: 'center',
   },
   copyButton: {
     flexDirection: 'row',
