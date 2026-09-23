@@ -37,6 +37,10 @@ namespace FamilyEventPlanner.Api.Controllers
             if (request.Options.Any(o => string.IsNullOrWhiteSpace(o)))
                 return BadRequest(new { message = "Poll options cannot be empty." });
 
+            var validDurations = new[] { 1, 6, 24, 72, 168 };
+            if (request.DurationHours.HasValue && !validDurations.Contains(request.DurationHours.Value))
+                return BadRequest(new { message = "Poll duration is not supported." });
+
             // Validate group
             var group = await _context.FamilyGroups.FindAsync(request.FamilyGroupId);
             if (group == null)
@@ -62,7 +66,10 @@ namespace FamilyEventPlanner.Api.Controllers
                 FamilyGroupId = request.FamilyGroupId,
                 Question = request.Question,
                 CreatedByMemberId = memberId,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = request.DurationHours.HasValue
+                    ? DateTime.UtcNow.AddHours(request.DurationHours.Value)
+                    : null
             };
 
             foreach (var optText in request.Options)
@@ -103,6 +110,8 @@ namespace FamilyEventPlanner.Api.Controllers
                 CreatorDisplayName = member.User?.DisplayName,
                 CreatedByMemberId = poll.CreatedByMemberId,
                 CreatedAt = poll.CreatedAt,
+                ExpiresAt = poll.ExpiresAt,
+                IsClosed = poll.ExpiresAt.HasValue && poll.ExpiresAt.Value <= DateTime.UtcNow,
                 Options = poll.Options.Select(o => new PollOptionResponse { Id = o.Id, Text = o.Text, VoteCount = 0 }).ToList()
             };
 
@@ -165,6 +174,8 @@ namespace FamilyEventPlanner.Api.Controllers
                     CreatorDisplayName = creatorDisplayName,
                     CreatedByMemberId = p.CreatedByMemberId,
                     CreatedAt = p.CreatedAt,
+                    ExpiresAt = p.ExpiresAt,
+                    IsClosed = p.ExpiresAt.HasValue && p.ExpiresAt.Value <= DateTime.UtcNow,
                     CurrentMemberSelectedOptionId = memberVote?.PollOptionId,
                     Options = p.Options.Select(o => new PollOptionResponse
                     {
@@ -221,6 +232,8 @@ namespace FamilyEventPlanner.Api.Controllers
                 CreatorDisplayName = creatorDisplayName,
                 CreatedByMemberId = poll.CreatedByMemberId,
                 CreatedAt = poll.CreatedAt,
+                ExpiresAt = poll.ExpiresAt,
+                IsClosed = poll.ExpiresAt.HasValue && poll.ExpiresAt.Value <= DateTime.UtcNow,
                 CurrentMemberSelectedOptionId = memberVote?.PollOptionId,
                 Options = poll.Options.Select(o => new PollOptionResponse
                 {
@@ -252,6 +265,9 @@ namespace FamilyEventPlanner.Api.Controllers
             var isMember = await _context.GroupMembers.AnyAsync(m => m.Id == memberId && m.FamilyGroupId == option.Poll.FamilyGroupId);
             if (!isMember)
                 return Forbid();
+
+            if (option.Poll.ExpiresAt.HasValue && option.Poll.ExpiresAt.Value <= DateTime.UtcNow)
+                return BadRequest(new { message = "This poll has expired and is no longer accepting votes." });
 
             // Ensure one vote per member per poll
             var already = await _context.PollVotes.Include(v => v.PollOption)

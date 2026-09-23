@@ -12,6 +12,8 @@ namespace FamilyEventPlanner.Api.Models.Responses
         public Guid? CreatedByMemberId { get; set; }
         public string? CreatorDisplayName { get; set; }
         public DateTime CreatedAt { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+        public bool IsClosed { get; set; }
         public Guid? CurrentMemberSelectedOptionId { get; set; }
         public List<PollOptionResponse> Options { get; set; } = new();
     }
