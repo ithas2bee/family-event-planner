@@ -14,10 +14,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ActivityIndicator, Image, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventDetailsScreen() {
   const { eventId } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<Event | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -265,7 +267,7 @@ export default function EventDetailsScreen() {
 
   return (
     <ScreenContainer withScroll padding={0}>
-      <View style={styles.contentContainer}>
+      <View style={[styles.contentContainer, { paddingTop: Math.max(insets.top, Spacing.lg) }]}>
         <View style={styles.hero}>
           {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.heroImage} /> : null}
           <View style={styles.heroOverlay} />
