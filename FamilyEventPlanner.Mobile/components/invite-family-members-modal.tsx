@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     color: '#102A65',
     fontSize: 30,
+    lineHeight: 38,
     fontWeight: '800',
     letterSpacing: 1.5,
     textAlign: 'center',
