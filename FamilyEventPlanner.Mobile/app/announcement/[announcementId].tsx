@@ -1,12 +1,14 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { formatAnnouncementDate } from '@/services/announcementService';
 
 export default function AnnouncementDetailsScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     title?: string;
     body?: string;
@@ -20,9 +22,16 @@ export default function AnnouncementDetailsScreen() {
   const createdAt = String(params.createdAt ?? '');
   const expiresAt = String(params.expiresAt ?? '');
   return (
-    <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={styles.container}>
+    <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.navigation}>
-        <View style={styles.navigationSpacer} />
+        <Pressable
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={styles.navigationButton}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#102653" />
+        </Pressable>
         <ThemedText type="defaultSemiBold" style={styles.navigationTitle}>
           Announcement
         </ThemedText>
@@ -72,8 +81,9 @@ export default function AnnouncementDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 20, paddingTop: 20 },
+  container: { flex: 1, paddingHorizontal: 20 },
   navigation: { height: 46, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  navigationButton: { position: 'absolute', left: 0, padding: 4 },
   navigationTitle: { color: '#102653', fontSize: 20 },
   navigationSpacer: { width: 27 },
   scrollContent: { paddingVertical: 18, paddingBottom: 32 },

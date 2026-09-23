@@ -66,13 +66,16 @@ function NavigationGate() {
       <Stack.Screen name="my-groups" options={{ headerShown: false }} />
       <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
       <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
-      <Stack.Screen name="create-event" options={{ title: 'Create Event' }} />
-      <Stack.Screen name="create-announcement" options={{ title: 'Create Announcement' }} />
+      <Stack.Screen name="create-event" options={{ headerShown: false }} />
+      <Stack.Screen name="create-announcement" options={{ headerShown: false }} />
       <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
-      <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
+      <Stack.Screen name="create-poll" options={{ headerShown: false }} />
       <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
-      <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
-      <Stack.Screen name="event/[eventId]" options={{ title: '' }} />
+      <Stack.Screen name="create-kickback" options={{ headerShown: false }} />
+      <Stack.Screen name="event/[eventId]" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="help-support" options={{ headerShown: false }} />
+      <Stack.Screen name="under-construction" options={{ headerShown: false }} />
     </Stack>
   );
 }

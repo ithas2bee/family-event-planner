@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -104,6 +105,14 @@ export default function CreateKickbackScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
+            <Pressable
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <MaterialIcons name="arrow-back" size={24} color="#17345D" />
+            </Pressable>
             <View style={styles.headerIcon}>
               <ThemedText style={styles.headerIconText}>✦</ThemedText>
             </View>
@@ -212,6 +221,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { padding: 20, gap: 18 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8 },
+  backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF2F6' },
   headerIcon: {
     width: 52,
     height: 52,

@@ -1,5 +1,5 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -89,6 +89,14 @@ export default function PollDetailsScreen() {
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}>
         <View style={styles.navRow}>
+          <Pressable
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            style={styles.navigationButton}
+          >
+            <MaterialIcons name="arrow-back" size={24} color="#102653" />
+          </Pressable>
           <ThemedText type="subtitle" style={styles.navTitle}>Poll Details</ThemedText>
         </View>
 
@@ -148,6 +156,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24, backgroundColor: '#F5F9FF' },
   feedback: { color: '#617DAA', textAlign: 'center' },
   navRow: { alignItems: 'center', marginBottom: 2 },
+  navigationButton: { position: 'absolute', left: 0, padding: 4 },
   navTitle: { color: '#10255B', fontSize: 22 },
   heroCard: { gap: 16, borderRadius: 20, padding: 18, backgroundColor: '#FFFFFF', shadowColor: '#17477D', shadowOpacity: 0.08, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
