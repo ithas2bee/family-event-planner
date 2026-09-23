@@ -5,10 +5,12 @@ import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleShe
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { loadSession, saveSession } from '@/services/sessionService';
 import { loginUser } from '@/services/userService';
 
 export default function LoginScreen() {
+  const { refreshMembership } = useActiveGroupContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -35,10 +37,11 @@ export default function LoginScreen() {
         memberName: canRestoreActiveSelection ? existingSession?.memberName : undefined,
         authToken: user.authToken ?? null,
       });
+      const hasGroups = await refreshMembership();
 
-      router.replace(canRestoreActiveSelection && existingSession?.groupId
+      router.replace(hasGroups || (canRestoreActiveSelection && existingSession?.groupId)
         ? '/(tabs)/(main)/family-home'
-        : '/(tabs)/(main)/my-groups');
+        : '/group-required');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Unable to sign in.');
     } finally {

@@ -3,27 +3,15 @@ import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { ThemedView } from '@/components/themed-view';
-import { loadSession } from '@/services/sessionService';
+import { useActiveGroupContext } from '@/contexts/active-group-context';
 
 export default function StartupGate() {
+  const { isReady, isAuthenticated, isResolvingGroups, hasGroups } = useActiveGroupContext();
+
   useEffect(() => {
-    async function checkSession() {
-      const session = await loadSession();
-      if (!session) {
-        router.replace('/auth');
-        return;
-      }
-
-      if (session.groupId) {
-        router.replace('/(tabs)/(main)/family-home');
-        return;
-      }
-
-      router.replace('/(tabs)/(main)/my-groups');
-    }
-
-    void checkSession();
-  }, []);
+    if (!isReady || isResolvingGroups) return;
+    router.replace(!isAuthenticated ? '/auth' : hasGroups ? '/(tabs)/(main)/family-home' : '/group-required');
+  }, [hasGroups, isAuthenticated, isReady, isResolvingGroups]);
 
   return (
     <ThemedView style={styles.container}>
@@ -39,4 +27,3 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
-const testType: number = 'string';

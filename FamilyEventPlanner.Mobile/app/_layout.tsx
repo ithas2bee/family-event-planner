@@ -1,9 +1,10 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
-import { Stack } from 'expo-router';
+import { Stack, router, useSegments } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { ActiveGroupProvider } from '@/contexts/active-group-context';
+import { ActiveGroupProvider, useActiveGroupContext } from '@/contexts/active-group-context';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -16,25 +17,62 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <ActiveGroupProvider>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ title: 'Sign In' }} />
-          <Stack.Screen name="create-account" options={{ title: 'Create Account' }} />
-          <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
-          <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
-          <Stack.Screen name="create-event" options={{ title: 'Create Event' }} />
-          <Stack.Screen name="create-announcement" options={{ title: 'Create Announcement' }} />
-          <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
-          <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
-          <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
-          <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
-          <Stack.Screen name="event/[eventId]" options={{ title: '' }} />
-        </Stack>
+        <NavigationGate />
       </ActiveGroupProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
+  );
+}
+
+const unrestrictedRoutes = new Set([
+  'index',
+  'auth',
+  'login',
+  'create-account',
+  'group-required',
+  'my-groups',
+  'join-group',
+  'create-group',
+]);
+
+function NavigationGate() {
+  const segments = useSegments();
+  const { isReady, isAuthenticated, isResolvingGroups, hasGroups } = useActiveGroupContext();
+
+  useEffect(() => {
+    const currentRoute = segments[segments.length - 1];
+    if (
+      !isReady ||
+      !isAuthenticated ||
+      isResolvingGroups ||
+      hasGroups ||
+      (currentRoute !== undefined && unrestrictedRoutes.has(currentRoute))
+    ) {
+      return;
+    }
+
+    router.replace('/group-required');
+  }, [hasGroups, isAuthenticated, isReady, isResolvingGroups, segments]);
+
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ title: 'Sign In' }} />
+      <Stack.Screen name="create-account" options={{ title: 'Create Account' }} />
+      <Stack.Screen name="group-required" options={{ headerShown: false }} />
+      <Stack.Screen name="my-groups" options={{ headerShown: false }} />
+      <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
+      <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
+      <Stack.Screen name="create-event" options={{ title: 'Create Event' }} />
+      <Stack.Screen name="create-announcement" options={{ title: 'Create Announcement' }} />
+      <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
+      <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
+      <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
+      <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
+      <Stack.Screen name="event/[eventId]" options={{ title: '' }} />
+    </Stack>
   );
 }
