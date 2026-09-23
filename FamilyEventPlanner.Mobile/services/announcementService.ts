@@ -17,6 +17,7 @@ export type CreateAnnouncementRequest = {
   familyGroupId: string;
   title: string;
   body: string;
+  durationHours?: number;
   expiresAt?: string;
 };
 

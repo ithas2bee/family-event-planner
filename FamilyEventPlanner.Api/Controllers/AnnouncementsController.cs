@@ -29,6 +29,10 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var validDurations = new[] { 1, 6, 24, 72, 168 };
+            if (request.DurationHours.HasValue && !validDurations.Contains(request.DurationHours.Value))
+                return BadRequest(new { message = "Announcement expiration is not supported." });
+
             var group = await _context.FamilyGroups.FindAsync(request.FamilyGroupId);
             if (group == null)
                 return NotFound(new { message = "FamilyGroup not found." });
@@ -53,7 +57,9 @@ namespace FamilyEventPlanner.Api.Controllers
                 Body = request.Body,
                 CreatedByMemberId = memberId,
                 CreatedAt = DateTime.UtcNow,
-                ExpiresAt = request.ExpiresAt
+                ExpiresAt = request.DurationHours.HasValue
+                    ? DateTime.UtcNow.AddHours(request.DurationHours.Value)
+                    : request.ExpiresAt
             };
 
             _context.Announcements.Add(ann);
@@ -111,7 +117,8 @@ namespace FamilyEventPlanner.Api.Controllers
 
             // Join with GroupMembers and Users to get creator display name
             var list = await _context.Announcements
-                .Where(a => a.FamilyGroupId == familyGroupId)
+                .Where(a => a.FamilyGroupId == familyGroupId &&
+                    (!a.ExpiresAt.HasValue || a.ExpiresAt.Value > DateTime.UtcNow))
                 .OrderByDescending(a => a.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
