@@ -16,6 +16,7 @@ export type Poll = {
   createdByMemberId?: string;
   creatorDisplayName?: string;
   createdAt: string;
+  expiresAt?: string;
   isClosed?: boolean;
   status?: string;
   currentMemberSelectedOptionId?: string;
@@ -96,6 +97,7 @@ function mapPoll(payload: unknown): Poll {
     createdByMemberId?: string;
     creatorDisplayName?: string;
     createdAt?: string;
+    expiresAt?: string;
     isClosed?: boolean;
     status?: string;
     currentMemberSelectedOptionId?: string;
@@ -110,6 +112,7 @@ function mapPoll(payload: unknown): Poll {
     createdByMemberId: poll.createdByMemberId != null ? String(poll.createdByMemberId) : undefined,
     creatorDisplayName: poll.creatorDisplayName != null ? String(poll.creatorDisplayName) : undefined,
     createdAt: String(poll.createdAt ?? ''),
+    expiresAt: poll.expiresAt != null ? String(poll.expiresAt) : undefined,
     isClosed: poll.isClosed,
     status: poll.status,
     currentMemberSelectedOptionId:
@@ -171,6 +174,7 @@ export type CreatePollRequest = {
   question: string;
   options: string[];
   familyEventId?: string;
+  durationHours?: number;
 };
 
 export async function createPoll(request: CreatePollRequest): Promise<void> {

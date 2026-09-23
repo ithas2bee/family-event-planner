@@ -4,6 +4,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -27,6 +28,18 @@ export default function CreatePollScreen() {
   const [options, setOptions] = useState<string[]>(['', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [durationHours, setDurationHours] = useState<number | null>(null);
+  const [durationPickerVisible, setDurationPickerVisible] = useState(false);
+
+  const durationOptions = [
+    { hours: 1, label: '1 hour' },
+    { hours: 6, label: '6 hours' },
+    { hours: 24, label: '1 day' },
+    { hours: 72, label: '3 days' },
+    { hours: 168, label: '7 days' },
+  ];
+  const selectedDurationLabel =
+    durationOptions.find((option) => option.hours === durationHours)?.label ?? 'No end date';
 
   const filledOptions = options.filter((option) => option.trim().length > 0);
   const canSubmit =
@@ -70,6 +83,7 @@ export default function CreatePollScreen() {
         familyGroupId: groupIdValue,
         question: question.trim(),
         options: filledOptions.map((option) => option.trim()),
+        durationHours: durationHours ?? undefined,
       });
 
       router.replace({
@@ -182,7 +196,12 @@ export default function CreatePollScreen() {
 
           <View style={styles.card}>
             <ThemedText style={styles.settingsTitle}>Additional Settings (Optional)</ThemedText>
-            <View style={styles.settingRow}>
+            <Pressable
+              style={styles.settingRow}
+              onPress={() => setDurationPickerVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Poll Duration"
+            >
               <View style={[styles.settingIcon, styles.durationIcon]}>
                 <MaterialIcons name="event" size={25} color="#6955E8" />
               </View>
@@ -191,10 +210,10 @@ export default function CreatePollScreen() {
                 <ThemedText style={styles.settingHint}>Set when voting ends.</ThemedText>
               </View>
               <View style={styles.settingValue}>
-                <ThemedText style={styles.settingValueText}>No end date</ThemedText>
+                <ThemedText style={styles.settingValueText}>{selectedDurationLabel}</ThemedText>
                 <MaterialIcons name="expand-more" size={23} color="#162B45" />
               </View>
-            </View>
+            </Pressable>
             <View style={styles.settingRow}>
               <View style={[styles.settingIcon, styles.notifyIcon]}>
                 <MaterialIcons name="groups" size={25} color="#16834F" />
@@ -208,6 +227,43 @@ export default function CreatePollScreen() {
               </View>
             </View>
           </View>
+
+          <Modal
+            visible={durationPickerVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setDurationPickerVisible(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setDurationPickerVisible(false)}>
+              <Pressable style={styles.durationPicker} onPress={(event) => event.stopPropagation()}>
+                <ThemedText style={styles.durationPickerTitle}>Poll Duration</ThemedText>
+                <ThemedText style={styles.durationPickerHint}>Choose when voting ends.</ThemedText>
+                <Pressable
+                  style={[styles.durationOption, durationHours === null && styles.selectedDurationOption]}
+                  onPress={() => {
+                    setDurationHours(null);
+                    setDurationPickerVisible(false);
+                  }}
+                >
+                  <ThemedText style={styles.durationOptionText}>No end date</ThemedText>
+                  {durationHours === null && <MaterialIcons name="check" size={22} color="#6955E8" />}
+                </Pressable>
+                {durationOptions.map((option) => (
+                  <Pressable
+                    key={option.hours}
+                    style={[styles.durationOption, durationHours === option.hours && styles.selectedDurationOption]}
+                    onPress={() => {
+                      setDurationHours(option.hours);
+                      setDurationPickerVisible(false);
+                    }}
+                  >
+                    <ThemedText style={styles.durationOptionText}>{option.label}</ThemedText>
+                    {durationHours === option.hours && <MaterialIcons name="check" size={22} color="#6955E8" />}
+                  </Pressable>
+                ))}
+              </Pressable>
+            </Pressable>
+          </Modal>
 
           {error !== null && <ThemedText style={styles.errorMessage}>{error}</ThemedText>}
 
@@ -327,6 +383,13 @@ const styles = StyleSheet.create({
   settingValueText: { color: '#16213A', fontSize: 14, fontWeight: '600' },
   toggle: { width: 64, height: 36, borderRadius: 18, backgroundColor: '#2D82EC', padding: 4, justifyContent: 'center' },
   toggleKnob: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', alignSelf: 'flex-end' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(17, 26, 48, 0.35)', justifyContent: 'center', padding: 20 },
+  durationPicker: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, gap: 8 },
+  durationPickerTitle: { color: '#111A30', fontSize: 20, fontWeight: '700' },
+  durationPickerHint: { color: '#687B98', fontSize: 14, marginBottom: 4 },
+  durationOption: { minHeight: 48, borderRadius: 12, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  selectedDurationOption: { backgroundColor: '#EDE9FF' },
+  durationOptionText: { color: '#16213A', fontSize: 16, fontWeight: '600' },
   errorMessage: { color: '#B42318', fontSize: 14, textAlign: 'center', marginTop: -8 },
   primaryButton: {
     minHeight: 58,
