@@ -175,6 +175,7 @@ export type CreatePollRequest = {
   options: string[];
   familyEventId?: string;
   durationHours?: number;
+  notifyFamily?: boolean;
 };
 
 export async function createPoll(request: CreatePollRequest): Promise<void> {

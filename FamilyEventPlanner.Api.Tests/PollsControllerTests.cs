@@ -36,6 +36,59 @@ public class PollsControllerTests
     }
 
     [Fact]
+    public async Task CreateWithNotifyFamilyNotifiesOtherMembersInTheGroup()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        var otherMember = AddMember(context, group.Id, "other@example.com", "Other");
+        var unrelatedGroup = new FamilyGroup { Id = Guid.NewGuid(), Name = "Other Family", CreatedAt = DateTime.UtcNow };
+        context.FamilyGroups.Add(unrelatedGroup);
+        var unrelatedMember = AddMember(context, unrelatedGroup.Id, "unrelated@example.com", "Unrelated");
+        await context.SaveChangesAsync();
+
+        var result = await CreateController(context, creator.Id).Create(new CreatePollRequest
+        {
+            FamilyGroupId = group.Id,
+            Question = "Where should we eat?",
+            Options = ["Home", "Restaurant"],
+            NotifyFamily = true
+        });
+
+        Assert.IsType<CreatedAtActionResult>(result);
+        var notifications = await context.Notifications.ToListAsync();
+        var notification = Assert.Single(notifications);
+        Assert.Equal(otherMember.Id, notification.MemberId);
+        Assert.DoesNotContain(notifications, n => n.MemberId == creator.Id || n.MemberId == unrelatedMember.Id);
+        Assert.Equal("PollCreated", notification.Type);
+        Assert.Contains("Where should we eat?", notification.Message);
+        Assert.StartsWith("/poll/", notification.Link);
+        Assert.Single(await context.ActivityFeed.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateWithoutNotifyFamilyDoesNotCreateNotifications()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        AddMember(context, group.Id, "other@example.com", "Other");
+        await context.SaveChangesAsync();
+
+        var result = await CreateController(context, creator.Id).Create(new CreatePollRequest
+        {
+            FamilyGroupId = group.Id,
+            Question = "Choose",
+            Options = ["One", "Two"],
+            DurationHours = 24,
+            NotifyFamily = false
+        });
+
+        Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Empty(await context.Notifications.ToListAsync());
+        Assert.Empty(await context.ActivityFeed.ToListAsync());
+        Assert.NotNull((await context.Polls.SingleAsync()).ExpiresAt);
+    }
+
+    [Fact]
     public async Task VoteOnExpiredPollIsRejectedButActivePollAcceptsVote()
     {
         await using var context = CreateContext();
@@ -100,6 +153,22 @@ public class PollsControllerTests
         context.GroupMembers.Add(member);
         context.SaveChanges();
         return (group, member);
+    }
+
+    private static GroupMember AddMember(AppDbContext context, Guid groupId, string email, string displayName)
+    {
+        var user = new User { Id = Guid.NewGuid(), Email = email, DisplayName = displayName };
+        var member = new GroupMember
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = groupId,
+            UserId = user.Id,
+            User = user,
+            JoinedAt = DateTime.UtcNow
+        };
+        context.Users.Add(user);
+        context.GroupMembers.Add(member);
+        return member;
     }
 
     private static Poll AddPoll(AppDbContext context, Guid groupId, Guid memberId, DateTime? expiresAt)

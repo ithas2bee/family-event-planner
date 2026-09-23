@@ -86,17 +86,44 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.Polls.Add(poll);
             await _context.SaveChangesAsync();
 
-            _context.ActivityFeed.Add(new ActivityFeed
+            if (request.NotifyFamily)
             {
-                Id = Guid.NewGuid(),
-                FamilyGroupId = poll.FamilyGroupId,
-                ActorMemberId = memberId,
-                ActivityType = "PollCreated",
-                RelatedEntityId = poll.Id,
-                RelatedEntityType = "Poll",
-                MetadataJson = $"{{\"question\":\"{poll.Question}\"}}",
-                CreatedAtUtc = DateTime.UtcNow
-            });
+                _context.ActivityFeed.Add(new ActivityFeed
+                {
+                    Id = Guid.NewGuid(),
+                    FamilyGroupId = poll.FamilyGroupId,
+                    ActorMemberId = memberId,
+                    ActivityType = "PollCreated",
+                    RelatedEntityId = poll.Id,
+                    RelatedEntityType = "Poll",
+                    MetadataJson = $"{{\"question\":\"{poll.Question}\"}}",
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+
+                var recipientIds = await _context.GroupMembers
+                    .Where(m => m.FamilyGroupId == poll.FamilyGroupId && m.Id != memberId)
+                    .Select(m => m.Id)
+                    .ToListAsync();
+                var link = $"/poll/{poll.Id}";
+                var existingRecipientIds = await _context.Notifications
+                    .Where(n => n.Type == "PollCreated" && n.Link == link)
+                    .Select(n => n.MemberId)
+                    .ToListAsync();
+
+                _context.Notifications.AddRange(recipientIds
+                    .Except(existingRecipientIds)
+                    .Select(recipientId => new Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        MemberId = recipientId,
+                        Message = $"{member.User?.DisplayName ?? "Someone"} created a poll: {poll.Question}",
+                        Type = "PollCreated",
+                        Link = link,
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    }));
+            }
+
             await _context.SaveChangesAsync();
 
             System.Diagnostics.Debug.WriteLine($"[CREATE POLL] Poll {poll.Id} created by member {memberId} in group {request.FamilyGroupId}");

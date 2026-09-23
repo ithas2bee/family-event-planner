@@ -30,6 +30,7 @@ export default function CreatePollScreen() {
   const [error, setError] = useState<string | null>(null);
   const [durationHours, setDurationHours] = useState<number | null>(null);
   const [durationPickerVisible, setDurationPickerVisible] = useState(false);
+  const [notifyFamily, setNotifyFamily] = useState(true);
 
   const durationOptions = [
     { hours: 1, label: '1 hour' },
@@ -84,6 +85,7 @@ export default function CreatePollScreen() {
         question: question.trim(),
         options: filledOptions.map((option) => option.trim()),
         durationHours: durationHours ?? undefined,
+        notifyFamily,
       });
 
       router.replace({
@@ -214,18 +216,24 @@ export default function CreatePollScreen() {
                 <MaterialIcons name="expand-more" size={23} color="#162B45" />
               </View>
             </Pressable>
-            <View style={styles.settingRow}>
+            <Pressable
+              style={styles.settingRow}
+              onPress={() => setNotifyFamily((current) => !current)}
+              accessibilityRole="switch"
+              accessibilityLabel="Notify Family"
+              accessibilityState={{ checked: notifyFamily }}
+            >
               <View style={[styles.settingIcon, styles.notifyIcon]}>
                 <MaterialIcons name="groups" size={25} color="#16834F" />
               </View>
               <View style={styles.settingCopy}>
                 <ThemedText style={styles.settingLabel}>Notify Family</ThemedText>
-                <ThemedText style={styles.settingHint}>Family activity updates are automatic.</ThemedText>
+                <ThemedText style={styles.settingHint}>Let family members know about this poll.</ThemedText>
               </View>
-              <View style={styles.toggle}>
-                <View style={styles.toggleKnob} />
+              <View style={[styles.toggle, !notifyFamily && styles.toggleOff]}>
+                <View style={[styles.toggleKnob, !notifyFamily && styles.toggleKnobOff]} />
               </View>
-            </View>
+            </Pressable>
           </View>
 
           <Modal
@@ -383,6 +391,8 @@ const styles = StyleSheet.create({
   settingValueText: { color: '#16213A', fontSize: 14, fontWeight: '600' },
   toggle: { width: 64, height: 36, borderRadius: 18, backgroundColor: '#2D82EC', padding: 4, justifyContent: 'center' },
   toggleKnob: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#FFFFFF', alignSelf: 'flex-end' },
+  toggleOff: { backgroundColor: '#D2DCE9' },
+  toggleKnobOff: { alignSelf: 'flex-start' },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(17, 26, 48, 0.35)', justifyContent: 'center', padding: 20 },
   durationPicker: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, gap: 8 },
   durationPickerTitle: { color: '#111A30', fontSize: 20, fontWeight: '700' },
