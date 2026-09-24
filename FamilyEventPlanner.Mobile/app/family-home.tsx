@@ -384,7 +384,7 @@ export default function FamilyHomeScreen() {
               accessibilityLabel="Open profile"
               accessibilityRole="button"
               hitSlop={6}
-              onPress={() => router.push('/(tabs)/(main)/my-groups')}
+              onPress={() => router.push('/profile')}
               style={styles.profileButton}
             >
               <ThemedText style={styles.profileInitials}>{getInitials(memberName)}</ThemedText>

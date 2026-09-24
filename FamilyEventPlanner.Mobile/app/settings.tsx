@@ -9,14 +9,14 @@ import { ThemedView } from '@/components/themed-view';
 type SettingOption = {
   title: string;
   icon: keyof typeof MaterialIcons.glyphMap;
-  route?: '/(tabs)/(main)/my-groups' | '/(tabs)/(main)/members';
+  route?: '/profile' | '/(tabs)/(main)/my-groups' | '/(tabs)/(main)/members';
 };
 
 const sections: { title: string; options: SettingOption[] }[] = [
   {
     title: 'Account',
     options: [
-      { title: 'Profile', icon: 'person-outline' },
+      { title: 'Profile', icon: 'person-outline', route: '/profile' },
       { title: 'Privacy', icon: 'lock-outline' },
       { title: 'Notification Preferences', icon: 'notifications-none' },
     ],

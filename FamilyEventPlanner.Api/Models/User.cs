@@ -15,6 +15,20 @@ namespace FamilyEventPlanner.Api.Models
 
         public string? DisplayName { get; set; }
 
+        public int? Age { get; set; }
+
+        [MaxLength(160)]
+        public string? Location { get; set; }
+
+        [MaxLength(2000)]
+        public string? Bio { get; set; }
+
+        [MaxLength(1024)]
+        public string? ProfilePictureUrl { get; set; }
+
+        // Stored as JSON so a user can have more than one family role.
+        public string? RolesJson { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
         public string? GoogleId { get; set; }
