@@ -1,8 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -122,7 +121,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7FAFF' },
-  content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
+  content: { flexGrow: 1, justifyContent: 'flex-start', padding: 24, paddingTop: 32 },
   container: { gap: 12 },
   brand: { color: '#101B5A', fontSize: 38, fontWeight: '800', textAlign: 'center' },
   tagline: { color: '#536987', fontSize: 16, textAlign: 'center', marginBottom: 28 },
