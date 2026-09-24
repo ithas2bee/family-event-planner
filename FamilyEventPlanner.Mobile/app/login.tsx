@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F7FAFF' },
   content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
   container: { gap: 12 },
-  brand: { color: '#101B5A', fontSize: 38, fontWeight: '800', textAlign: 'center' },
+  brand: { color: '#101B5A', fontSize: 38, lineHeight: 56, fontWeight: '800', textAlign: 'center' },
   tagline: { color: '#536987', fontSize: 16, textAlign: 'center', marginBottom: 28 },
   title: { color: '#101B5A', textAlign: 'center', fontSize: 32 },
   subtitle: { color: '#536987', textAlign: 'center', fontSize: 18, lineHeight: 27, marginBottom: 22 },
