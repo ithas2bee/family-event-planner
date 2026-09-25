@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
+import { EventLocation } from '@/services/locationService';
 
 export type EventAssignment = {
   memberId?: string;
@@ -17,6 +18,12 @@ export type Event = {
   startDate: string;
   endDate?: string;
   location?: string;
+  locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+  structuredLocation?: EventLocation | null;
   dressCode?: string;
   notes?: string;
   createdByMemberId?: string;
@@ -32,6 +39,11 @@ export type CreateEventRequest = {
   startDate: string;
   endDate?: string;
   location?: string;
+  locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
   dressCode?: string;
   notes?: string;
   assignments?: EventAssignment[]; // Added assignments
@@ -44,6 +56,11 @@ export type UpdateEventRequest = {
   startDate?: string;
   endDate?: string;
   location?: string;
+  locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
   dressCode?: string;
   notes?: string;
   assignments?: EventAssignment[]; // Added assignments
@@ -110,6 +127,11 @@ function mapEvent(payload: unknown): Event {
     startDate?: string;
     endDate?: string;
     location?: string;
+    locationName?: string;
+    locationAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    placeId?: string;
     dressCode?: string;
     notes?: string;
     createdByMemberId?: string;
@@ -143,6 +165,14 @@ function mapEvent(payload: unknown): Event {
     startDate: String(event.startDate ?? ''),
     endDate: event.endDate,
     location: event.location,
+    locationName: event.locationName,
+    locationAddress: event.locationAddress,
+    latitude: event.latitude,
+    longitude: event.longitude,
+    placeId: event.placeId,
+    structuredLocation: event.locationName && event.locationAddress && event.latitude != null && event.longitude != null
+      ? { name: event.locationName, address: event.locationAddress, latitude: event.latitude, longitude: event.longitude, placeId: event.placeId ?? '' }
+      : null,
     dressCode: event.dressCode,
     notes: event.notes,
     createdByMemberId: event.createdByMemberId,

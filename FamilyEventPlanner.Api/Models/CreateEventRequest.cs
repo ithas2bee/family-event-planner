@@ -19,6 +19,13 @@ namespace FamilyEventPlanner.Api.Models
         public DateTime? EndDate { get; set; }
 
         public string? Location { get; set; }
+        public string? LocationName { get; set; }
+        public string? LocationAddress { get; set; }
+        [Range(-90, 90)]
+        public double? Latitude { get; set; }
+        [Range(-180, 180)]
+        public double? Longitude { get; set; }
+        public string? PlaceId { get; set; }
         public string? DressCode { get; set; }
         public string? Notes { get; set; }
 
