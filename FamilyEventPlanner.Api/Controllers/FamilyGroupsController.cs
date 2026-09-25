@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using FamilyEventPlanner.Api.Models;
+using FamilyEventPlanner.Api.Models.Responses;
 using FamilyEventPlanner.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -92,7 +93,7 @@ namespace FamilyEventPlanner.Api.Controllers
             var groups = await _context.GroupMembers
                 .Where(m => m.UserId == userId)
                 .Include(m => m.FamilyGroup)
-                .Select(m => new
+                .Select(m => new GroupSummaryResponse
                 {
                     groupId = m.FamilyGroupId,
                     groupName = m.FamilyGroup.Name,

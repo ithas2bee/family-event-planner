@@ -11,13 +11,13 @@ import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getGroupMemberByUser } from '@/services/groupMemberService';
 import { clearSession, loadSession, type AppSession } from '@/services/sessionService';
 
-type MyGroup = {
+export type MyGroup = {
   groupId: string;
   groupName: string;
   memberCount?: number;
 };
 
-function mapGroups(raw: unknown): MyGroup[] {
+export function mapGroups(raw: unknown): MyGroup[] {
   if (!Array.isArray(raw)) return [];
 
   return raw
@@ -42,7 +42,15 @@ function mapGroups(raw: unknown): MyGroup[] {
     .filter((group): group is MyGroup => group !== null);
 }
 
-function GroupCard({ group, onPress }: { group: MyGroup; onPress: () => void }) {
+export function GroupCard({
+  group,
+  onPress,
+  isActive = false,
+}: {
+  group: MyGroup;
+  onPress: () => void;
+  isActive?: boolean;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -67,7 +75,10 @@ function GroupCard({ group, onPress }: { group: MyGroup; onPress: () => void }) 
           <ThemedText style={styles.groupHintText}>Plan moments together</ThemedText>
         </View>
       </View>
-      <MaterialIcons name="chevron-right" size={30} color="#52677A" />
+      <View style={styles.cardTrailing}>
+        {isActive ? <MaterialIcons name="check-circle" size={22} color="#0A9B67" /> : null}
+        <MaterialIcons name="chevron-right" size={30} color="#52677A" />
+      </View>
     </Pressable>
   );
 }
@@ -107,7 +118,7 @@ function ActionCard({
 }
 
 export default function MyGroupsScreen() {
-  const { setActiveGroup, clearActiveGroup, refreshMembership } = useActiveGroupContext();
+  const { groupId: activeGroupId, setActiveGroup, clearActiveGroup, refreshMembership } = useActiveGroupContext();
   const [session, setSession] = useState<AppSession | null>(null);
   const [groups, setGroups] = useState<MyGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -209,7 +220,16 @@ export default function MyGroupsScreen() {
           <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
             Your Groups
           </ThemedText>
-          {groups.length > 0 ? <ThemedText style={styles.seeAll}>See all ›</ThemedText> : null}
+          {groups.length > 0 ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="See all groups"
+              onPress={() => router.push('/all-groups')}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <ThemedText style={styles.seeAll}>See all ›</ThemedText>
+            </Pressable>
+          ) : null}
         </View>
 
         {loadingGroups ? (
@@ -217,7 +237,17 @@ export default function MyGroupsScreen() {
         ) : groupsError ? (
           <ThemedText style={styles.errorText}>{groupsError}</ThemedText>
         ) : groups.length > 0 ? (
-          groups.map((group) => <GroupCard key={group.groupId} group={group} onPress={() => void handleOpenGroup(group)} />)
+          (() => {
+            const currentGroup = groups.find((group) => group.groupId === activeGroupId) ?? groups[0];
+            return (
+              <GroupCard
+                key={currentGroup.groupId}
+                group={currentGroup}
+                isActive
+                onPress={() => void handleOpenGroup(currentGroup)}
+              />
+            );
+          })()
         ) : (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
@@ -291,6 +321,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.8 },
   groupVisual: { width: 94, height: 106, borderRadius: 18, backgroundColor: '#DDF5FA', alignItems: 'center', justifyContent: 'center' },
   groupInfo: { flex: 1, gap: 5 },
+  cardTrailing: { alignItems: 'center', gap: 4 },
   groupName: { color: '#102A3D', fontSize: 20 },
   groupMeta: { color: '#52677A', fontSize: 16 },
   groupHint: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
