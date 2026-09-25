@@ -12,6 +12,7 @@
       "bundleIdentifier": "com.huddleup.familyeventplanner"
     },
     "android": {
+      "package": "com.huddleup.familyeventplanner",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
