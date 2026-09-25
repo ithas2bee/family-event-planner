@@ -115,7 +115,7 @@ export default function PollsScreen() {
         ListHeaderComponent={
           <>
             <View style={styles.headerRow}>
-              <View>
+              <View style={styles.headerCopy}>
                 <ThemedText type="title" style={styles.title}>Polls</ThemedText>
                 <ThemedText style={styles.subtitle}>Help your family make decisions together.</ThemedText>
               </View>
@@ -196,6 +196,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerCopy: {
+    flex: 1,
   },
   title: {
     color: '#10255B',
