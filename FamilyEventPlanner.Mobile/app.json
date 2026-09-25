@@ -8,7 +8,8 @@
     "scheme": "familyeventplannermobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.huddleup.familyeventplanner"
     },
     "android": {
       "adaptiveIcon": {
