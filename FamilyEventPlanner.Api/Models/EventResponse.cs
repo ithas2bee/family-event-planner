@@ -19,6 +19,11 @@ namespace FamilyEventPlanner.Api.Models
         public DateTime StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public string? Location { get; set; }
+        public string? LocationName { get; set; }
+        public string? LocationAddress { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
+        public string? PlaceId { get; set; }
         public string? DressCode { get; set; }
         public string? Notes { get; set; }
         public Guid? CreatedByMemberId { get; set; }

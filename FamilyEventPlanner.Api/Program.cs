@@ -30,6 +30,7 @@ namespace FamilyEventPlanner.Api
 
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
+            builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();
 
             // Add services to the container with JSON camelCase naming
             builder.Services.AddControllers()

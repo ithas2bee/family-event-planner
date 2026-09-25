@@ -4,6 +4,7 @@ import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { ThemedText } from '@/components/themed-text';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createEvent } from '@/services/eventService';
+import { EventLocation } from '@/services/locationService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -27,7 +28,7 @@ export default function CreateEventScreen() {
   const [startDate, setStartDate] = useState('');
   const [description, setDescription] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState<EventLocation | null>(null);
   const [dressCode, setDressCode] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,7 +51,7 @@ export default function CreateEventScreen() {
     setEndDate(newEndDate ? newEndDate.toISOString() : '');
   }
 
-  function handleLocationChange(newLocation: string) {
+  function handleLocationChange(newLocation: EventLocation | null) {
     setLocation(newLocation);
   }
 
@@ -78,7 +79,12 @@ export default function CreateEventScreen() {
         startDate: startDate.trim(),
         description: description.trim() || undefined,
         endDate: endDate.trim() || undefined,
-        location: location.trim() || undefined,
+        location: location?.address,
+        locationName: location?.name,
+        locationAddress: location?.address,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        placeId: location?.placeId,
         dressCode: dressCode.trim() || undefined,
         notes: notes.trim() || undefined,
       });
@@ -175,7 +181,7 @@ export default function CreateEventScreen() {
             <ThemedText style={styles.label}>Location</ThemedText>
             <Pressable style={styles.locationInput} onPress={() => setLocationModalVisible(true)} accessibilityRole="button" accessibilityLabel="Add a location">
               <MaterialIcons name="place" size={21} color="#56708E" />
-              <ThemedText style={[styles.detailValue, !location && styles.placeholder]}>{location || 'Add a location'}</ThemedText>
+              <ThemedText style={[styles.detailValue, !location && styles.placeholder]}>{location?.name || location?.address || 'Add a location'}</ThemedText>
               <MaterialIcons name="chevron-right" size={22} color="#56708E" />
             </Pressable>
 

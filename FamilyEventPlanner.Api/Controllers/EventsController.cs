@@ -22,6 +22,15 @@ namespace FamilyEventPlanner.Api.Controllers
             _context = context;
         }
 
+        private static string? ValidateLocation(double? latitude, double? longitude)
+        {
+            if (latitude.HasValue != longitude.HasValue)
+                return "Latitude and longitude must be provided together.";
+            if (latitude is < -90 or > 90 || longitude is < -180 or > 180)
+                return "Latitude or longitude is outside the valid range.";
+            return null;
+        }
+
         // POST: api/events
         /// <summary>
         /// Create a new family event. Authenticated member becomes the creator.
@@ -31,6 +40,8 @@ namespace FamilyEventPlanner.Api.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+            var locationError = ValidateLocation(request.Latitude, request.Longitude);
+            if (locationError != null) return BadRequest(new { message = locationError });
 
             var group = await _context.FamilyGroups.FindAsync(request.FamilyGroupId);
             if (group == null)
@@ -58,6 +69,11 @@ namespace FamilyEventPlanner.Api.Controllers
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
                 Location = request.Location,
+                LocationName = request.LocationName,
+                LocationAddress = request.LocationAddress,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                PlaceId = request.PlaceId,
                 DressCode = request.DressCode,
                 Notes = request.Notes,
                 CreatedByMemberId = memberId,
@@ -91,6 +107,11 @@ namespace FamilyEventPlanner.Api.Controllers
                 StartDate = ev.StartDate,
                 EndDate = ev.EndDate,
                 Location = ev.Location,
+                LocationName = ev.LocationName,
+                LocationAddress = ev.LocationAddress,
+                Latitude = ev.Latitude,
+                Longitude = ev.Longitude,
+                PlaceId = ev.PlaceId,
                 DressCode = ev.DressCode,
                 Notes = ev.Notes,
                 CreatedByMemberId = ev.CreatedByMemberId,
@@ -144,6 +165,11 @@ namespace FamilyEventPlanner.Api.Controllers
                 StartDate = e.StartDate,
                 EndDate = e.EndDate,
                 Location = e.Location,
+                LocationName = e.LocationName,
+                LocationAddress = e.LocationAddress,
+                Latitude = e.Latitude,
+                Longitude = e.Longitude,
+                PlaceId = e.PlaceId,
                 DressCode = e.DressCode,
                 Notes = e.Notes,
                 CreatedByMemberId = e.CreatedByMemberId,
@@ -223,6 +249,11 @@ namespace FamilyEventPlanner.Api.Controllers
                 StartDate = ev.StartDate,
                 EndDate = ev.EndDate,
                 Location = ev.Location,
+                LocationName = ev.LocationName,
+                LocationAddress = ev.LocationAddress,
+                Latitude = ev.Latitude,
+                Longitude = ev.Longitude,
+                PlaceId = ev.PlaceId,
                 DressCode = ev.DressCode,
                 Notes = ev.Notes,
                 CreatedByMemberId = ev.CreatedByMemberId,
@@ -280,6 +311,8 @@ namespace FamilyEventPlanner.Api.Controllers
                 System.Diagnostics.Debug.WriteLine("[UPDATE EVENT] ModelState INVALID");
                 return BadRequest(ModelState);
             }
+            var locationError = ValidateLocation(request.Latitude, request.Longitude);
+            if (locationError != null) return BadRequest(new { message = locationError });
 
             var ev = await _context.FamilyEvents
                 .Include(e => e.Assignments)
@@ -315,6 +348,11 @@ namespace FamilyEventPlanner.Api.Controllers
             ev.StartDate = request.StartDate;
             ev.EndDate = request.EndDate;
             ev.Location = request.Location;
+            ev.LocationName = request.LocationName;
+            ev.LocationAddress = request.LocationAddress;
+            ev.Latitude = request.Latitude;
+            ev.Longitude = request.Longitude;
+            ev.PlaceId = request.PlaceId;
             ev.DressCode = request.DressCode;
             ev.Notes = request.Notes;
 
@@ -473,6 +511,11 @@ namespace FamilyEventPlanner.Api.Controllers
                 StartDate = ev.StartDate,
                 EndDate = ev.EndDate,
                 Location = ev.Location,
+                LocationName = ev.LocationName,
+                LocationAddress = ev.LocationAddress,
+                Latitude = ev.Latitude,
+                Longitude = ev.Longitude,
+                PlaceId = ev.PlaceId,
                 DressCode = ev.DressCode,
                 Notes = ev.Notes,
                 CreatedByMemberId = ev.CreatedByMemberId,

@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { EventDateModal } from '@/components/events/EventDateModal';
+import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
@@ -8,6 +9,7 @@ import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { getEventAttendance, saveEventAttendance, AttendanceResponse } from '@/services/eventAttendanceService';
 import { Event, getEventById, updateEvent } from '@/services/eventService';
+import { EventLocation } from '@/services/locationService';
 import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -35,6 +37,7 @@ export default function EventDetailsScreen() {
   const [activeAssignmentIndex, setActiveAssignmentIndex] = useState<number | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   useEffect(() => {
     if (!eventId || typeof eventId !== 'string') {
@@ -507,13 +510,13 @@ export default function EventDetailsScreen() {
                 </View>
                 <ThemedText style={styles.editSectionTitle}>Location</ThemedText>
               </View>
-            <FormInput
-              label="Where is it happening?"
-              value={event.location || ''}
-              onChangeText={(text) => setEvent({ ...event, location: text })}
-              placeholder="Add a location"
-              style={styles.lightInput}
-            />
+            <Pressable style={styles.dateTimeField} onPress={() => setLocationModalVisible(true)} accessibilityRole="button" accessibilityLabel="Edit event location">
+              <View style={styles.dateTimeCopy}>
+                <ThemedText style={styles.dateTimeValue}>{event.locationName || event.locationAddress || event.location || 'Add a location'}</ThemedText>
+                <ThemedText style={styles.dateTimeHint}>Tap to search or clear the location</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color="#56708E" />
+            </Pressable>
             </View>
 
             <View style={styles.editSection}>
@@ -691,6 +694,23 @@ export default function EventDetailsScreen() {
         notes={event.notes || ''}
         onChange={handleSettingsChange}
         onClose={() => setSettingsModalVisible(false)}
+      />
+      <EventLocationModal
+        visible={locationModalVisible}
+        location={event.structuredLocation}
+        onChange={(location: EventLocation | null) => {
+          setEvent({
+            ...event,
+            location: location?.address,
+            locationName: location?.name,
+            locationAddress: location?.address,
+            latitude: location?.latitude,
+            longitude: location?.longitude,
+            placeId: location?.placeId,
+            structuredLocation: location,
+          });
+        }}
+        onClose={() => setLocationModalVisible(false)}
       />
     </ScreenContainer>
   );
