@@ -2,6 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
 import { ThemedText } from '@/components/themed-text';
@@ -54,6 +55,7 @@ async function getInviteCode(groupId: string, userId: string): Promise<string | 
 }
 
 export default function MembersScreen() {
+  const insets = useSafeAreaInsets();
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
   const {
     groupId: contextGroupId,
@@ -115,7 +117,7 @@ export default function MembersScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 28) }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Pressable
             accessibilityLabel="Go back"
@@ -211,7 +213,7 @@ export default function MembersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F8FC' },
-  content: { padding: 20, paddingTop: 28, paddingBottom: 36 },
+  content: { padding: 20, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   backButton: { paddingTop: 8, paddingRight: 2 },
   heading: { flex: 1 },
