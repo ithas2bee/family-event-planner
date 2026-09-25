@@ -101,7 +101,7 @@ export function EventLocationModal({ visible, location, onChange, onClose }: Pro
           </View>
         ) : null}
         {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-        <MapView provider={PROVIDER_GOOGLE} style={styles.map} region={region}>
+        <MapView style={styles.map} region={region}>
           {draft ? <Marker coordinate={{ latitude: draft.latitude, longitude: draft.longitude }} title={draft.name} description={draft.address} /> : null}
         </MapView>
         {draft ? (
