@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { ThemedText } from '../themed-text';
+/* eslint-disable react-hooks/set-state-in-effect */
 
 type Props = {
   visible: boolean;
@@ -20,7 +21,8 @@ export function EventLocationModal({ visible, location, onChange, onClose }: Pro
   const [suggestions, setSuggestions] = useState<{ placeId: string; description: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const token = useRef('');
+  const token = useRef('location-session-0');
+  const sessionNumber = useRef(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -29,7 +31,6 @@ export function EventLocationModal({ visible, location, onChange, onClose }: Pro
       setQuery('');
       setSuggestions([]);
       setError(null);
-      token.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     }
   }, [visible, location]);
 
@@ -63,7 +64,8 @@ export function EventLocationModal({ visible, location, onChange, onClose }: Pro
       setDraft(selected);
       setSuggestions([]);
       setQuery('');
-      token.current = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionNumber.current += 1;
+      token.current = `location-session-${sessionNumber.current}`;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to load that location.');
     } finally {

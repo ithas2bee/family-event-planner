@@ -23,11 +23,6 @@ export type Event = {
   latitude?: number;
   longitude?: number;
   placeId?: string;
-  locationName?: string;
-  locationAddress?: string;
-  latitude?: number;
-  longitude?: number;
-  placeId?: string;
   structuredLocation?: EventLocation | null;
   dressCode?: string;
   notes?: string;
@@ -132,6 +127,11 @@ function mapEvent(payload: unknown): Event {
     startDate?: string;
     endDate?: string;
     location?: string;
+    locationName?: string;
+    locationAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    placeId?: string;
     dressCode?: string;
     notes?: string;
     createdByMemberId?: string;
