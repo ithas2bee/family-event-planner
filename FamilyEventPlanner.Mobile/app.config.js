@@ -18,6 +18,15 @@ module.exports = {
         googleMapsApiKey: process.env.GOOGLE_MAPS_IOS_KEY,
       },
     },
-    plugins: [...(appJson.expo.plugins ?? []), 'react-native-maps'],
+    plugins: [
+      ...(appJson.expo.plugins ?? []),
+      [
+        'react-native-maps',
+        {
+          iosGoogleMapsApiKey: process.env.GOOGLE_MAPS_IOS_KEY,
+          androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY,
+        },
+      ],
+    ],
   },
 };
