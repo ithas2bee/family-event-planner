@@ -6,6 +6,7 @@ module.exports = {
     ...appJson.expo,
     android: {
       ...appJson.expo.android,
+      package: 'com.huddleup.familyeventplanner',
       config: {
         ...appJson.expo.android?.config,
         googleMaps: { apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY },
