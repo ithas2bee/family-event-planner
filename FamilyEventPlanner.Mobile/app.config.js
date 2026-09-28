@@ -28,6 +28,10 @@ module.exports = {
           androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY,
         },
       ],
+      [
+        './plugins/with-development-cleartext-traffic',
+        { enabled: process.env.EAS_BUILD_PROFILE === 'development' },
+      ],
     ],
   },
 };
