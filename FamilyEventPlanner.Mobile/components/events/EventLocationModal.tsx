@@ -2,8 +2,9 @@ import { EventLocation, getLocationDetails, searchLocations } from '@/services/l
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import type { Region } from 'react-native-maps';
 import { ThemedText } from '../themed-text';
+import { EventLocationMap } from './EventLocationMap';
 /* eslint-disable react-hooks/set-state-in-effect */
 
 type Props = {
@@ -101,9 +102,7 @@ export function EventLocationModal({ visible, location, onChange, onClose }: Pro
           </View>
         ) : null}
         {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-        <MapView style={styles.map} region={region}>
-          {draft ? <Marker coordinate={{ latitude: draft.latitude, longitude: draft.longitude }} title={draft.name} description={draft.address} /> : null}
-        </MapView>
+        <EventLocationMap style={styles.map} region={region} location={draft} />
         {draft ? (
           <View style={styles.card}>
             <ThemedText style={styles.name}>{draft.name}</ThemedText>
