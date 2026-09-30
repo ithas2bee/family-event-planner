@@ -7,10 +7,6 @@ module.exports = {
     android: {
       ...appJson.expo.android,
       package: 'com.huddleup.familyeventplanner',
-      config: {
-        ...appJson.expo.android?.config,
-        googleMaps: { apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY },
-      },
     },
     ios: {
       ...appJson.expo.ios,
@@ -25,9 +21,9 @@ module.exports = {
         'react-native-maps',
         {
           iosGoogleMapsApiKey: process.env.GOOGLE_MAPS_IOS_KEY,
-          androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY,
         },
       ],
+      '@maplibre/maplibre-react-native',
       [
         './plugins/with-development-cleartext-traffic',
         { enabled: process.env.EAS_BUILD_PROFILE === 'development' },
