@@ -15,7 +15,15 @@ public static class EventImagePresets
         "beach-day",
         "holiday-gathering",
         "arts-and-crafts",
-        "backyard-bbq"
+        "backyard-bbq",
+        "cruise-event",
+        "camping-trip",
+        "movie-night",
+        "pool-party",
+        "mall-outing",
+        "sip-and-paint",
+        "water-party",
+        "kids-park"
     });
 
     public static bool IsSupported(string key) => SupportedKeys.Contains(key, StringComparer.Ordinal);
