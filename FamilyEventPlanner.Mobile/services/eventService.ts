@@ -14,6 +14,7 @@ export type Event = {
   familyGroupId: string;
   title: string;
   imageUrl?: string;
+  eventImagePresetKey?: string | null;
   description?: string;
   startDate: string;
   endDate?: string;
@@ -35,6 +36,7 @@ export type Event = {
 export type CreateEventRequest = {
   familyGroupId: string;
   title: string;
+  eventImagePresetKey?: string | null;
   description?: string;
   startDate: string;
   endDate?: string;
@@ -52,6 +54,7 @@ export type CreateEventRequest = {
 export type UpdateEventRequest = {
   title?: string;
   imageUrl?: string;
+  eventImagePresetKey?: string | null;
   description?: string;
   startDate?: string;
   endDate?: string;
@@ -123,6 +126,7 @@ function mapEvent(payload: unknown): Event {
     familyGroupId?: string;
     title?: string;
     imageUrl?: string;
+    eventImagePresetKey?: string | null;
     description?: string;
     startDate?: string;
     endDate?: string;
@@ -161,6 +165,7 @@ function mapEvent(payload: unknown): Event {
     familyGroupId: String(event.familyGroupId ?? ''),
     title: String(event.title ?? ''),
     imageUrl: typeof event.imageUrl === 'string' ? event.imageUrl : undefined,
+    eventImagePresetKey: typeof event.eventImagePresetKey === 'string' ? event.eventImagePresetKey : null,
     description: event.description,
     startDate: String(event.startDate ?? ''),
     endDate: event.endDate,

@@ -15,6 +15,9 @@ namespace FamilyEventPlanner.Api.Models
         [Required, MaxLength(200)]
         public string Title { get; set; }
 
+        [MaxLength(40)]
+        public string? EventImagePresetKey { get; set; }
+
         public string? Description { get; set; }
 
         public DateTime StartDate { get; set; }

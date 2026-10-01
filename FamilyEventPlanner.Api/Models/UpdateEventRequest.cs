@@ -2,6 +2,7 @@ using System;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace FamilyEventPlanner.Api.Models
 {
@@ -27,6 +28,22 @@ namespace FamilyEventPlanner.Api.Models
     {
         [Required, MaxLength(200)]
         public string Title { get; set; }
+
+        private string? _eventImagePresetKey;
+
+        [EventImagePresetKey(ErrorMessage = "Event image preset key is not supported.")]
+        public string? EventImagePresetKey
+        {
+            get => _eventImagePresetKey;
+            set
+            {
+                _eventImagePresetKey = value;
+                EventImagePresetKeySpecified = true;
+            }
+        }
+
+        [JsonIgnore]
+        public bool EventImagePresetKeySpecified { get; private set; }
 
         public string? Description { get; set; }
 
