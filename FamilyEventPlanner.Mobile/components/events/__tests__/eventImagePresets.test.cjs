@@ -11,6 +11,11 @@ const {
 } = require('../../../constants/eventImagePresets.ts');
 const selectorPath = require.resolve('../EventImageSelector.tsx');
 const selectorSource = fs.readFileSync(selectorPath, 'utf8');
+const componentDirectory = path.dirname(selectorPath);
+const assetResolverPath = path.resolve(componentDirectory, '../../constants/eventImagePresetAssets.ts');
+const assetResolverSource = fs.readFileSync(assetResolverPath, 'utf8');
+const cardSource = fs.readFileSync(path.resolve(componentDirectory, '../upcoming-event-card.tsx'), 'utf8');
+const homeSource = fs.readFileSync(path.resolve(componentDirectory, '../../app/family-home.tsx'), 'utf8');
 
 test('provides exactly eighteen unique event image presets with the requested labels', () => {
   const keys = EVENT_IMAGE_PRESETS.map((preset) => preset.key);
@@ -84,7 +89,7 @@ test('maps every preset to exactly one bundled local JPG', () => {
     'water-party': 'water-games.jpg',
     'kids-park': 'kids-park.jpg',
   };
-  const mappings = [...selectorSource.matchAll(
+  const mappings = [...assetResolverSource.matchAll(
     /^\s*'([^']+\.jpg)': require\('@\/assets\/images\/event-presets\/([^']+\.jpg)'\),?$/gm,
   )];
 
@@ -96,10 +101,12 @@ test('maps every preset to exactly one bundled local JPG', () => {
   for (const [mapping, assetKey, file] of mappings) {
     assert.equal(assetKey, file);
     assert.ok(fs.existsSync(path.join(assetDirectory, file)));
-    assert.ok(selectorSource.includes(mapping));
+    assert.ok(assetResolverSource.includes(mapping));
   }
-  assert.match(selectorSource, /<Image source=\{presetImages\[selectedPreset\.imageAsset\]\}/);
-  assert.match(selectorSource, /<Image source=\{presetImages\[preset\.imageAsset\]\}/);
+  assert.match(selectorSource, /getEventImagePresetSource\(selectedPreset\.key\)/);
+  assert.match(selectorSource, /getEventImagePresetSource\(preset\.key\)/);
+  assert.match(cardSource, /getEventImagePresetSource\(item\.eventImagePresetKey\)/);
+  assert.match(homeSource, /eventImagePresetKey: event\.eventImagePresetKey/);
 });
 
 test('restores the selected preset for an existing event', () => {
@@ -172,9 +179,17 @@ test('picker UI uses a compact field, dimmed modal, two-column landscape gallery
   assert.match(selectorSource, /accessibilityLabel="No image"/);
   assert.match(selectorSource, /onPress=\{handleDone\}[\s\S]*>[\s\S]*Done/);
   assert.match(selectorSource, /width: '48\.5%'/);
-  assert.match(selectorSource, /aspectRatio: 2\.15/);
+  assert.match(selectorSource, /aspectRatio: 16 \/ 9/);
+  assert.match(selectorSource, /resizeMode="cover"/);
   assert.match(selectorSource, /selectedOption: \{ borderColor: '#087AC5'/);
   assert.match(selectorSource, /name="check"/);
   assert.match(selectorSource, /centerTitle\s+showHandle/);
-  assert.match(selectorSource, /image: \{ width: '100%', aspectRatio: 2\.15 \}/);
+  assert.match(selectorSource, /image: \{ width: '100%', aspectRatio: 16 \/ 9 \}/);
+});
+
+test('upcoming event cards render the selected preset image and preserve no-image styling', () => {
+  assert.match(cardSource, /const imageSource = getEventImagePresetSource\(item\.eventImagePresetKey\)/);
+  assert.match(cardSource, /<Image source=\{imageSource\} style=\{styles\.imageBackground\} resizeMode="cover" \/>/);
+  assert.match(cardSource, /imageSource \? '#16213A' : tone\.background/);
+  assert.match(cardSource, /eventImagePresetKey\?: string \| null/);
 });

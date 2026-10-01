@@ -1,8 +1,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import type { DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
 
 const EVENT_TONES = [
   {
@@ -35,6 +36,7 @@ type EventTone = (typeof EVENT_TONES)[number];
 
 export type UpcomingEventCardItem = DashboardCardItem & {
   startDate: string;
+  eventImagePresetKey?: string | null;
   location?: string;
   host?: string;
   participantCount?: number;
@@ -129,6 +131,7 @@ function getEventTone(title: string, index: number): EventTone {
 
 export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardProps) {
   const tone = getEventTone(item.title, index);
+  const imageSource = getEventImagePresetSource(item.eventImagePresetKey);
   const dateParts = formatEventDateParts(item.startDate);
   const statusLabel = getStatusLabel(item.startDate, item.isNextUp);
   const contextLabel =
@@ -146,9 +149,18 @@ export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardPro
       android_ripple={{ color: 'rgba(53,80,112,0.08)' }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}>
-      <View style={[styles.header, { backgroundColor: tone.background }]}>
-        <View style={[styles.headerBubbleLarge, { backgroundColor: tone.bubble }]} />
-        <View style={[styles.headerBubbleSmall, { backgroundColor: tone.bubble }]} />
+      <View style={[styles.header, { backgroundColor: imageSource ? '#16213A' : tone.background }]}>
+        {imageSource ? (
+          <>
+            <Image source={imageSource} style={styles.imageBackground} resizeMode="cover" />
+            <View style={styles.imageOverlay} />
+          </>
+        ) : (
+          <>
+            <View style={[styles.headerBubbleLarge, { backgroundColor: tone.bubble }]} />
+            <View style={[styles.headerBubbleSmall, { backgroundColor: tone.bubble }]} />
+          </>
+        )}
 
         <View style={styles.headerTopRow}>
           <View style={[styles.headerIcon, { backgroundColor: tone.bubble }]}>
@@ -236,6 +248,21 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 12,
     justifyContent: 'space-between',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+  },
+  imageBackground: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
   headerTopRow: {
     flexDirection: 'row',

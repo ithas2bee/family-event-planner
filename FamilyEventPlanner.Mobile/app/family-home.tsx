@@ -96,6 +96,7 @@ function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
     id: event.id,
     title: event.title || 'Untitled Event',
     startDate: event.startDate,
+    eventImagePresetKey: event.eventImagePresetKey,
     location: event.location?.trim() || undefined,
     host: event.creatorDisplayName?.trim() || undefined,
     participantCount: event.assignments?.length,
