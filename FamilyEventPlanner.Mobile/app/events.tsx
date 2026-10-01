@@ -1,10 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getEventsByGroup, type Event } from '@/services/eventService';
 
@@ -78,6 +79,7 @@ function getInitials(name: string): string {
 
 function EventCard({ event, index, onPress }: { event: Event; index: number; onPress: () => void }) {
   const tone = IMAGE_TONES[index % IMAGE_TONES.length];
+  const imageSource = getEventImagePresetSource(event.eventImagePresetKey);
   const date = formatEventDate(event.startDate);
   const assignments = event.assignments ?? [];
   const attendees = assignments.filter((assignment) => assignment.memberName.trim().length > 0);
@@ -92,8 +94,14 @@ function EventCard({ event, index, onPress }: { event: Event; index: number; onP
       accessibilityLabel={`${event.title || 'Untitled Event'}. ${date.date} at ${date.time}.`}
       android_ripple={{ color: '#E7EDF5' }}>
       <View style={[styles.eventImage, { backgroundColor: tone.background }]}>
-        <View style={[styles.imageCircle, { backgroundColor: `${tone.foreground}22` }]} />
-        <MaterialIcons name={tone.icon} size={34} color={tone.foreground} />
+        {imageSource ? (
+          <Image source={imageSource} style={styles.eventImageBackground} resizeMode="cover" />
+        ) : (
+          <>
+            <View style={[styles.imageCircle, { backgroundColor: `${tone.foreground}22` }]} />
+            <MaterialIcons name={tone.icon} size={34} color={tone.foreground} />
+          </>
+        )}
       </View>
 
       <View style={styles.cardContent}>
@@ -261,6 +269,7 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', minHeight: 142, overflow: 'hidden', borderRadius: 18, backgroundColor: '#FFFFFF', shadowColor: '#203B5A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   cardPressed: { opacity: 0.9 },
   eventImage: { width: 94, margin: 8, borderRadius: 13, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  eventImageBackground: { ...StyleSheet.absoluteFillObject },
   imageCircle: { position: 'absolute', width: 120, height: 120, borderRadius: 60, right: -35, bottom: -28 },
   cardContent: { flex: 1, minWidth: 0, paddingTop: 14, paddingRight: 10, paddingBottom: 10, gap: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },

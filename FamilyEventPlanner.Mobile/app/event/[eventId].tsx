@@ -3,6 +3,7 @@ import { EventDateModal } from '@/components/events/EventDateModal';
 import { EventImageSelector } from '@/components/events/EventImageSelector';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
@@ -125,6 +126,7 @@ export default function EventDetailsScreen() {
   };
 
   const isCreator = Boolean(event?.createdByMemberId && currentMemberId && event.createdByMemberId === currentMemberId);
+  const eventImagePresetSource = event ? getEventImagePresetSource(event.eventImagePresetKey) : undefined;
   const memberNames = new Map(
     groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Family member']),
   );
@@ -273,7 +275,11 @@ export default function EventDetailsScreen() {
     <ScreenContainer withScroll padding={0}>
       <View style={[styles.contentContainer, { paddingTop: Math.max(insets.top, Spacing.lg) }]}>
         <View style={styles.hero}>
-          {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.heroImage} /> : null}
+          {eventImagePresetSource ? (
+            <Image source={eventImagePresetSource} style={styles.heroImage} resizeMode="cover" />
+          ) : event.imageUrl ? (
+            <Image source={{ uri: event.imageUrl }} style={styles.heroImage} />
+          ) : null}
           <View style={styles.heroOverlay} />
           <Pressable
             accessibilityLabel="Go back"
@@ -283,7 +289,9 @@ export default function EventDetailsScreen() {
           >
             <MaterialIcons name="arrow-back" size={22} color="#203B5A" />
           </Pressable>
-          {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
+          {!eventImagePresetSource && !event.imageUrl ? (
+            <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
+          ) : null}
           <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
         </View>
 
