@@ -95,7 +95,7 @@ function EventCard({ event, index, onPress }: { event: Event; index: number; onP
       android_ripple={{ color: '#E7EDF5' }}>
       {imageSource ? (
         <>
-          <Image source={imageSource} style={styles.eventImageBackground} resizeMode="cover" />
+          <Image source={imageSource} style={styles.eventImageBackground} resizeMode="contain" />
           <View style={styles.imageOverlay} />
           <View style={styles.imageCardContent}>
             <View style={styles.imageCardTopRow}>
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   selectedFilterText: { color: '#FFFFFF' },
   list: { paddingBottom: 24, gap: 12 },
   card: { flexDirection: 'row', minHeight: 142, overflow: 'hidden', borderRadius: 18, backgroundColor: '#FFFFFF', shadowColor: '#203B5A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  imageCard: { width: '100%', aspectRatio: 1.55, overflow: 'hidden', borderRadius: 18, backgroundColor: '#172033', shadowColor: '#203B5A', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  imageCard: { width: '100%', aspectRatio: 11 / 6, overflow: 'hidden', borderRadius: 18, backgroundColor: '#172033', shadowColor: '#203B5A', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   cardPressed: { opacity: 0.9 },
   eventImage: { width: 94, margin: 8, borderRadius: 13, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   eventImageBackground: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },

@@ -276,7 +276,7 @@ export default function EventDetailsScreen() {
       <View style={[styles.contentContainer, { paddingTop: Math.max(insets.top, Spacing.lg) }]}>
         <View style={[styles.hero, eventImagePresetSource ? styles.presetHero : null]}>
           {eventImagePresetSource ? (
-            <Image source={eventImagePresetSource} style={styles.heroImage} resizeMode="cover" />
+            <Image source={eventImagePresetSource} style={styles.heroImage} resizeMode="contain" />
           ) : event.imageUrl ? (
             <Image source={{ uri: event.imageUrl }} style={styles.heroImage} />
           ) : null}
@@ -772,7 +772,7 @@ const styles = StyleSheet.create({
   },
   presetHero: {
     minHeight: 0,
-    aspectRatio: 1.55,
+    aspectRatio: 11 / 6,
     alignItems: 'stretch',
     justifyContent: 'flex-end',
     padding: Spacing.md,
