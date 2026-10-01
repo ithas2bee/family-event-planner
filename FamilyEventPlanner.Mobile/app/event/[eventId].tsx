@@ -274,7 +274,7 @@ export default function EventDetailsScreen() {
   return (
     <ScreenContainer withScroll padding={0}>
       <View style={[styles.contentContainer, { paddingTop: Math.max(insets.top, Spacing.lg) }]}>
-        <View style={[styles.hero, eventImagePresetSource && styles.presetHero]}>
+        <View style={[styles.hero, eventImagePresetSource ? styles.presetHero : null]}>
           {eventImagePresetSource ? (
             <Image source={eventImagePresetSource} style={styles.heroImage} resizeMode="cover" />
           ) : event.imageUrl ? (
@@ -788,11 +788,19 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   heroImage: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     opacity: 1,
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: 'rgba(11, 32, 55, 0.16)',
   },
   backButton: {
