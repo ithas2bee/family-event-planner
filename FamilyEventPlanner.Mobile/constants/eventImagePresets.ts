@@ -14,7 +14,7 @@ export const EVENT_IMAGE_PRESETS = [
 export type EventImagePresetKey = (typeof EVENT_IMAGE_PRESETS)[number]['key'];
 
 export function selectEventImagePreset(
-  _selected: EventImagePresetKey | null | undefined,
+  _selected: string | null | undefined,
   next: EventImagePresetKey | null,
 ): EventImagePresetKey | null {
   return next;
