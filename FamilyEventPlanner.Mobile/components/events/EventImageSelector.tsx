@@ -1,12 +1,10 @@
 import {
   EVENT_IMAGE_PRESETS,
   EventImagePresetKey,
-  isEventImagePresetSelected,
-} from '@/constants/eventImagePresets';
-import {
   eventImagePickerReducer,
   initialEventImagePickerState,
-} from '@/constants/eventImagePickerState';
+  isEventImagePresetSelected,
+} from '@/constants/eventImagePresets';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';

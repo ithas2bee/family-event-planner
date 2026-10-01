@@ -4,13 +4,11 @@ const path = require('node:path');
 const test = require('node:test');
 const {
   EVENT_IMAGE_PRESETS,
+  eventImagePickerReducer,
+  initialEventImagePickerState,
   isEventImagePresetSelected,
   selectEventImagePreset,
 } = require('../../../constants/eventImagePresets.ts');
-const {
-  eventImagePickerReducer,
-  initialEventImagePickerState,
-} = require('../../../constants/eventImagePickerState.ts');
 const selectorPath = require.resolve('../EventImageSelector.tsx');
 const selectorSource = fs.readFileSync(selectorPath, 'utf8');
 
