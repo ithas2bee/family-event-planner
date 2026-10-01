@@ -16,6 +16,8 @@ const assetResolverPath = path.resolve(componentDirectory, '../../constants/even
 const assetResolverSource = fs.readFileSync(assetResolverPath, 'utf8');
 const cardSource = fs.readFileSync(path.resolve(componentDirectory, '../upcoming-event-card.tsx'), 'utf8');
 const homeSource = fs.readFileSync(path.resolve(componentDirectory, '../../app/family-home.tsx'), 'utf8');
+const createEventSource = fs.readFileSync(path.resolve(componentDirectory, '../../app/create-event.tsx'), 'utf8');
+const eventServiceSource = fs.readFileSync(path.resolve(componentDirectory, '../../services/eventService.ts'), 'utf8');
 
 test('provides exactly eighteen unique event image presets with the requested labels', () => {
   const keys = EVENT_IMAGE_PRESETS.map((preset) => preset.key);
@@ -107,6 +109,7 @@ test('maps every preset to exactly one bundled local JPG', () => {
   assert.match(selectorSource, /getEventImagePresetSource\(preset\.key\)/);
   assert.match(cardSource, /getEventImagePresetSource\(item\.eventImagePresetKey\)/);
   assert.match(homeSource, /eventImagePresetKey: event\.eventImagePresetKey/);
+  assert.match(assetResolverSource, /'happy-birthday\.jpg': require\('@\/assets\/images\/event-presets\/happy-birthday\.jpg'\)/);
 });
 
 test('restores the selected preset for an existing event', () => {
@@ -181,15 +184,33 @@ test('picker UI uses a compact field, dimmed modal, two-column landscape gallery
   assert.match(selectorSource, /width: '48\.5%'/);
   assert.match(selectorSource, /aspectRatio: 16 \/ 9/);
   assert.match(selectorSource, /resizeMode="cover"/);
+  assert.match(selectorSource, /<View style=\{styles\.imageFrame\}>[\s\S]*<Image[\s\S]*style=\{styles\.image\}[\s\S]*resizeMode="cover"/);
+  assert.match(selectorSource, /<View style=\{styles\.labelArea\}>[\s\S]*\{preset\.label\}/);
+  assert.match(selectorSource, /height: 38/);
+  assert.match(selectorSource, /borderRadius: 14/);
   assert.match(selectorSource, /selectedOption: \{ borderColor: '#087AC5'/);
   assert.match(selectorSource, /name="check"/);
   assert.match(selectorSource, /centerTitle\s+showHandle/);
-  assert.match(selectorSource, /image: \{ width: '100%', aspectRatio: 16 \/ 9 \}/);
+  assert.match(selectorSource, /imageFrame: \{[\s\S]*aspectRatio: 16 \/ 9/);
+  assert.match(selectorSource, /image: \{[\s\S]*position: 'absolute'/);
 });
 
 test('upcoming event cards render the selected preset image and preserve no-image styling', () => {
   assert.match(cardSource, /const imageSource = getEventImagePresetSource\(item\.eventImagePresetKey\)/);
   assert.match(cardSource, /<Image source=\{imageSource\} style=\{styles\.imageBackground\} resizeMode="cover" \/>/);
-  assert.match(cardSource, /imageSource \? '#16213A' : tone\.background/);
+  assert.match(cardSource, /imageCard: \{\s*height: 320/);
+  assert.match(cardSource, /imageBackground: \{[\s\S]*position: 'absolute'/);
+  assert.match(cardSource, /imageCardTitle: \{\s*color: '#FFFFFF'/);
+  assert.match(cardSource, /<View style=\{\[styles\.header, \{ backgroundColor: tone\.background \}\]\}>/);
   assert.match(cardSource, /eventImagePresetKey\?: string \| null/);
+});
+
+test('selected preset key travels from Create Event through the service to the upcoming card', () => {
+  assert.match(createEventSource, /<EventImageSelector value=\{eventImagePresetKey\} onChange=\{setEventImagePresetKey\} \/>/);
+  assert.match(createEventSource, /await createEvent\(\{[\s\S]*eventImagePresetKey,/);
+  assert.match(eventServiceSource, /body: JSON\.stringify\(request\)/);
+  assert.match(eventServiceSource, /eventImagePresetKey: typeof event\.eventImagePresetKey === 'string' \? event\.eventImagePresetKey : null/);
+  assert.match(homeSource, /eventImagePresetKey: event\.eventImagePresetKey/);
+  assert.match(cardSource, /const imageSource = getEventImagePresetSource\(item\.eventImagePresetKey\)/);
+  assert.match(cardSource, /\{imageSource \? \([\s\S]*<Image source=\{imageSource\} style=\{styles\.imageBackground\} resizeMode="cover" \/>[\s\S]*\) : \(/);
 });

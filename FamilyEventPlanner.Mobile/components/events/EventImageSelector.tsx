@@ -85,13 +85,21 @@ export function EventImageSelector({ value, onChange }: EventImageSelectorProps)
                 onPress={() => dispatch({ type: 'select', selectedKey: preset.key })}
                 style={[styles.option, selected && styles.selectedOption]}
               >
-                <Image source={getEventImagePresetSource(preset.key)} style={styles.image} resizeMode="cover" />
-                {selected && (
-                  <View style={styles.selectedIndicator}>
-                    <MaterialIcons name="check" size={15} color="#FFFFFF" />
-                  </View>
-                )}
-                <ThemedText style={styles.label} numberOfLines={1}>{preset.label}</ThemedText>
+                <View style={styles.imageFrame}>
+                  <Image
+                    source={getEventImagePresetSource(preset.key)}
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                  {selected && (
+                    <View style={styles.selectedIndicator}>
+                      <MaterialIcons name="check" size={17} color="#FFFFFF" />
+                    </View>
+                  )}
+                </View>
+                <View style={styles.labelArea}>
+                  <ThemedText style={styles.label} numberOfLines={1}>{preset.label}</ThemedText>
+                </View>
               </Pressable>
             );
           })}
@@ -138,22 +146,45 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
     marginBottom: 12,
+    shadowColor: '#203B5A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  selectedOption: { borderColor: '#087AC5', borderWidth: 2 },
-  image: { width: '100%', aspectRatio: 16 / 9 },
+  selectedOption: { borderColor: '#087AC5', borderWidth: 2, elevation: 4 },
+  imageFrame: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    overflow: 'hidden',
+    backgroundColor: '#E4EAF2',
+  },
+  image: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   selectedIndicator: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 23,
-    height: 23,
-    borderRadius: 12,
+    top: 7,
+    right: 7,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#087AC5',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
   },
-  label: { color: '#16213A', fontSize: 12, fontWeight: '600', paddingVertical: 6, paddingHorizontal: 8 },
+  labelArea: {
+    height: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 9,
+    backgroundColor: '#FFFFFF',
+  },
+  label: { color: '#16213A', fontSize: 12, fontWeight: '700' },
   doneButton: { minHeight: 52, borderRadius: 11, backgroundColor: '#087AC5', width: '100%' },
 });
