@@ -274,7 +274,7 @@ export default function EventDetailsScreen() {
   return (
     <ScreenContainer withScroll padding={0}>
       <View style={[styles.contentContainer, { paddingTop: Math.max(insets.top, Spacing.lg) }]}>
-        <View style={styles.hero}>
+        <View style={[styles.hero, eventImagePresetSource && styles.presetHero]}>
           {eventImagePresetSource ? (
             <Image source={eventImagePresetSource} style={styles.heroImage} resizeMode="cover" />
           ) : event.imageUrl ? (
@@ -289,19 +289,29 @@ export default function EventDetailsScreen() {
           >
             <MaterialIcons name="arrow-back" size={22} color="#203B5A" />
           </Pressable>
-          {!eventImagePresetSource && !event.imageUrl ? (
-            <MaterialIcons name="celebration" size={48} color="#FFFFFF" />
-          ) : null}
-          <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
+          {eventImagePresetSource ? (
+            <View style={styles.presetHeroCaption}>
+              <ThemedText type="title" style={styles.presetHeroTitle} numberOfLines={2}>
+                {event.title || 'Untitled Event'}
+              </ThemedText>
+            </View>
+          ) : (
+            <>
+              {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
+              <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
+            </>
+          )}
         </View>
 
         <View style={styles.detailsCard}>
-          <View style={styles.titleRow}>
-            <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
-            <View style={styles.nextUpBadge}>
-              <ThemedText style={styles.nextUpText}>Next Up</ThemedText>
+          {!eventImagePresetSource ? (
+            <View style={styles.titleRow}>
+              <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
+              <View style={styles.nextUpBadge}>
+                <ThemedText style={styles.nextUpText}>Next Up</ThemedText>
+              </View>
             </View>
-          </View>
+          ) : null}
           <View style={styles.infoRow}>
             <View style={styles.iconCircle}><MaterialIcons name="event" size={19} color="#087AC5" /></View>
             <View style={styles.infoCopy}>
@@ -759,6 +769,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.xl,
+  },
+  presetHero: {
+    minHeight: 0,
+    aspectRatio: 1.55,
+    alignItems: 'stretch',
+    justifyContent: 'flex-end',
+    padding: Spacing.md,
+  },
+  presetHeroCaption: {
+    padding: Spacing.md,
+    borderRadius: 14,
+    backgroundColor: 'rgba(12, 18, 29, 0.5)',
+  },
+  presetHeroTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 30,
   },
   heroImage: {
     ...StyleSheet.absoluteFillObject,
