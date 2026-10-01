@@ -5,33 +5,13 @@ import {
   initialEventImagePickerState,
   isEventImagePresetSelected,
 } from '@/constants/eventImagePresets';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useReducer } from 'react';
-import { Image, ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
-
-const presetImages: Record<(typeof EVENT_IMAGE_PRESETS)[number]['imageAsset'], ImageSourcePropType> = {
-  'picnic.jpg': require('@/assets/images/event-presets/picnic.jpg'),
-  'happy-birthday.jpg': require('@/assets/images/event-presets/happy-birthday.jpg'),
-  'family-dinner.jpg': require('@/assets/images/event-presets/family-dinner.jpg'),
-  'game-night.jpg': require('@/assets/images/event-presets/game-night.jpg'),
-  'Outside-adventure.jpg': require('@/assets/images/event-presets/Outside-adventure.jpg'),
-  'sports.jpg': require('@/assets/images/event-presets/sports.jpg'),
-  'beach.jpg': require('@/assets/images/event-presets/beach.jpg'),
-  'xmas.jpg': require('@/assets/images/event-presets/xmas.jpg'),
-  'arts-and-craft.jpg': require('@/assets/images/event-presets/arts-and-craft.jpg'),
-  'Bbq.jpg': require('@/assets/images/event-presets/Bbq.jpg'),
-  'boat.jpg': require('@/assets/images/event-presets/boat.jpg'),
-  'camping.jpg': require('@/assets/images/event-presets/camping.jpg'),
-  'movie-night.jpg': require('@/assets/images/event-presets/movie-night.jpg'),
-  'pool-party.jpg': require('@/assets/images/event-presets/pool-party.jpg'),
-  'mall-outing.jpg': require('@/assets/images/event-presets/mall-outing.jpg'),
-  'sip-and-paint.jpg': require('@/assets/images/event-presets/sip-and-paint.jpg'),
-  'water-games.jpg': require('@/assets/images/event-presets/water-games.jpg'),
-  'kids-park.jpg': require('@/assets/images/event-presets/kids-park.jpg'),
-};
 
 type EventImageSelectorProps = {
   value?: string | null;
@@ -56,7 +36,7 @@ export function EventImageSelector({ value, onChange }: EventImageSelectorProps)
         style={styles.field}
       >
         {selectedPreset ? (
-          <Image source={presetImages[selectedPreset.imageAsset]} style={styles.thumbnail} />
+          <Image source={getEventImagePresetSource(selectedPreset.key)} style={styles.thumbnail} />
         ) : (
           <MaterialIcons name="image" size={23} color="#087AC5" />
         )}
@@ -105,13 +85,21 @@ export function EventImageSelector({ value, onChange }: EventImageSelectorProps)
                 onPress={() => dispatch({ type: 'select', selectedKey: preset.key })}
                 style={[styles.option, selected && styles.selectedOption]}
               >
-                <Image source={presetImages[preset.imageAsset]} style={styles.image} />
-                {selected && (
-                  <View style={styles.selectedIndicator}>
-                    <MaterialIcons name="check" size={15} color="#FFFFFF" />
-                  </View>
-                )}
-                <ThemedText style={styles.label} numberOfLines={1}>{preset.label}</ThemedText>
+                <View style={styles.imageFrame}>
+                  <Image
+                    source={getEventImagePresetSource(preset.key)}
+                    style={styles.image}
+                    resizeMode="cover"
+                  />
+                  {selected && (
+                    <View style={styles.selectedIndicator}>
+                      <MaterialIcons name="check" size={17} color="#FFFFFF" />
+                    </View>
+                  )}
+                </View>
+                <View style={styles.labelArea}>
+                  <ThemedText style={styles.label} numberOfLines={1}>{preset.label}</ThemedText>
+                </View>
               </Pressable>
             );
           })}
@@ -158,22 +146,45 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#FFFFFF',
     marginBottom: 12,
+    shadowColor: '#203B5A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  selectedOption: { borderColor: '#087AC5', borderWidth: 2 },
-  image: { width: '100%', aspectRatio: 2.15 },
+  selectedOption: { borderColor: '#087AC5', borderWidth: 2, elevation: 4 },
+  imageFrame: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    overflow: 'hidden',
+    backgroundColor: '#E4EAF2',
+  },
+  image: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   selectedIndicator: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 23,
-    height: 23,
-    borderRadius: 12,
+    top: 7,
+    right: 7,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#087AC5',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
   },
-  label: { color: '#16213A', fontSize: 12, fontWeight: '600', paddingVertical: 6, paddingHorizontal: 8 },
+  labelArea: {
+    height: 38,
+    justifyContent: 'center',
+    paddingHorizontal: 9,
+    backgroundColor: '#FFFFFF',
+  },
+  label: { color: '#16213A', fontSize: 12, fontWeight: '700' },
   doneButton: { minHeight: 52, borderRadius: 11, backgroundColor: '#087AC5', width: '100%' },
 });

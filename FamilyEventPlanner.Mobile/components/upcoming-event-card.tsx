@@ -1,8 +1,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 
 import type { DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
 
 const EVENT_TONES = [
   {
@@ -35,6 +36,7 @@ type EventTone = (typeof EVENT_TONES)[number];
 
 export type UpcomingEventCardItem = DashboardCardItem & {
   startDate: string;
+  eventImagePresetKey?: string | null;
   location?: string;
   host?: string;
   participantCount?: number;
@@ -129,6 +131,7 @@ function getEventTone(title: string, index: number): EventTone {
 
 export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardProps) {
   const tone = getEventTone(item.title, index);
+  const imageSource = getEventImagePresetSource(item.eventImagePresetKey);
   const dateParts = formatEventDateParts(item.startDate);
   const statusLabel = getStatusLabel(item.startDate, item.isNextUp);
   const contextLabel =
@@ -141,76 +144,143 @@ export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardPro
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed ? styles.cardPressed : null]}
+      style={({ pressed }) => [
+        styles.card,
+        imageSource && styles.imageCard,
+        pressed ? styles.cardPressed : null,
+      ]}
       onPress={onPress}
       android_ripple={{ color: 'rgba(53,80,112,0.08)' }}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}>
-      <View style={[styles.header, { backgroundColor: tone.background }]}>
-        <View style={[styles.headerBubbleLarge, { backgroundColor: tone.bubble }]} />
-        <View style={[styles.headerBubbleSmall, { backgroundColor: tone.bubble }]} />
-
-        <View style={styles.headerTopRow}>
-          <View style={[styles.headerIcon, { backgroundColor: tone.bubble }]}>
-            <MaterialIcons name={tone.icon} size={20} color="#FFFFFF" />
-          </View>
-
-          <View style={[styles.statusBadge, { backgroundColor: tone.badge }]}>
-            <ThemedText style={styles.statusBadgeText}>{statusLabel}</ThemedText>
-          </View>
-        </View>
-
-        <View style={styles.headerDatePill}>
-          <ThemedText style={styles.headerDateText}>{dateParts.monthDay}</ThemedText>
-        </View>
-      </View>
-
-      <View style={styles.content}>
-        <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={2}>
-          {item.title}
-        </ThemedText>
-
-        <View style={styles.infoGroup}>
-          <View style={styles.infoRow}>
-            <MaterialIcons name="event" size={16} color="#355070" />
-            <View style={styles.infoTextGroup}>
-              <ThemedText style={styles.infoPrimary}>{dateParts.shortDate}</ThemedText>
-              <ThemedText style={styles.infoSecondary}>{dateParts.time}</ThemedText>
+      {imageSource ? (
+        <>
+          <Image source={imageSource} style={styles.imageBackground} resizeMode="cover" />
+          <View style={styles.imageOverlay} />
+          <View style={styles.imageCardContent}>
+            <View style={styles.imageCardTopRow}>
+              <View style={[styles.statusBadge, { backgroundColor: tone.badge }]}>
+                <ThemedText style={styles.statusBadgeText}>{statusLabel}</ThemedText>
+              </View>
+              <View style={styles.imageDatePill}>
+                <ThemedText style={styles.imageDateText}>{dateParts.monthDay}</ThemedText>
+              </View>
             </View>
-          </View>
 
-          {item.location ? (
-            <View style={styles.infoRow}>
-              <MaterialIcons name="place" size={16} color="#355070" />
-              <ThemedText style={styles.infoPrimary} numberOfLines={1}>
-                {item.location}
+            <View style={styles.imageCardBottom}>
+              <ThemedText type="defaultSemiBold" style={styles.imageCardTitle} numberOfLines={2}>
+                {item.title}
               </ThemedText>
-            </View>
-          ) : null}
 
-          {item.host ? (
-            <View style={styles.infoRow}>
-              <MaterialIcons name="person" size={16} color="#355070" />
-              <ThemedText style={styles.infoPrimary} numberOfLines={1}>
-                Hosted by {item.host}
-              </ThemedText>
-            </View>
-          ) : null}
-        </View>
+              <View style={styles.imageInfoGroup}>
+                <View style={styles.infoRow}>
+                  <MaterialIcons name="event" size={16} color="#FFFFFF" />
+                  <View style={styles.infoTextGroup}>
+                    <ThemedText style={styles.imageInfoPrimary}>{dateParts.shortDate}</ThemedText>
+                    <ThemedText style={styles.imageInfoSecondary}>{dateParts.time}</ThemedText>
+                  </View>
+                </View>
+                {item.location ? (
+                  <View style={styles.infoRow}>
+                    <MaterialIcons name="place" size={16} color="#FFFFFF" />
+                    <ThemedText style={styles.imageInfoPrimary} numberOfLines={1}>
+                      {item.location}
+                    </ThemedText>
+                  </View>
+                ) : null}
+                {item.host ? (
+                  <View style={styles.infoRow}>
+                    <MaterialIcons name="person" size={16} color="#FFFFFF" />
+                    <ThemedText style={styles.imageInfoPrimary} numberOfLines={1}>
+                      Hosted by {item.host}
+                    </ThemedText>
+                  </View>
+                ) : null}
+              </View>
 
-        <View style={styles.footer}>
-          <View style={styles.contextChip}>
-            <MaterialIcons name="groups" size={16} color="#355070" />
-            <ThemedText style={styles.contextChipText} numberOfLines={1}>
-              {contextLabel}
+              <View style={styles.footer}>
+                <View style={styles.imageContextChip}>
+                  <MaterialIcons name="groups" size={16} color="#FFFFFF" />
+                  <ThemedText style={styles.imageContextChipText} numberOfLines={1}>
+                    {contextLabel}
+                  </ThemedText>
+                </View>
+                <View style={styles.imageCtaCircle}>
+                  <MaterialIcons name="chevron-right" size={20} color="#FFFFFF" />
+                </View>
+              </View>
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={[styles.header, { backgroundColor: tone.background }]}>
+            <View style={[styles.headerBubbleLarge, { backgroundColor: tone.bubble }]} />
+            <View style={[styles.headerBubbleSmall, { backgroundColor: tone.bubble }]} />
+
+            <View style={styles.headerTopRow}>
+              <View style={[styles.headerIcon, { backgroundColor: tone.bubble }]}>
+                <MaterialIcons name={tone.icon} size={20} color="#FFFFFF" />
+              </View>
+
+              <View style={[styles.statusBadge, { backgroundColor: tone.badge }]}>
+                <ThemedText style={styles.statusBadgeText}>{statusLabel}</ThemedText>
+              </View>
+            </View>
+
+            <View style={styles.headerDatePill}>
+              <ThemedText style={styles.headerDateText}>{dateParts.monthDay}</ThemedText>
+            </View>
+          </View>
+
+          <View style={styles.content}>
+            <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={2}>
+              {item.title}
             </ThemedText>
-          </View>
 
-          <View style={styles.ctaCircle}>
-            <MaterialIcons name="chevron-right" size={20} color="#355070" />
+            <View style={styles.infoGroup}>
+              <View style={styles.infoRow}>
+                <MaterialIcons name="event" size={16} color="#355070" />
+                <View style={styles.infoTextGroup}>
+                  <ThemedText style={styles.infoPrimary}>{dateParts.shortDate}</ThemedText>
+                  <ThemedText style={styles.infoSecondary}>{dateParts.time}</ThemedText>
+                </View>
+              </View>
+
+              {item.location ? (
+                <View style={styles.infoRow}>
+                  <MaterialIcons name="place" size={16} color="#355070" />
+                  <ThemedText style={styles.infoPrimary} numberOfLines={1}>
+                    {item.location}
+                  </ThemedText>
+                </View>
+              ) : null}
+
+              {item.host ? (
+                <View style={styles.infoRow}>
+                  <MaterialIcons name="person" size={16} color="#355070" />
+                  <ThemedText style={styles.infoPrimary} numberOfLines={1}>
+                    Hosted by {item.host}
+                  </ThemedText>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.footer}>
+              <View style={styles.contextChip}>
+                <MaterialIcons name="groups" size={16} color="#355070" />
+                <ThemedText style={styles.contextChipText} numberOfLines={1}>
+                  {contextLabel}
+                </ThemedText>
+              </View>
+
+              <View style={styles.ctaCircle}>
+                <MaterialIcons name="chevron-right" size={20} color="#355070" />
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -227,6 +297,10 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 6,
   },
+  imageCard: {
+    height: 320,
+    backgroundColor: '#16213A',
+  },
   cardPressed: {
     opacity: 0.96,
   },
@@ -236,6 +310,97 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 12,
     justifyContent: 'space-between',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+  },
+  imageBackground: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  imageCardContent: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  imageCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  imageDatePill: {
+    minWidth: 58,
+    minHeight: 64,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  imageDateText: {
+    color: '#087AC5',
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  imageCardBottom: {
+    gap: 12,
+  },
+  imageCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 21,
+    lineHeight: 27,
+  },
+  imageInfoGroup: {
+    gap: 9,
+  },
+  imageInfoPrimary: {
+    flexShrink: 1,
+    color: '#FFFFFF',
+    fontSize: 13,
+    lineHeight: 17,
+    fontWeight: '600',
+  },
+  imageInfoSecondary: {
+    color: '#FFFFFF',
+    opacity: 0.9,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  imageContextChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 38,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+  },
+  imageContextChipText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  imageCtaCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerTopRow: {
     flexDirection: 'row',
