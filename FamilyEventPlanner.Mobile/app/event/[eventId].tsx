@@ -3,6 +3,7 @@ import { EventDateModal } from '@/components/events/EventDateModal';
 import { EventImageSelector } from '@/components/events/EventImageSelector';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
@@ -125,6 +126,7 @@ export default function EventDetailsScreen() {
   };
 
   const isCreator = Boolean(event?.createdByMemberId && currentMemberId && event.createdByMemberId === currentMemberId);
+  const eventImagePresetSource = event ? getEventImagePresetSource(event.eventImagePresetKey) : undefined;
   const memberNames = new Map(
     groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Family member']),
   );
@@ -272,8 +274,12 @@ export default function EventDetailsScreen() {
   return (
     <ScreenContainer withScroll padding={0}>
       <View style={[styles.contentContainer, { paddingTop: Math.max(insets.top, Spacing.lg) }]}>
-        <View style={styles.hero}>
-          {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.heroImage} /> : null}
+        <View style={[styles.hero, eventImagePresetSource ? styles.presetHero : null]}>
+          {eventImagePresetSource ? (
+            <Image source={eventImagePresetSource} style={styles.heroImage} resizeMode="contain" />
+          ) : event.imageUrl ? (
+            <Image source={{ uri: event.imageUrl }} style={styles.heroImage} />
+          ) : null}
           <View style={styles.heroOverlay} />
           <Pressable
             accessibilityLabel="Go back"
@@ -283,17 +289,29 @@ export default function EventDetailsScreen() {
           >
             <MaterialIcons name="arrow-back" size={22} color="#203B5A" />
           </Pressable>
-          {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
-          <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
+          {eventImagePresetSource ? (
+            <View style={styles.presetHeroCaption}>
+              <ThemedText type="title" style={styles.presetHeroTitle} numberOfLines={2}>
+                {event.title || 'Untitled Event'}
+              </ThemedText>
+            </View>
+          ) : (
+            <>
+              {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
+              <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
+            </>
+          )}
         </View>
 
         <View style={styles.detailsCard}>
-          <View style={styles.titleRow}>
-            <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
-            <View style={styles.nextUpBadge}>
-              <ThemedText style={styles.nextUpText}>Next Up</ThemedText>
+          {!eventImagePresetSource ? (
+            <View style={styles.titleRow}>
+              <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
+              <View style={styles.nextUpBadge}>
+                <ThemedText style={styles.nextUpText}>Next Up</ThemedText>
+              </View>
             </View>
-          </View>
+          ) : null}
           <View style={styles.infoRow}>
             <View style={styles.iconCircle}><MaterialIcons name="event" size={19} color="#087AC5" /></View>
             <View style={styles.infoCopy}>
@@ -752,12 +770,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Spacing.xl,
   },
+  presetHero: {
+    minHeight: 0,
+    aspectRatio: 11 / 6,
+    alignItems: 'stretch',
+    justifyContent: 'flex-end',
+    padding: Spacing.md,
+  },
+  presetHeroCaption: {
+    padding: Spacing.md,
+    borderRadius: 14,
+    backgroundColor: 'rgba(12, 18, 29, 0.5)',
+  },
+  presetHeroTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 30,
+  },
   heroImage: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     opacity: 1,
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: 'rgba(11, 32, 55, 0.16)',
   },
   backButton: {
