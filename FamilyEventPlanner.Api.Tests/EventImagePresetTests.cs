@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace FamilyEventPlanner.Api.Tests;
 
@@ -46,6 +48,23 @@ public class EventImagePresetTests
         Assert.False(omitted.EventImagePresetKeySpecified);
         Assert.True(cleared.EventImagePresetKeySpecified);
         Assert.True(ValidatePreset(cleared));
+    }
+
+    [Fact]
+    public void EventImagePresetKeyIsNullableAndLimitedToFortyCharactersInDatabaseModel()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        using var context = new AppDbContext(options);
+
+        var property = context.Model
+            .FindEntityType(typeof(FamilyEvent))!
+            .FindProperty(nameof(FamilyEvent.EventImagePresetKey));
+
+        Assert.NotNull(property);
+        Assert.True(property!.IsNullable);
+        Assert.Equal(40, property.GetMaxLength());
     }
 
     public static IEnumerable<object[]> SupportedKeys() =>

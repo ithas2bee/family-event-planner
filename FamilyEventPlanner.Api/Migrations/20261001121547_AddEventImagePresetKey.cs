@@ -16,36 +16,6 @@ namespace FamilyEventPlanner.Api.Migrations
                 type: "nvarchar(40)",
                 maxLength: 40,
                 nullable: true);
-
-            migrationBuilder.AddColumn<double>(
-                name: "Latitude",
-                table: "FamilyEvents",
-                type: "float",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "LocationAddress",
-                table: "FamilyEvents",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "LocationName",
-                table: "FamilyEvents",
-                type: "nvarchar(max)",
-                nullable: true);
-
-            migrationBuilder.AddColumn<double>(
-                name: "Longitude",
-                table: "FamilyEvents",
-                type: "float",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "PlaceId",
-                table: "FamilyEvents",
-                type: "nvarchar(max)",
-                nullable: true);
         }
 
         /// <inheritdoc />
@@ -53,26 +23,6 @@ namespace FamilyEventPlanner.Api.Migrations
         {
             migrationBuilder.DropColumn(
                 name: "EventImagePresetKey",
-                table: "FamilyEvents");
-
-            migrationBuilder.DropColumn(
-                name: "Latitude",
-                table: "FamilyEvents");
-
-            migrationBuilder.DropColumn(
-                name: "LocationAddress",
-                table: "FamilyEvents");
-
-            migrationBuilder.DropColumn(
-                name: "LocationName",
-                table: "FamilyEvents");
-
-            migrationBuilder.DropColumn(
-                name: "Longitude",
-                table: "FamilyEvents");
-
-            migrationBuilder.DropColumn(
-                name: "PlaceId",
                 table: "FamilyEvents");
         }
     }
