@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   card: { flexDirection: 'row', minHeight: 142, overflow: 'hidden', borderRadius: 18, backgroundColor: '#FFFFFF', shadowColor: '#203B5A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   cardPressed: { opacity: 0.9 },
   eventImage: { width: 94, margin: 8, borderRadius: 13, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  eventImageBackground: { ...StyleSheet.absoluteFillObject },
+  eventImageBackground: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   imageCircle: { position: 'absolute', width: 120, height: 120, borderRadius: 60, right: -35, bottom: -28 },
   cardContent: { flex: 1, minWidth: 0, paddingTop: 14, paddingRight: 10, paddingBottom: 10, gap: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
