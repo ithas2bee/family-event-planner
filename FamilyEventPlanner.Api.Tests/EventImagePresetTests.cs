@@ -8,10 +8,31 @@ namespace FamilyEventPlanner.Api.Tests;
 public class EventImagePresetTests
 {
     [Fact]
-    public void ExactlyTenPresetKeysAreSupported()
+    public void ExactlyEighteenPresetKeysAreSupported()
     {
-        Assert.Equal(10, EventImagePresets.SupportedKeys.Count);
+        Assert.Equal(18, EventImagePresets.SupportedKeys.Count);
         Assert.Equal(EventImagePresets.SupportedKeys.Count, EventImagePresets.SupportedKeys.Distinct().Count());
+        Assert.Equal(new[]
+        {
+            "family-picnic",
+            "birthday-party",
+            "family-dinner",
+            "game-night",
+            "outdoor-adventure",
+            "sports-day",
+            "beach-day",
+            "holiday-gathering",
+            "arts-and-crafts",
+            "backyard-bbq",
+            "cruise-event",
+            "camping-trip",
+            "movie-night",
+            "pool-party",
+            "mall-outing",
+            "sip-and-paint",
+            "water-party",
+            "kids-park"
+        }, EventImagePresets.SupportedKeys);
     }
 
     [Theory]

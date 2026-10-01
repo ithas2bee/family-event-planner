@@ -12,28 +12,94 @@ const {
 const selectorPath = require.resolve('../EventImageSelector.tsx');
 const selectorSource = fs.readFileSync(selectorPath, 'utf8');
 
-test('provides exactly ten unique event image presets', () => {
+test('provides exactly eighteen unique event image presets with the requested labels', () => {
   const keys = EVENT_IMAGE_PRESETS.map((preset) => preset.key);
+  const labels = EVENT_IMAGE_PRESETS.map((preset) => preset.label);
 
-  assert.equal(keys.length, 10);
-  assert.equal(new Set(keys).size, 10);
+  assert.equal(keys.length, 18);
+  assert.equal(new Set(keys).size, 18);
+  assert.deepEqual(keys, [
+    'family-picnic',
+    'birthday-party',
+    'family-dinner',
+    'game-night',
+    'outdoor-adventure',
+    'sports-day',
+    'beach-day',
+    'holiday-gathering',
+    'arts-and-crafts',
+    'backyard-bbq',
+    'cruise-event',
+    'camping-trip',
+    'movie-night',
+    'pool-party',
+    'mall-outing',
+    'sip-and-paint',
+    'water-party',
+    'kids-park',
+  ]);
+  assert.deepEqual(labels, [
+    'Family Picnic',
+    'Birthday Party',
+    'Family Dinner',
+    'Game Night',
+    'Outdoor Adventure',
+    'Sports Day',
+    'Beach Day',
+    'Holiday Gathering',
+    'Arts & Crafts',
+    'Backyard BBQ',
+    'Cruise Event',
+    'Camping Trip',
+    'Movie Night',
+    'Pool Party',
+    'Mall Outing',
+    'Sip & Paint',
+    'Water Party',
+    'Kids Park',
+  ]);
 });
 
-test('maps every preset to one of ten bundled local images', () => {
-  const keys = EVENT_IMAGE_PRESETS.map((preset) => preset.key).sort();
+test('maps every preset to exactly one bundled local JPG', () => {
   const assetDirectory = path.resolve(path.dirname(selectorPath), '../../assets/images/event-presets');
-  const assetFiles = fs.readdirSync(assetDirectory).sort();
+  const assetFiles = fs.readdirSync(assetDirectory).filter((file) => file.endsWith('.jpg')).sort();
+  const mappedFiles = EVENT_IMAGE_PRESETS.map(({ imageAsset }) => imageAsset).sort();
+  const expectedMappings = {
+    'family-picnic': 'picnic.jpg',
+    'birthday-party': 'happy-birthday.jpg',
+    'family-dinner': 'family-dinner.jpg',
+    'game-night': 'game-night.jpg',
+    'outdoor-adventure': 'Outside-adventure.jpg',
+    'sports-day': 'sports.jpg',
+    'beach-day': 'beach.jpg',
+    'holiday-gathering': 'xmas.jpg',
+    'arts-and-crafts': 'arts-and-craft.jpg',
+    'backyard-bbq': 'Bbq.jpg',
+    'cruise-event': 'boat.jpg',
+    'camping-trip': 'camping.jpg',
+    'movie-night': 'movie-night.jpg',
+    'pool-party': 'pool-party.jpg',
+    'mall-outing': 'mall-outing.jpg',
+    'sip-and-paint': 'sip-and-paint.jpg',
+    'water-party': 'water-games.jpg',
+    'kids-park': 'kids-park.jpg',
+  };
   const mappings = [...selectorSource.matchAll(
-    /^\s*'([^']+)': require\('@\/assets\/images\/event-presets\/([^']+\.png)'\),?$/gm,
+    /^\s*'([^']+\.jpg)': require\('@\/assets\/images\/event-presets\/([^']+\.jpg)'\),?$/gm,
   )];
 
-  assert.equal(assetFiles.length, 10);
-  assert.deepEqual(assetFiles.map((file) => file.replace(/\.png$/, '')), keys);
-  assert.deepEqual(mappings.map(([, key]) => key).sort(), keys);
-  for (const [, key, file] of mappings) {
-    assert.equal(file, `${key}.png`);
+  assert.equal(assetFiles.length, 18);
+  assert.equal(new Set(mappedFiles).size, 18);
+  assert.deepEqual(mappedFiles, assetFiles);
+  assert.deepEqual(Object.fromEntries(EVENT_IMAGE_PRESETS.map(({ key, imageAsset }) => [key, imageAsset])), expectedMappings);
+  assert.deepEqual(mappings.map(([, assetKey]) => assetKey).sort(), mappedFiles);
+  for (const [mapping, assetKey, file] of mappings) {
+    assert.equal(assetKey, file);
     assert.ok(fs.existsSync(path.join(assetDirectory, file)));
+    assert.ok(selectorSource.includes(mapping));
   }
+  assert.match(selectorSource, /<Image source=\{presetImages\[selectedPreset\.imageAsset\]\}/);
+  assert.match(selectorSource, /<Image source=\{presetImages\[preset\.imageAsset\]\}/);
 });
 
 test('restores the selected preset for an existing event', () => {
