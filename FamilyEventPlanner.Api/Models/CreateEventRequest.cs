@@ -11,6 +11,9 @@ namespace FamilyEventPlanner.Api.Models
         [Required, MaxLength(200)]
         public string Title { get; set; }
 
+        [EventImagePresetKey(ErrorMessage = "Event image preset key is not supported.")]
+        public string? EventImagePresetKey { get; set; }
+
         public string? Description { get; set; }
 
         [Required]

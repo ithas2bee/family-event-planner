@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { EventDateModal } from '@/components/events/EventDateModal';
+import { EventImageSelector } from '@/components/events/EventImageSelector';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
@@ -500,6 +501,11 @@ export default function EventDetailsScreen() {
               multiline
               maxLength={200}
               style={[styles.lightInput, styles.descriptionInput]}
+            />
+            <ThemedText style={styles.editSectionTitle}>Event Image</ThemedText>
+            <EventImageSelector
+              value={event.eventImagePresetKey}
+              onChange={(eventImagePresetKey) => setEvent({ ...event, eventImagePresetKey })}
             />
             </View>
 

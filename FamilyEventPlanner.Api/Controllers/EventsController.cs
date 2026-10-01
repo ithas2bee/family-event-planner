@@ -65,6 +65,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Id = Guid.NewGuid(),
                 FamilyGroupId = request.FamilyGroupId,
                 Title = request.Title,
+                EventImagePresetKey = request.EventImagePresetKey,
                 Description = request.Description,
                 StartDate = request.StartDate,
                 EndDate = request.EndDate,
@@ -103,6 +104,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Id = ev.Id,
                 FamilyGroupId = ev.FamilyGroupId,
                 Title = ev.Title,
+                EventImagePresetKey = ev.EventImagePresetKey,
                 Description = ev.Description,
                 StartDate = ev.StartDate,
                 EndDate = ev.EndDate,
@@ -161,6 +163,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Id = e.Id,
                 FamilyGroupId = e.FamilyGroupId,
                 Title = e.Title,
+                EventImagePresetKey = e.EventImagePresetKey,
                 Description = e.Description,
                 StartDate = e.StartDate,
                 EndDate = e.EndDate,
@@ -245,6 +248,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Id = ev.Id,
                 FamilyGroupId = ev.FamilyGroupId,
                 Title = ev.Title,
+                EventImagePresetKey = ev.EventImagePresetKey,
                 Description = ev.Description,
                 StartDate = ev.StartDate,
                 EndDate = ev.EndDate,
@@ -344,6 +348,8 @@ namespace FamilyEventPlanner.Api.Controllers
 
             // Apply updates to event fields
             ev.Title = request.Title;
+            if (request.EventImagePresetKeySpecified)
+                ev.EventImagePresetKey = request.EventImagePresetKey;
             ev.Description = request.Description;
             ev.StartDate = request.StartDate;
             ev.EndDate = request.EndDate;
@@ -507,6 +513,7 @@ namespace FamilyEventPlanner.Api.Controllers
                 Id = ev.Id,
                 FamilyGroupId = ev.FamilyGroupId,
                 Title = ev.Title,
+                EventImagePresetKey = ev.EventImagePresetKey,
                 Description = ev.Description,
                 StartDate = ev.StartDate,
                 EndDate = ev.EndDate,

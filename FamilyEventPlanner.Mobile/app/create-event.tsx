@@ -1,4 +1,5 @@
 import { EventDateModal } from '@/components/events/EventDateModal';
+import { EventImageSelector } from '@/components/events/EventImageSelector';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { ThemedText } from '@/components/themed-text';
@@ -31,6 +32,7 @@ export default function CreateEventScreen() {
   const [location, setLocation] = useState<EventLocation | null>(null);
   const [dressCode, setDressCode] = useState('');
   const [notes, setNotes] = useState('');
+  const [eventImagePresetKey, setEventImagePresetKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +78,7 @@ export default function CreateEventScreen() {
       await createEvent({
         familyGroupId: groupIdValue,
         title: title.trim(),
+        eventImagePresetKey,
         startDate: startDate.trim(),
         description: description.trim() || undefined,
         endDate: endDate.trim() || undefined,
@@ -186,11 +189,7 @@ export default function CreateEventScreen() {
             </Pressable>
 
             <ThemedText style={styles.label}>Event Image</ThemedText>
-            <View style={styles.imagePlaceholder}>
-              <MaterialIcons name="image" size={27} color="#56708E" />
-              <ThemedText style={styles.imageTitle}>Add a photo (optional)</ThemedText>
-              <ThemedText style={styles.imageHint}>Make your event more fun with a photo!</ThemedText>
-            </View>
+            <EventImageSelector value={eventImagePresetKey} onChange={setEventImagePresetKey} />
 
             <Pressable style={styles.additionalDetails} onPress={() => setSettingsModalVisible(true)} accessibilityRole="button" accessibilityLabel="Additional event details">
               <MaterialIcons name="tune" size={20} color="#56708E" />
@@ -244,9 +243,6 @@ const styles = StyleSheet.create({
   detailValue: { flex: 1, color: '#56708E', fontSize: 12 },
   locationInput: { minHeight: 44, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10 },
   placeholder: { flex: 1, color: '#8CA0B8' },
-  imagePlaceholder: { minHeight: 77, borderWidth: 1, borderStyle: 'dashed', borderColor: '#B7C9DC', borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  imageTitle: { color: '#45617F', fontSize: 12, fontWeight: '600', marginTop: 3 },
-  imageHint: { color: '#8CA0B8', fontSize: 10, marginTop: 2 },
   additionalDetails: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 42, paddingHorizontal: 4 },
   additionalText: { flex: 1, color: '#45617F', fontSize: 12, fontWeight: '600' },
   primaryButton: { minHeight: 46, borderRadius: 11, backgroundColor: '#087AC5', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
