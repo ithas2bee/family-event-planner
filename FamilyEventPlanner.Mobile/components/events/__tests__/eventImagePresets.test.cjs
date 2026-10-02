@@ -218,6 +218,10 @@ test('View All Events renders selected images as landscape cards and preserves t
   assert.match(allEventsSource, /\) : \([\s\S]*<MaterialIcons name=\{tone\.icon\}/);
 });
 
+test('Events page reloads its event list whenever it regains focus', () => {
+  assert.match(allEventsSource, /useFocusEffect\(useCallback\(\(\) => \{[\s\S]*getEventsByGroup\(groupIdValue\)[\s\S]*\}, \[groupIdValue, isReady\]\)\)/);
+});
+
 test('Event Details uses a landscape preset hero with its title and preserves existing fallbacks', () => {
   assert.match(eventDetailsSource, /getEventImagePresetSource\(event\.eventImagePresetKey\)/);
   assert.match(eventDetailsSource, /presetHero: \{[\s\S]*aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO/);

@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -204,7 +204,7 @@ function EventCard({ event, index, onPress }: { event: Event; index: number; onP
 }
 
 export default function EventsScreen() {
-  const { groupId, refreshToken } = useLocalSearchParams<{ groupId: string; refreshToken?: string }>();
+  const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { groupId: contextGroupId, memberId, setActiveGroup, isReady } = useActiveGroupContext();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
   const [events, setEvents] = useState<Event[]>([]);
@@ -216,7 +216,7 @@ export default function EventsScreen() {
     if (groupId) void setActiveGroup({ groupId: String(groupId) });
   }, [groupId, setActiveGroup]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
     async function loadEvents() {
       setLoading(true);
@@ -241,7 +241,7 @@ export default function EventsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, refreshToken, isReady]);
+  }, [groupIdValue, isReady]));
 
   const filteredEvents = useMemo(() => {
     if (selectedFilter === 'Past') return events.filter((event) => !isUpcoming(event));
