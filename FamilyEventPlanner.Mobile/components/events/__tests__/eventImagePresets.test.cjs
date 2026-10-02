@@ -194,7 +194,7 @@ test('picker UI uses a compact field, dimmed modal, two-column landscape gallery
   assert.match(selectorSource, /name="check"/);
   assert.match(selectorSource, /centerTitle\s+showHandle/);
   assert.match(selectorSource, /imageFrame: \{[\s\S]*aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO/);
-  assert.match(selectorSource, /image: \{[\s\S]*position: 'absolute'/);
+  assert.match(selectorSource, /image: \{[\s\S]*position: 'absolute'[\s\S]*width: '100%'[\s\S]*height: '100%'/);
 });
 
 test('upcoming event cards render the selected preset image and preserve no-image styling', () => {
