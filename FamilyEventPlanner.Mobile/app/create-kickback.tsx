@@ -18,15 +18,15 @@ import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createKickback } from '@/services/kickbackService';
 
 export const vibeOptions = ['BBQ', 'Game On', 'Drinks', 'Bonfire', 'Chill', 'Pool', 'Music', 'Food', 'Other'] as const;
-export const durationOptions = ['2 Hours', 'Tonight', 'Until Midnight', 'Custom'] as const;
+export const durationOptions = ['2 Hours', '4–6 Hours', 'Tonight', 'Until Midnight'] as const;
 
 type DurationOption = (typeof durationOptions)[number];
 
-export function resolveExpiresAtUtc(duration: DurationOption, customHours = 2): string {
+export function resolveExpiresAtUtc(duration: DurationOption): string {
   const now = new Date();
 
-  if (duration === '2 Hours' || duration === 'Custom') {
-    const hours = duration === 'Custom' && customHours > 0 ? customHours : 2;
+  if (duration === '2 Hours' || duration === '4–6 Hours') {
+    const hours = duration === '2 Hours' ? 2 : 6;
     return new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString();
   }
 
@@ -49,7 +49,6 @@ export default function CreateKickbackScreen() {
   const [selectedVibe, setSelectedVibe] = useState('');
   const [note, setNote] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<DurationOption>('2 Hours');
-  const [customHours, setCustomHours] = useState('2');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +74,7 @@ export default function CreateKickbackScreen() {
         familyGroupId: groupIdValue,
         vibe: selectedVibe,
         note: note.trim() || undefined,
-        expiresAtUtc: resolveExpiresAtUtc(selectedDuration, Number(customHours)),
+        expiresAtUtc: resolveExpiresAtUtc(selectedDuration),
       });
 
       router.replace({
@@ -181,19 +180,6 @@ export default function CreateKickbackScreen() {
                 );
               })}
             </View>
-            {selectedDuration === 'Custom' && (
-              <View style={styles.customDurationRow}>
-                <TextInput
-                  style={styles.customDurationInput}
-                  value={customHours}
-                  onChangeText={setCustomHours}
-                  keyboardType="number-pad"
-                  maxLength={2}
-                  accessibilityLabel="Custom duration in hours"
-                />
-                <ThemedText style={styles.customDurationLabel}>hours from now</ThemedText>
-              </View>
-            )}
           </View>
 
           {error !== null && <ThemedText style={styles.errorMessage}>{error}</ThemedText>}
@@ -281,18 +267,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBFCFE',
   },
   durationText: { color: '#3B536D', fontSize: 15, fontWeight: '600' },
-  customDurationRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  customDurationInput: {
-    width: 58,
-    borderWidth: 1,
-    borderColor: '#D8E2EC',
-    borderRadius: 10,
-    padding: 10,
-    color: '#162B45',
-    textAlign: 'center',
-    fontSize: 16,
-  },
-  customDurationLabel: { color: '#64748B', fontSize: 14 },
   errorMessage: { color: '#B42318', fontSize: 14, textAlign: 'center' },
   primaryButton: {
     minHeight: 56,
