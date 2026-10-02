@@ -68,7 +68,7 @@ function NavigationGate() {
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
       <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
-      <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
+      <Stack.Screen name="create-group" options={{ headerShown: false }} />
       <Stack.Screen name="create-event" options={{ headerShown: false }} />
       <Stack.Screen name="create-announcement" options={{ headerShown: false }} />
       <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
