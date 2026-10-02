@@ -20,6 +20,7 @@ import { UpcomingEventCard, type UpcomingEventCardItem } from '@/components/upco
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getAnnouncementsByGroup } from '@/services/announcementService';
 import { getEventsByGroup, type Event } from '@/services/eventService';
+import { filterUpcomingEvents } from '@/services/upcomingEventUtils';
 import { getGroupMemberByUser, getGroupMembers, type GroupMember } from '@/services/groupMemberService';
 import { getKickbacksByGroup } from '@/services/kickbackService';
 import { getPollsByGroup } from '@/services/pollService';
@@ -71,10 +72,11 @@ function toBodyPreview(text: string, maxLength = 96): string {
 }
 
 function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
-  const previewEvents = events.slice(0, PREVIEW_LIMIT);
+  const now = new Date();
+  const previewEvents = filterUpcomingEvents(events, now).slice(0, PREVIEW_LIMIT);
   const nextUpEventId = previewEvents.reduce<string | null>((closestEventId, event) => {
     const parsedDate = new Date(event.startDate);
-    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getTime() < Date.now()) {
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getTime() <= now.getTime()) {
       return closestEventId;
     }
 
