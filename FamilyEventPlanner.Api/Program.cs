@@ -9,7 +9,7 @@ namespace FamilyEventPlanner.Api
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -132,6 +132,12 @@ namespace FamilyEventPlanner.Api
 
             var app = builder.Build();
 
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                await dbContext.Database.MigrateAsync();
+            }
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -150,7 +156,7 @@ namespace FamilyEventPlanner.Api
 
             app.MapControllers();
 
-            app.Run();
+            await app.RunAsync();
         }
     }
 }
