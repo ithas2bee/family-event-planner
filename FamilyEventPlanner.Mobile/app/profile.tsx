@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   hero: { alignItems: 'center', paddingVertical: 28 },
   avatar: { width: 148, height: 148, borderRadius: 74 },
   avatarFallback: { width: 148, height: 148, borderRadius: 74, backgroundColor: '#DDEAFF', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 44, fontWeight: '700', color: '#1769E0' },
+  avatarText: { fontSize: 44, lineHeight: 53, fontWeight: '700', color: '#1769E0' },
   name: { marginTop: 16, fontSize: 30, lineHeight: 36, fontWeight: '700', color: '#101B41' },
   card: { marginHorizontal: 18, marginBottom: 18, padding: 18, borderRadius: 16, backgroundColor: '#fff', shadowColor: '#203A72', shadowOpacity: 0.06, shadowRadius: 12, elevation: 2 },
   infoRow: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#EEF1F7', paddingVertical: 7 },
