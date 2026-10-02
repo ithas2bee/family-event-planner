@@ -199,9 +199,11 @@ test('picker UI uses a compact field, dimmed modal, two-column landscape gallery
 
 test('upcoming event cards render the selected preset image and preserve no-image styling', () => {
   assert.match(cardSource, /const imageSource = getEventImagePresetSource\(item\.eventImagePresetKey\)/);
-  assert.match(cardSource, /<Image source=\{imageSource\} style=\{styles\.imageBackground\} resizeMode="cover" \/>/);
+  assert.match(cardSource, /<View style=\{styles\.imageFrame\}>[\s\S]*<Image source=\{imageSource\} style=\{styles\.imageBackground\} resizeMode="contain" \/>/);
+  assert.match(cardSource, /import \{ EVENT_PRESET_IMAGE_ASPECT_RATIO \} from '@\/constants\/eventImagePresets'/);
+  assert.match(cardSource, /imageBackground: \{\s*width: '100%',\s*aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO/);
   assert.match(cardSource, /imageCard: \{\s*height: 320/);
-  assert.match(cardSource, /imageBackground: \{[\s\S]*position: 'absolute'/);
+  assert.match(cardSource, /imageFrame: \{[\s\S]*position: 'absolute'[\s\S]*justifyContent: 'center'/);
   assert.match(cardSource, /imageCardTitle: \{\s*color: '#FFFFFF'/);
   assert.match(cardSource, /<View style=\{\[styles\.header, \{ backgroundColor: tone\.background \}\]\}>/);
   assert.match(cardSource, /eventImagePresetKey\?: string \| null/);
@@ -236,5 +238,5 @@ test('selected preset key travels from Create Event through the service to the u
   assert.match(eventServiceSource, /eventImagePresetKey: typeof event\.eventImagePresetKey === 'string' \? event\.eventImagePresetKey : null/);
   assert.match(homeSource, /eventImagePresetKey: event\.eventImagePresetKey/);
   assert.match(cardSource, /const imageSource = getEventImagePresetSource\(item\.eventImagePresetKey\)/);
-  assert.match(cardSource, /\{imageSource \? \([\s\S]*<Image source=\{imageSource\} style=\{styles\.imageBackground\} resizeMode="cover" \/>[\s\S]*\) : \(/);
+  assert.match(cardSource, /\{imageSource \? \([\s\S]*<Image source=\{imageSource\} style=\{styles\.imageBackground\} resizeMode="contain" \/>[\s\S]*\) : \(/);
 });
