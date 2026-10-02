@@ -209,7 +209,7 @@ test('upcoming event cards render the selected preset image and preserve no-imag
 
 test('View All Events renders selected images as landscape cards and preserves the icon fallback', () => {
   assert.match(allEventsSource, /getEventImagePresetSource\(event\.eventImagePresetKey\)/);
-  assert.match(allEventsSource, /imageCard: \{[^}]*aspectRatio: 11 \/ 6/);
+  assert.match(allEventsSource, /imageCard: \{[^}]*aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO/);
   assert.match(allEventsSource, /imageSource \? \([\s\S]*<Image source=\{imageSource\} style=\{styles\.eventImageBackground\} resizeMode="contain" \/>[\s\S]*<ThemedText type="defaultSemiBold" style=\{styles\.imageCardTitle\}/);
   assert.match(allEventsSource, /imageDateBadge:[\s\S]*backgroundColor: '#FFFFFF'/);
   assert.match(allEventsSource, /\) : \([\s\S]*<MaterialIcons name=\{tone\.icon\}/);
@@ -217,7 +217,7 @@ test('View All Events renders selected images as landscape cards and preserves t
 
 test('Event Details uses a landscape preset hero with its title and preserves existing fallbacks', () => {
   assert.match(eventDetailsSource, /getEventImagePresetSource\(event\.eventImagePresetKey\)/);
-  assert.match(eventDetailsSource, /presetHero: \{[\s\S]*aspectRatio: 11 \/ 6/);
+  assert.match(eventDetailsSource, /presetHero: \{[\s\S]*aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO/);
   assert.match(eventDetailsSource, /eventImagePresetSource \? \([\s\S]*<Image source=\{eventImagePresetSource\} style=\{styles\.heroImage\} resizeMode="contain" \/>[\s\S]*\) : event\.imageUrl \? \([\s\S]*<Image source=\{\{ uri: event\.imageUrl \}\} style=\{styles\.heroImage\} \/>/);
   assert.match(eventDetailsSource, /eventImagePresetSource \? \([\s\S]*<ThemedText type="title" style=\{styles\.presetHeroTitle\}/);
   assert.match(eventDetailsSource, /eventImagePresetSource \? \([\s\S]*<ThemedText type="title" style=\{styles\.presetHeroTitle\}[\s\S]*\) : \([\s\S]*<ThemedText style=\{styles\.heroLabel\}>FAMILY EVENT/);
