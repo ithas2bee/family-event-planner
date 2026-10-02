@@ -20,6 +20,30 @@ import { createKickback } from '@/services/kickbackService';
 export const vibeOptions = ['BBQ', 'Game On', 'Drinks', 'Bonfire', 'Chill', 'Pool', 'Music', 'Food', 'Other'] as const;
 export const durationOptions = ['2 Hours', '4–6 Hours', 'Tonight', 'Until Midnight'] as const;
 
+const vibeIcons: Record<(typeof vibeOptions)[number], keyof typeof MaterialIcons.glyphMap> = {
+  BBQ: 'outdoor-grill',
+  'Game On': 'sports-esports',
+  Drinks: 'local-bar',
+  Bonfire: 'local-fire-department',
+  Chill: 'weekend',
+  Pool: 'pool',
+  Music: 'music-note',
+  Food: 'restaurant',
+  Other: 'more-horiz',
+};
+
+const vibeColors: Record<(typeof vibeOptions)[number], string> = {
+  BBQ: '#E94764',
+  'Game On': '#8B57E8',
+  Drinks: '#F3A52B',
+  Bonfire: '#F16B37',
+  Chill: '#28A970',
+  Pool: '#24A9D6',
+  Music: '#E94764',
+  Food: '#F3A52B',
+  Other: '#617894',
+};
+
 type DurationOption = (typeof durationOptions)[number];
 
 export function resolveExpiresAtUtc(duration: DurationOption): string {
@@ -112,9 +136,6 @@ export default function CreateKickbackScreen() {
             >
               <MaterialIcons name="arrow-back" size={24} color="#17345D" />
             </Pressable>
-            <View style={styles.headerIcon}>
-              <ThemedText style={styles.headerIconText}>✦</ThemedText>
-            </View>
             <View style={styles.headerCopy}>
               <ThemedText style={styles.eyebrow}>MAKE IT HAPPEN</ThemedText>
               <ThemedText style={styles.title}>Create a Kickback</ThemedText>
@@ -122,11 +143,40 @@ export default function CreateKickbackScreen() {
                 Something spontaneous for the family, without the fuss.
               </ThemedText>
             </View>
+            <View style={styles.gatheringIllustration} accessible={false}>
+              <MaterialIcons name="auto-awesome" size={13} color="#E58A2B" style={styles.sparkle} />
+              <View style={styles.gatheringPeople}>
+                <View style={styles.person}>
+                  <View style={[styles.personHead, styles.bluePerson]} />
+                  <View style={[styles.personBody, styles.bluePerson]} />
+                </View>
+                <View style={styles.person}>
+                  <View style={[styles.personHead, styles.pinkPerson]} />
+                  <View style={[styles.personBody, styles.pinkPerson]} />
+                </View>
+                <View style={styles.person}>
+                  <View style={[styles.personHead, styles.orangePerson]} />
+                  <View style={[styles.personBody, styles.orangePerson]} />
+                </View>
+              </View>
+              <View style={styles.gatheringTable} />
+              <View style={styles.tableLegs}>
+                <View style={[styles.tableLeg, styles.leftLeg]} />
+                <View style={[styles.tableLeg, styles.rightLeg]} />
+              </View>
+            </View>
           </View>
 
           <View style={styles.card}>
-            <ThemedText style={styles.sectionTitle}>What&apos;s the vibe?</ThemedText>
-            <ThemedText style={styles.sectionHint}>Pick one to get the family excited.</ThemedText>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, styles.vibeIcon]}>
+                <MaterialIcons name="auto-awesome" size={22} color="#E94764" />
+              </View>
+              <View style={styles.sectionCopy}>
+                <ThemedText style={styles.sectionTitle}>What&apos;s the vibe?</ThemedText>
+                <ThemedText style={styles.sectionHint}>Pick one to get the family excited.</ThemedText>
+              </View>
+            </View>
             <View style={styles.vibeGrid}>
               {vibeOptions.map((vibe) => {
                 const isSelected = selectedVibe === vibe;
@@ -139,6 +189,11 @@ export default function CreateKickbackScreen() {
                     accessibilityLabel={`Vibe: ${vibe}`}
                     accessibilityState={{ selected: isSelected }}
                   >
+                    <MaterialIcons
+                      name={vibeIcons[vibe]}
+                      size={21}
+                      color={isSelected ? '#1677E8' : vibeColors[vibe]}
+                    />
                     <ThemedText style={[styles.vibeText, isSelected && styles.selectedButtonText]}>
                       {vibe}
                     </ThemedText>
@@ -146,21 +201,42 @@ export default function CreateKickbackScreen() {
                 );
               })}
             </View>
+          </View>
 
-            <ThemedText style={styles.sectionTitle}>Add a note</ThemedText>
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, styles.noteIcon]}>
+                <MaterialIcons name="sticky-note-2" size={22} color="#E94764" />
+              </View>
+              <View style={styles.sectionCopy}>
+                <ThemedText style={styles.sectionTitle}>Add a note (optional)</ThemedText>
+                <ThemedText style={styles.sectionHint}>Anything the family should know?</ThemedText>
+              </View>
+            </View>
             <TextInput
               style={styles.noteInput}
               value={note}
               onChangeText={setNote}
-              placeholder="Anything the family should know? (optional)"
+              placeholder="E.g., Bring a chair, snacks provided, etc."
               placeholderTextColor="#8CA0B8"
               multiline
               maxLength={200}
               textAlignVertical="top"
               accessibilityLabel="Optional note"
             />
+            <ThemedText style={styles.noteCounter}>{note.length}/200</ThemedText>
+          </View>
 
-            <ThemedText style={styles.sectionTitle}>How long?</ThemedText>
+          <View style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <View style={[styles.sectionIcon, styles.durationIcon]}>
+                <MaterialIcons name="schedule" size={23} color="#1677E8" />
+              </View>
+              <View style={styles.sectionCopy}>
+                <ThemedText style={styles.sectionTitle}>How long?</ThemedText>
+                <ThemedText style={styles.sectionHint}>Choose a duration for your kickback.</ThemedText>
+              </View>
+            </View>
             <View style={styles.durationGrid}>
               {durationOptions.map((duration) => {
                 const isSelected = selectedDuration === duration;
@@ -173,6 +249,11 @@ export default function CreateKickbackScreen() {
                     accessibilityLabel={`Duration: ${duration}`}
                     accessibilityState={{ selected: isSelected }}
                   >
+                    <MaterialIcons
+                      name={duration === 'Tonight' || duration === 'Until Midnight' ? 'nightlight-round' : 'schedule'}
+                      size={21}
+                      color={isSelected ? '#1677E8' : '#3B536D'}
+                    />
                     <ThemedText style={[styles.durationText, isSelected && styles.selectedButtonText]}>
                       {duration}
                     </ThemedText>
@@ -193,7 +274,10 @@ export default function CreateKickbackScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <ThemedText style={styles.primaryButtonText}>Create Kickback</ThemedText>
+              <View style={styles.primaryButtonContent}>
+                <ThemedText style={styles.primaryButtonText}>Create Kickback</ThemedText>
+                <MaterialIcons name="arrow-forward" size={21} color="#FFFFFF" />
+              </View>
             )}
           </Pressable>
         </ScrollView>
@@ -205,80 +289,119 @@ export default function CreateKickbackScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F8FC' },
   flex: { flex: 1 },
-  container: { padding: 20, gap: 18 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8 },
-  backButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF2F6' },
-  headerIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    backgroundColor: '#E5F5F8',
+  container: { padding: 18, paddingBottom: 26, gap: 14 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  backButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF2F6' },
+  headerCopy: { flex: 1, gap: 3 },
+  eyebrow: { color: '#087FA7', fontSize: 11, fontWeight: '800', letterSpacing: 1.3 },
+  title: { color: '#112953', fontSize: 27, fontWeight: '800', lineHeight: 32, letterSpacing: -0.5 },
+  subtitle: { color: '#647895', fontSize: 14, lineHeight: 19 },
+  gatheringIllustration: {
+    width: 82,
+    height: 82,
+    borderRadius: 41,
+    backgroundColor: '#FDEAF0',
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 1,
   },
-  headerIconText: { color: '#0A7EA4', fontSize: 28, fontWeight: '700' },
-  headerCopy: { flex: 1, gap: 2 },
-  eyebrow: { color: '#0A7EA4', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
-  title: { color: '#162B45', fontSize: 30, fontWeight: '800', lineHeight: 36 },
-  subtitle: { color: '#64748B', fontSize: 15, lineHeight: 21 },
+  sparkle: { position: 'absolute', top: 13, right: 12 },
+  gatheringPeople: { flexDirection: 'row', alignItems: 'flex-end', marginTop: 8, zIndex: 1 },
+  person: { alignItems: 'center', marginHorizontal: -2 },
+  personHead: { width: 14, height: 14, borderRadius: 7 },
+  personBody: { width: 22, height: 18, borderRadius: 11, marginTop: -1 },
+  bluePerson: { backgroundColor: '#4387D7' },
+  pinkPerson: { backgroundColor: '#E95570' },
+  orangePerson: { backgroundColor: '#F3A52B' },
+  gatheringTable: { position: 'absolute', top: 49, width: 53, height: 6, borderRadius: 3, backgroundColor: '#31557F' },
+  tableLegs: { position: 'absolute', top: 54, width: 39, flexDirection: 'row', justifyContent: 'space-between' },
+  tableLeg: { width: 4, height: 13, borderRadius: 2, backgroundColor: '#31557F' },
+  leftLeg: { transform: [{ rotate: '18deg' }] },
+  rightLeg: { transform: [{ rotate: '-18deg' }] },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
-    gap: 12,
+    borderRadius: 24,
+    padding: 16,
+    gap: 14,
     shadowColor: '#183B56',
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
   },
-  sectionTitle: { color: '#162B45', fontSize: 18, fontWeight: '700', marginTop: 4 },
-  sectionHint: { color: '#64748B', fontSize: 14, marginTop: -7 },
-  vibeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginBottom: 8 },
-  vibeButton: {
-    borderWidth: 1,
-    borderColor: '#D8E2EC',
-    borderRadius: 13,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
-    backgroundColor: '#FBFCFE',
-  },
-  selectedButton: { backgroundColor: '#0A7EA4', borderColor: '#0A7EA4' },
-  vibeText: { color: '#3B536D', fontSize: 15, fontWeight: '600' },
-  selectedButtonText: { color: '#FFFFFF' },
-  noteInput: {
-    minHeight: 82,
-    borderWidth: 1,
-    borderColor: '#D8E2EC',
-    borderRadius: 13,
-    padding: 13,
-    color: '#162B45',
-    fontSize: 15,
-    backgroundColor: '#FBFCFE',
-  },
-  durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
-  durationButton: {
-    flex: 1,
-    minWidth: '45%',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D8E2EC',
-    borderRadius: 13,
-    paddingVertical: 13,
-    backgroundColor: '#FBFCFE',
-  },
-  durationText: { color: '#3B536D', fontSize: 15, fontWeight: '600' },
-  errorMessage: { color: '#B42318', fontSize: 14, textAlign: 'center' },
-  primaryButton: {
-    minHeight: 56,
-    borderRadius: 16,
-    backgroundColor: '#0A7EA4',
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sectionIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0A7EA4',
-    shadowOpacity: 0.25,
+  },
+  vibeIcon: { backgroundColor: '#FCEEF2' },
+  noteIcon: { backgroundColor: '#FCEEF2' },
+  durationIcon: { backgroundColor: '#EAF3FF' },
+  sectionCopy: { flex: 1, gap: 2 },
+  sectionTitle: { color: '#112953', fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  sectionHint: { color: '#6C809D', fontSize: 13, lineHeight: 18 },
+  vibeGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  vibeButton: {
+    width: '31.5%',
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderColor: '#E0E9F3',
+    borderRadius: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 5,
+    backgroundColor: '#FBFCFE',
+  },
+  selectedButton: { backgroundColor: '#EAF3FF', borderColor: '#2581F6', borderWidth: 1.5 },
+  vibeText: { color: '#405979', fontSize: 12, fontWeight: '700', lineHeight: 16 },
+  selectedButtonText: { color: '#164A92' },
+  noteInput: {
+    minHeight: 94,
+    borderWidth: 1,
+    borderColor: '#D7E2EF',
+    borderRadius: 18,
+    padding: 15,
+    color: '#172F57',
+    fontSize: 14,
+    lineHeight: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  noteCounter: { color: '#8999AE', fontSize: 12, lineHeight: 16, textAlign: 'right', marginTop: -8 },
+  durationGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  durationButton: {
+    width: '48%',
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E0E9F3',
+    borderRadius: 16,
+    paddingVertical: 11,
+    backgroundColor: '#FBFCFE',
+  },
+  durationText: { color: '#304B6D', fontSize: 13, fontWeight: '700' },
+  errorMessage: { color: '#B42318', fontSize: 14, textAlign: 'center' },
+  primaryButton: {
+    minHeight: 60,
+    borderRadius: 20,
+    backgroundColor: '#237AF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#237AF1',
+    shadowOpacity: 0.22,
     shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
     elevation: 4,
   },
   disabledButton: { opacity: 0.5 },
-  primaryButtonText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
+  primaryButtonContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 17, lineHeight: 22, fontWeight: '800' },
 });
