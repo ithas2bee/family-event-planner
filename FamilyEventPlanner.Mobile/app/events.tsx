@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   imageCard: { width: '100%', aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO, overflow: 'hidden', borderRadius: 18, backgroundColor: '#172033', shadowColor: '#203B5A', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   cardPressed: { opacity: 0.9 },
   eventImage: { width: 94, margin: 8, borderRadius: 13, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  eventImageBackground: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+  eventImageBackground: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
   imageOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(10, 18, 31, 0.18)' },
   imageCardContent: { flex: 1, justifyContent: 'space-between', padding: 14 },
   imageCardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },

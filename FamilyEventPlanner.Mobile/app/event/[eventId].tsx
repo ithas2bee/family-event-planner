@@ -776,10 +776,11 @@ const styles = StyleSheet.create({
     aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO,
     alignItems: 'stretch',
     justifyContent: 'flex-end',
-    padding: Spacing.md,
+    padding: 0,
   },
   presetHeroCaption: {
     padding: Spacing.md,
+    margin: Spacing.md,
     borderRadius: 14,
     backgroundColor: 'rgba(12, 18, 29, 0.5)',
   },
@@ -791,9 +792,9 @@ const styles = StyleSheet.create({
   heroImage: {
     position: 'absolute',
     top: 0,
-    right: 0,
-    bottom: 0,
     left: 0,
+    width: '100%',
+    height: '100%',
     opacity: 1,
   },
   heroOverlay: {
