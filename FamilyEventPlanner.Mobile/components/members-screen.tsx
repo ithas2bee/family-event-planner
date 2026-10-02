@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   avatar: { width: 74, height: 74, borderRadius: 37, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 28, fontWeight: '700' },
+  avatarText: { fontSize: 28, lineHeight: 34, fontWeight: '700' },
   memberCopy: { flex: 1, gap: 5 },
   memberName: { color: '#102A65', fontSize: 24, lineHeight: 29 },
   memberRole: { color: '#687A96', fontSize: 18, lineHeight: 24 },
