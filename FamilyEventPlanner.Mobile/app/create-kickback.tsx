@@ -142,6 +142,10 @@ export default function CreateKickbackScreen() {
               <ThemedText style={styles.subtitle}>
                 Something spontaneous for the family, without the fuss.
               </ThemedText>
+              <View style={styles.nowBadge}>
+                <MaterialIcons name="bolt" size={15} color="#21865B" />
+                <ThemedText style={styles.nowBadgeText}>Happening now</ThemedText>
+              </View>
             </View>
             <View style={styles.gatheringIllustration} accessible={false}>
               <MaterialIcons name="auto-awesome" size={13} color="#E58A2B" style={styles.sparkle} />
@@ -296,6 +300,18 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#087FA7', fontSize: 11, fontWeight: '800', letterSpacing: 1.3 },
   title: { color: '#112953', fontSize: 27, fontWeight: '800', lineHeight: 32, letterSpacing: -0.5 },
   subtitle: { color: '#647895', fontSize: 14, lineHeight: 19 },
+  nowBadge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 12,
+    backgroundColor: '#E8F6EE',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    marginTop: 5,
+  },
+  nowBadgeText: { color: '#21865B', fontSize: 12, lineHeight: 16, fontWeight: '700' },
   gatheringIllustration: {
     width: 82,
     height: 82,
