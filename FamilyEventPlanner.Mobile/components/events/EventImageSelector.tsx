@@ -4,6 +4,7 @@ import {
   eventImagePickerReducer,
   initialEventImagePickerState,
   isEventImagePresetSelected,
+  EVENT_PRESET_IMAGE_ASPECT_RATIO,
 } from '@/constants/eventImagePresets';
 import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
 import { ModalSheet } from '@/components/ui/modal-sheet';
@@ -89,7 +90,7 @@ export function EventImageSelector({ value, onChange }: EventImageSelectorProps)
                   <Image
                     source={getEventImagePresetSource(preset.key)}
                     style={styles.image}
-                    resizeMode="cover"
+                    resizeMode="contain"
                   />
                   {selected && (
                     <View style={styles.selectedIndicator}>
@@ -155,16 +156,16 @@ const styles = StyleSheet.create({
   selectedOption: { borderColor: '#087AC5', borderWidth: 2, elevation: 4 },
   imageFrame: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO,
     overflow: 'hidden',
     backgroundColor: '#E4EAF2',
   },
   image: {
     position: 'absolute',
     top: 0,
-    right: 0,
-    bottom: 0,
     left: 0,
+    width: '100%',
+    height: '100%',
   },
   selectedIndicator: {
     position: 'absolute',

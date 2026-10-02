@@ -184,17 +184,17 @@ test('picker UI uses a compact field, dimmed modal, two-column landscape gallery
   assert.match(selectorSource, /accessibilityLabel="No image"/);
   assert.match(selectorSource, /onPress=\{handleDone\}[\s\S]*>[\s\S]*Done/);
   assert.match(selectorSource, /width: '48\.5%'/);
-  assert.match(selectorSource, /aspectRatio: 16 \/ 9/);
-  assert.match(selectorSource, /resizeMode="cover"/);
-  assert.match(selectorSource, /<View style=\{styles\.imageFrame\}>[\s\S]*<Image[\s\S]*style=\{styles\.image\}[\s\S]*resizeMode="cover"/);
+  assert.match(selectorSource, /EVENT_PRESET_IMAGE_ASPECT_RATIO/);
+  assert.match(selectorSource, /resizeMode="contain"/);
+  assert.match(selectorSource, /<View style=\{styles\.imageFrame\}>[\s\S]*<Image[\s\S]*style=\{styles\.image\}[\s\S]*resizeMode="contain"/);
   assert.match(selectorSource, /<View style=\{styles\.labelArea\}>[\s\S]*\{preset\.label\}/);
   assert.match(selectorSource, /height: 38/);
   assert.match(selectorSource, /borderRadius: 14/);
   assert.match(selectorSource, /selectedOption: \{ borderColor: '#087AC5'/);
   assert.match(selectorSource, /name="check"/);
   assert.match(selectorSource, /centerTitle\s+showHandle/);
-  assert.match(selectorSource, /imageFrame: \{[\s\S]*aspectRatio: 16 \/ 9/);
-  assert.match(selectorSource, /image: \{[\s\S]*position: 'absolute'/);
+  assert.match(selectorSource, /imageFrame: \{[\s\S]*aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO/);
+  assert.match(selectorSource, /image: \{[\s\S]*position: 'absolute'[\s\S]*width: '100%'[\s\S]*height: '100%'/);
 });
 
 test('upcoming event cards render the selected preset image and preserve no-image styling', () => {
