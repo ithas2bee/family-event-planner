@@ -171,6 +171,63 @@ namespace FamilyEventPlanner.Api.Controllers
             return CreatedAtAction(nameof(GetForGroup), new { groupId = kickback.FamilyGroupId }, response);
         }
 
+        // PUT: api/kickbacks/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateKickbackRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            if (string.IsNullOrWhiteSpace(request.Vibe))
+                return BadRequest(new { message = "A kickback vibe is required." });
+
+            var kickback = await _context.Kickbacks.FirstOrDefaultAsync(k => k.Id == id);
+            if (kickback == null)
+                return NotFound(new { message = "Kickback not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var isMember = await _context.GroupMembers.AnyAsync(
+                m => m.Id == memberId && m.FamilyGroupId == kickback.FamilyGroupId);
+            if (!isMember || kickback.CreatedByMemberId != memberId)
+                return Forbid();
+
+            var now = DateTime.UtcNow;
+            if (!kickback.IsActive || kickback.ExpiresAtUtc <= now)
+                return BadRequest(new { message = "This kickback is no longer active." });
+            if (request.ExpiresAtUtc <= now)
+                return BadRequest(new { message = "The kickback end time must be in the future." });
+
+            kickback.Vibe = request.Vibe.Trim();
+            kickback.Note = request.Note?.Trim();
+            kickback.ExpiresAtUtc = request.ExpiresAtUtc;
+            await _context.SaveChangesAsync();
+
+            var responses = await _context.KickbackResponses
+                .Where(r => r.KickbackId == kickback.Id)
+                .ToListAsync();
+            var creator = await _context.GroupMembers
+                .Include(m => m.User)
+                .FirstOrDefaultAsync(m => m.Id == kickback.CreatedByMemberId);
+
+            return Ok(new KickbackDto
+            {
+                Id = kickback.Id,
+                FamilyGroupId = kickback.FamilyGroupId,
+                CreatedByMemberId = kickback.CreatedByMemberId,
+                CreatorDisplayName = creator?.User?.DisplayName,
+                Vibe = kickback.Vibe,
+                Note = kickback.Note,
+                ExpiresAtUtc = kickback.ExpiresAtUtc,
+                CreatedAtUtc = kickback.CreatedAtUtc,
+                IsActive = kickback.IsActive,
+                PullingUpCount = responses.Count(r => r.ResponseType == "PullingUp"),
+                MaybeCount = responses.Count(r => r.ResponseType == "Maybe"),
+                CurrentMemberResponse = responses.FirstOrDefault(r => r.MemberId == memberId)?.ResponseType
+            });
+        }
+
         // POST: api/kickbacks/respond
         [HttpPost("respond")]
         public async Task<IActionResult> Respond([FromBody] RespondToKickbackRequest request)
