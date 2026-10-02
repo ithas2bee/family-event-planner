@@ -4,6 +4,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import type { DashboardCardItem } from '@/components/dashboard-section';
 import { ThemedText } from '@/components/themed-text';
 import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
+import { EVENT_PRESET_IMAGE_ASPECT_RATIO } from '@/constants/eventImagePresets';
 
 const EVENT_TONES = [
   {
@@ -155,7 +156,9 @@ export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardPro
       accessibilityLabel={accessibilityLabel}>
       {imageSource ? (
         <>
-          <Image source={imageSource} style={styles.imageBackground} resizeMode="cover" />
+          <View style={styles.imageFrame}>
+            <Image source={imageSource} style={styles.imageBackground} resizeMode="contain" />
+          </View>
           <View style={styles.imageOverlay} />
           <View style={styles.imageCardContent}>
             <View style={styles.imageCardTopRow}>
@@ -319,12 +322,18 @@ const styles = StyleSheet.create({
     left: 0,
     backgroundColor: 'rgba(0,0,0,0.38)',
   },
-  imageBackground: {
+  imageFrame: {
     position: 'absolute',
     top: 0,
     right: 0,
     bottom: 0,
     left: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageBackground: {
+    width: '100%',
+    aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO,
   },
   imageCardContent: {
     flex: 1,
