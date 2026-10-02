@@ -11,6 +11,7 @@ import {
   StyleSheet,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,6 +20,8 @@ import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createAnnouncement } from '@/services/announcementService';
 
 export default function CreateAnnouncementScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 440;
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { groupId: contextGroupId } = useActiveGroupContext();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
@@ -88,12 +91,16 @@ export default function CreateAnnouncementScreen() {
             <View style={styles.topBarSpacer} />
           </View>
 
-          <View style={styles.hero}>
-            <View style={styles.heroCopy}>
+          <View style={[styles.hero, isCompact && styles.compactHero]}>
+            <View style={[styles.heroCopy, isCompact && styles.compactHeroCopy]}>
               <ThemedText style={styles.title}>Create an Announcement</ThemedText>
               <ThemedText style={styles.subtitle}>Share important news with your family. ❤️</ThemedText>
             </View>
-            <View style={styles.heroIcon} accessible accessibilityLabel="Announcement">
+            <View
+              style={[styles.heroIcon, isCompact && styles.compactHeroIcon]}
+              accessible
+              accessibilityLabel="Announcement"
+            >
               <MaterialIcons name="campaign" size={48} color="#E52D50" />
             </View>
           </View>
@@ -240,7 +247,9 @@ const styles = StyleSheet.create({
   topBarTitle: { color: '#111A30', fontSize: 16, fontWeight: '700' },
   topBarSpacer: { width: 28 },
   hero: { minHeight: 145, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
+  compactHero: { flexDirection: 'column', alignItems: 'stretch' },
   heroCopy: { flex: 1, paddingRight: 8 },
+  compactHeroCopy: { flex: 0 },
   title: { color: '#111A30', fontSize: 36, lineHeight: 43, fontWeight: '800' },
   subtitle: { color: '#687B98', fontSize: 16, lineHeight: 23, marginTop: 5 },
   heroIcon: {
@@ -252,6 +261,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     transform: [{ rotate: '-8deg' }],
   },
+  compactHeroIcon: { alignSelf: 'flex-end' },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
