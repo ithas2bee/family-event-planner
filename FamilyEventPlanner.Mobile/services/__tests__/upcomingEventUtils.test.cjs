@@ -1,9 +1,12 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 const { filterUpcomingEvents } = require('../upcomingEventUtils.ts');
 
 const now = new Date('2026-10-02T13:00:00.000Z');
 const event = (id, startDate) => ({ id, startDate });
+const homeSource = fs.readFileSync(path.resolve(__dirname, '../../app/family-home.tsx'), 'utf8');
 
 test('excludes events scheduled in the past', () => {
   assert.deepEqual(
@@ -38,4 +41,8 @@ test('keeps future events and preserves their existing order among mixed dates',
     ], now).map(({ id }) => id),
     ['future-first', 'future-second'],
   );
+});
+
+test('filters past events before applying the Home preview limit', () => {
+  assert.match(homeSource, /filterUpcomingEvents\(events, now\)\.slice\(0, PREVIEW_LIMIT\)/);
 });
