@@ -4,6 +4,7 @@ import { EventImageSelector } from '@/components/events/EventImageSelector';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
+import { EVENT_PRESET_IMAGE_ASPECT_RATIO } from '@/constants/eventImagePresets';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
@@ -772,13 +773,14 @@ const styles = StyleSheet.create({
   },
   presetHero: {
     minHeight: 0,
-    aspectRatio: 11 / 6,
+    aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO,
     alignItems: 'stretch',
     justifyContent: 'flex-end',
-    padding: Spacing.md,
+    padding: 0,
   },
   presetHeroCaption: {
     padding: Spacing.md,
+    margin: Spacing.md,
     borderRadius: 14,
     backgroundColor: 'rgba(12, 18, 29, 0.5)',
   },
@@ -790,9 +792,9 @@ const styles = StyleSheet.create({
   heroImage: {
     position: 'absolute',
     top: 0,
-    right: 0,
-    bottom: 0,
     left: 0,
+    width: '100%',
+    height: '100%',
     opacity: 1,
   },
   heroOverlay: {

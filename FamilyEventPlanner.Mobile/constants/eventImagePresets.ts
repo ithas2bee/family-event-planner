@@ -19,6 +19,8 @@ export const EVENT_IMAGE_PRESETS = [
   { key: 'kids-park', label: 'Kids Park', imageAsset: 'kids-park.jpg' },
 ] as const;
 
+export const EVENT_PRESET_IMAGE_ASPECT_RATIO = 2816 / 1536;
+
 export type EventImagePresetKey = (typeof EVENT_IMAGE_PRESETS)[number]['key'];
 
 export function selectEventImagePreset(
