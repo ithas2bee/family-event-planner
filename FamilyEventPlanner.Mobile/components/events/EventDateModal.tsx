@@ -332,7 +332,7 @@ const EventDateModalContent: React.FC<EventDateModalProps> = ({ visible, date, e
               <View style={styles.endHeading}>
                 <StepHeading number={4} title="Select End Time" subtitle="Choose when the event will end." />
                 {showEndPicker ? (
-                  <Pressable onPress={clearEndTime} accessibilityRole="button">
+                  <Pressable onPress={clearEndTime} style={styles.endActionButton} accessibilityRole="button">
                     <ThemedText style={styles.endAction}>Clear</ThemedText>
                   </Pressable>
                 ) : null}
@@ -391,10 +391,10 @@ const styles = StyleSheet.create({
   subtitle: { color: '#71829C', fontSize: 13, marginTop: 2 },
   content: { paddingHorizontal: 16, paddingBottom: 12 },
   sectionCard: { borderWidth: 1, borderColor: '#E1EAF5', borderRadius: 20, padding: 14, marginBottom: 12 },
-  stepHeading: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
+  stepHeading: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   stepNumber: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#E1EEFF', alignItems: 'center', justifyContent: 'center' },
   stepNumberText: { color: '#1678E8', fontSize: 16, fontWeight: '700' },
-  stepTitleContainer: { flex: 1 },
+  stepTitleContainer: { flex: 1, minWidth: 0 },
   stepTitle: { color: '#111A30', fontSize: 17, fontWeight: '700' },
   stepSubtitle: { color: '#71829C', fontSize: 13, marginTop: 2 },
   calendarCard: { borderWidth: 1, borderColor: '#E1EAF5', borderRadius: 18, overflow: 'hidden' },
@@ -414,8 +414,9 @@ const styles = StyleSheet.create({
   wheelValueSelected: { color: '#102758', fontSize: 18, fontWeight: '700' },
   currentTimeButton: { alignSelf: 'flex-end', marginTop: 9, paddingVertical: 3, paddingHorizontal: 2 },
   currentTimeText: { color: '#087AC5', fontSize: 12, fontWeight: '600' },
-  endHeading: { flexDirection: 'row', alignItems: 'center' },
-  endAction: { color: '#087AC5', fontSize: 13, fontWeight: '600', padding: 6 },
+  endHeading: { width: '100%', flexDirection: 'row', alignItems: 'center' },
+  endActionButton: { flexShrink: 0, marginLeft: 8 },
+  endAction: { color: '#087AC5', fontSize: 13, fontWeight: '600', paddingHorizontal: 6, paddingVertical: 4 },
   addEndButton: { minHeight: 45, borderWidth: 1, borderColor: '#DCE8F8', borderRadius: 14, backgroundColor: '#F7FAFE', alignItems: 'center', justifyContent: 'center' },
   addEndText: { color: '#087AC5', fontSize: 14, fontWeight: '600' },
   selectedSummary: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F2F7FE', borderRadius: 16, padding: 14, marginBottom: 4 },

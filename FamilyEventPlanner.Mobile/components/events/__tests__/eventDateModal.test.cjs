@@ -43,3 +43,11 @@ test('Create Event and Edit Event both use the shared selector and persist end d
   assert.match(editEventSource, /<EventDateModal[\s\S]*?endDate=\{event\.endDate \? new Date\(event\.endDate\) : null\}/);
   assert.match(editEventSource, /endDate: endDate \? endDate\.toISOString\(\) : undefined/);
 });
+
+test('End Time heading gives its title flexible width and keeps Clear inside the card', () => {
+  assert.match(modalSource, /endHeading: \{ width: '100%'/);
+  assert.match(modalSource, /stepHeading: \{ flex: 1, minWidth: 0/);
+  assert.match(modalSource, /stepTitleContainer: \{ flex: 1, minWidth: 0/);
+  assert.match(modalSource, /endActionButton: \{ flexShrink: 0, marginLeft: 8 \}/);
+  assert.match(modalSource, /style={styles\.endActionButton}/);
+});
