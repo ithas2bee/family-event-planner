@@ -75,6 +75,7 @@ function NavigationGate() {
       <Stack.Screen name="create-poll" options={{ headerShown: false }} />
       <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
       <Stack.Screen name="create-kickback" options={{ headerShown: false }} />
+      <Stack.Screen name="kickback/[kickbackId]" options={{ headerShown: false }} />
       <Stack.Screen name="event/[eventId]" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="help-support" options={{ headerShown: false }} />

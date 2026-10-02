@@ -37,5 +37,8 @@ test('4–6 Hours sets the Kickback expiry to six hours from now', () => {
     screenSource,
     /if \(duration === '2 Hours' \|\| duration === '4–6 Hours'\) \{\s+const hours = duration === '2 Hours' \? 2 : 6;\s+return new Date\(now\.getTime\(\) \+ hours \* 60 \* 60 \* 1000\)\.toISOString\(\);/,
   );
-  assert.match(screenSource, /expiresAtUtc: resolveExpiresAtUtc\(selectedDuration\)/);
+  assert.match(
+    screenSource,
+    /expiresAtUtc:\s+selectedDuration !== null\s+\?\s+resolveExpiresAtUtc\(selectedDuration\)/,
+  );
 });

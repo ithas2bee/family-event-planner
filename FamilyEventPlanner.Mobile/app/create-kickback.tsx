@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
-import { createKickback } from '@/services/kickbackService';
+import { createKickback, getKickbacksByGroup, updateKickback, type Kickback } from '@/services/kickbackService';
 
 export const vibeOptions = ['BBQ', 'Game On', 'Drinks', 'Bonfire', 'Chill', 'Pool', 'Music', 'Food', 'Other'] as const;
 export const durationOptions = ['2 Hours', '4–6 Hours', 'Tonight', 'Until Midnight'] as const;
@@ -65,18 +65,58 @@ export function resolveExpiresAtUtc(duration: DurationOption): string {
 }
 
 export default function CreateKickbackScreen() {
-  const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
+  const { groupId, memberId, kickbackId } = useLocalSearchParams<{
+    groupId: string;
+    memberId: string;
+    kickbackId?: string;
+  }>();
   const { groupId: contextGroupId, memberId: contextMemberId } = useActiveGroupContext();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
   const memberIdValue = String(memberId ?? contextMemberId ?? '');
+  const kickbackIdValue = String(kickbackId ?? '');
+  const isEditing = kickbackIdValue.length > 0;
 
   const [selectedVibe, setSelectedVibe] = useState('');
   const [note, setNote] = useState('');
-  const [selectedDuration, setSelectedDuration] = useState<DurationOption>('2 Hours');
+  const [selectedDuration, setSelectedDuration] = useState<DurationOption | null>(
+    isEditing ? null : '2 Hours',
+  );
+  const [existingKickback, setExistingKickback] = useState<Kickback | null>(null);
+  const [loadingKickback, setLoadingKickback] = useState(isEditing);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = selectedVibe.trim().length > 0 && groupIdValue.length > 0 && !loading;
+  useEffect(() => {
+    if (!isEditing) return;
+    let cancelled = false;
+
+    async function loadKickback() {
+      setLoadingKickback(true);
+      try {
+        const kickbacks = await getKickbacksByGroup(groupIdValue);
+        const kickback = kickbacks.find((item) => item.id === kickbackIdValue);
+        if (!kickback) throw new Error('Kickback not found.');
+        if (!cancelled) {
+          setExistingKickback(kickback);
+          setSelectedVibe(kickback.vibe);
+          setNote(kickback.note ?? '');
+          setError(null);
+        }
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load kickback.');
+      } finally {
+        if (!cancelled) setLoadingKickback(false);
+      }
+    }
+
+    void loadKickback();
+    return () => {
+      cancelled = true;
+    };
+  }, [groupIdValue, isEditing, kickbackIdValue]);
+
+  const canSubmit =
+    selectedVibe.trim().length > 0 && groupIdValue.length > 0 && !loading && !loadingKickback;
 
   async function handleCreateKickback() {
     setError(null);
@@ -94,12 +134,21 @@ export default function CreateKickbackScreen() {
     setLoading(true);
 
     try {
-      await createKickback({
-        familyGroupId: groupIdValue,
+      const updatedFields = {
         vibe: selectedVibe,
         note: note.trim() || undefined,
-        expiresAtUtc: resolveExpiresAtUtc(selectedDuration),
-      });
+        expiresAtUtc:
+          selectedDuration !== null
+            ? resolveExpiresAtUtc(selectedDuration)
+            : existingKickback?.expiresAtUtc ?? resolveExpiresAtUtc('2 Hours'),
+      };
+
+      if (isEditing) {
+        if (!existingKickback) throw new Error('Kickback not found.');
+        await updateKickback(kickbackIdValue, updatedFields);
+      } else {
+        await createKickback({ familyGroupId: groupIdValue, ...updatedFields });
+      }
 
       router.replace({
         pathname: '/(tabs)/(main)/kickbacks',
@@ -114,6 +163,16 @@ export default function CreateKickbackScreen() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (loadingKickback) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#237AF1" />
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -138,9 +197,9 @@ export default function CreateKickbackScreen() {
             </Pressable>
             <View style={styles.headerCopy}>
               <ThemedText style={styles.eyebrow}>MAKE IT HAPPEN</ThemedText>
-              <ThemedText style={styles.title}>Create a Kickback</ThemedText>
+              <ThemedText style={styles.title}>{isEditing ? 'Edit Kickback' : 'Create a Kickback'}</ThemedText>
               <ThemedText style={styles.subtitle}>
-                Something spontaneous for the family, without the fuss.
+                {isEditing ? 'Update the details of your current kickback.' : 'Something spontaneous for the family, without the fuss.'}
               </ThemedText>
               <View style={styles.nowBadge}>
                 <MaterialIcons name="bolt" size={15} color="#21865B" />
@@ -271,15 +330,15 @@ export default function CreateKickbackScreen() {
           <Pressable
             style={[styles.primaryButton, !canSubmit && styles.disabledButton]}
             onPress={handleCreateKickback}
-            disabled={loading}
+            disabled={!canSubmit}
             accessibilityRole="button"
-            accessibilityLabel="Create Kickback"
+            accessibilityLabel={isEditing ? 'Save Kickback' : 'Create Kickback'}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <View style={styles.primaryButtonContent}>
-                <ThemedText style={styles.primaryButtonText}>Create Kickback</ThemedText>
+                <ThemedText style={styles.primaryButtonText}>{isEditing ? 'Save Changes' : 'Create Kickback'}</ThemedText>
                 <MaterialIcons name="arrow-forward" size={21} color="#FFFFFF" />
               </View>
             )}
@@ -292,6 +351,7 @@ export default function CreateKickbackScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F5F8FC' },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   container: { padding: 18, paddingBottom: 26, gap: 14 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
