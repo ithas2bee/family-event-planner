@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { AuthScreenLayout } from '@/components/auth-screen-layout';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { loadSession, saveSession } from '@/services/sessionService';
 import { loginUser } from '@/services/userService';
@@ -54,9 +54,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ThemedView style={styles.container}>
+    <AuthScreenLayout>
           <ThemedText style={styles.brand}>Huddle Up</ThemedText>
           <ThemedText style={styles.tagline}>Plan together. Make more memories.</ThemedText>
           <ThemedText type="title" style={styles.title}>Sign In</ThemedText>
@@ -113,16 +111,11 @@ export default function LoginScreen() {
 
           {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
           <View style={styles.footer}><ThemedText style={styles.footerText}>Don&apos;t have an account? </ThemedText><Pressable onPress={() => router.replace('/create-account')}><ThemedText style={styles.link}>Create Account</ThemedText></Pressable></View>
-        </ThemedView>
-      </ScrollView>
-    </SafeAreaView>
+    </AuthScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F7FAFF' },
-  content: { flexGrow: 1, justifyContent: 'center', padding: 24 },
-  container: { gap: 12 },
   brand: { color: '#101B5A', fontSize: 38, lineHeight: 56, fontWeight: '800', textAlign: 'center' },
   tagline: { color: '#536987', fontSize: 16, textAlign: 'center', marginBottom: 28 },
   title: { color: '#101B5A', textAlign: 'center', fontSize: 32 },
