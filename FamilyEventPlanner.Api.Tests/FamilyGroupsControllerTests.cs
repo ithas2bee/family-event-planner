@@ -10,6 +10,51 @@ namespace FamilyEventPlanner.Api.Tests;
 public class FamilyGroupsControllerTests
 {
     [Fact]
+    public async Task CreateGroupPersistsDetailsAndPrivateDefaults()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Group Creator");
+        await context.SaveChangesAsync();
+
+        var result = await new FamilyGroupsController(context).CreateGroup(new CreateFamilyGroupRequest
+        {
+            Name = "Weekend Hikers",
+            GroupType = "Sports & Fitness",
+            Description = "Local trails and weekend walks",
+            UserId = user.Id
+        });
+
+        Assert.IsType<CreatedAtActionResult>(result);
+        var group = await context.FamilyGroups.SingleAsync();
+        Assert.Equal("Weekend Hikers", group.Name);
+        Assert.Equal("Sports & Fitness", group.GroupType);
+        Assert.Equal("Local trails and weekend walks", group.Description);
+        Assert.True(group.IsInviteOnly);
+        Assert.False(group.IsSearchable);
+    }
+
+    [Fact]
+    public async Task CreateGroupKeepsLegacyRequestsPrivateAndDefaultsTypeToOther()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Group Creator");
+        await context.SaveChangesAsync();
+
+        var result = await new FamilyGroupsController(context).CreateGroup(new CreateFamilyGroupRequest
+        {
+            Name = "Legacy Family",
+            UserId = user.Id
+        });
+
+        Assert.IsType<CreatedAtActionResult>(result);
+        var group = await context.FamilyGroups.SingleAsync();
+        Assert.Equal("Other", group.GroupType);
+        Assert.Null(group.Description);
+        Assert.True(group.IsInviteOnly);
+        Assert.False(group.IsSearchable);
+    }
+
+    [Fact]
     public async Task GetMyGroupsReturnsEveryGroupForTheUserAndExcludesOtherUsersGroups()
     {
         await using var context = CreateContext();

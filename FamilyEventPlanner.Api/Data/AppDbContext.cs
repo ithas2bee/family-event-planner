@@ -104,6 +104,18 @@ namespace FamilyEventPlanner.Api.Data
                 .HasIndex(g => g.InviteCode)
                 .IsUnique();
 
+            modelBuilder.Entity<FamilyGroup>()
+                .Property(g => g.GroupType)
+                .HasDefaultValue("Other");
+
+            modelBuilder.Entity<FamilyGroup>()
+                .Property(g => g.IsInviteOnly)
+                .HasDefaultValue(true);
+
+            modelBuilder.Entity<FamilyGroup>()
+                .Property(g => g.IsSearchable)
+                .HasDefaultValue(false);
+
             // GroupMember.UserId is now required (not nullable)
             modelBuilder.Entity<GroupMember>()
                 .HasOne(gm => gm.User)
@@ -114,4 +126,3 @@ namespace FamilyEventPlanner.Api.Data
         }
     }
 }
-

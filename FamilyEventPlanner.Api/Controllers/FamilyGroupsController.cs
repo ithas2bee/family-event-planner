@@ -47,7 +47,11 @@ namespace FamilyEventPlanner.Api.Controllers
             var group = new FamilyGroup
             {
                 Id = Guid.NewGuid(),
-                Name = request.Name,
+                Name = request.Name.Trim(),
+                GroupType = string.IsNullOrWhiteSpace(request.GroupType) ? "Other" : request.GroupType.Trim(),
+                Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim(),
+                IsInviteOnly = true,
+                IsSearchable = false,
                 InviteCode = inviteCode,
                 CreatedAt = DateTime.UtcNow
             };
@@ -74,6 +78,10 @@ namespace FamilyEventPlanner.Api.Controllers
             {
                 groupId = group.Id,
                 groupName = group.Name,
+                groupType = group.GroupType,
+                description = group.Description,
+                isInviteOnly = group.IsInviteOnly,
+                isSearchable = group.IsSearchable,
                 inviteCode = group.InviteCode,
                 createdAt = group.CreatedAt,
                 memberId = creatorMember.Id,
