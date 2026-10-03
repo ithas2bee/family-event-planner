@@ -22,6 +22,16 @@ test('My Groups lists each group and opens its direct details route', () => {
   assert.match(myGroupsSource, /isAdmin: entry\.isAdmin === true/);
 });
 
+test('Group Management allows direct switching and identifies the current group', () => {
+  assert.match(detailsSource, /accessibilityLabel=\{switchGroupOpen \? 'Hide groups' : 'Switch Group'\}/);
+  assert.match(detailsSource, /familygroups\/my\/\$\{session\.userId\}/);
+  assert.match(detailsSource, /Current group/);
+  assert.match(detailsSource, /group\.groupId === groupId/);
+  assert.match(detailsSource, /router\.replace\(\{[\s\S]*pathname: '\/group\/\[groupId\]'/);
+  assert.match(detailsSource, /groupName: group\.groupName/);
+  assert.match(detailsSource, /memberId,[\s\S]*?\}\);\s*router\.replace/);
+});
+
 test('Group details show immutable group identity and gate management controls to admins', () => {
   assert.match(detailsSource, /Community type/);
   assert.match(detailsSource, /Group name/);
