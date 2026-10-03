@@ -139,8 +139,46 @@ namespace FamilyEventPlanner.Api.Controllers
                 description = g.Description,
                 isInviteOnly = g.IsInviteOnly,
                 isSearchable = g.IsSearchable,
+                accessMode = GetAccessMode(g.IsInviteOnly, g.IsSearchable),
                 memberCount,
                 isAdmin = member.IsAdmin
+            });
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
+        [HttpPut("{id}/access")]
+        public async Task<IActionResult> UpdateAccess(Guid id, [FromBody] UpdateGroupAccessRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var member = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == GetAuthenticatedMemberId() && m.FamilyGroupId == id);
+            if (member == null || !member.IsAdmin)
+                return Forbid();
+
+            var access = request.AccessMode switch
+            {
+                "InviteOnlyNotSearchable" => (IsInviteOnly: true, IsSearchable: false),
+                "InviteOnlySearchable" => (IsInviteOnly: true, IsSearchable: true),
+                "CommunitySearchableRequestToJoin" => (IsInviteOnly: false, IsSearchable: true),
+                _ => ((bool IsInviteOnly, bool IsSearchable)?)null
+            };
+            if (access == null)
+                return BadRequest(new { message = "Unsupported group access configuration." });
+
+            var group = await _context.FamilyGroups.FindAsync(id);
+            if (group == null)
+                return NotFound();
+
+            group.IsInviteOnly = access.Value.IsInviteOnly;
+            group.IsSearchable = access.Value.IsSearchable;
+            await _context.SaveChangesAsync();
+            return Ok(new
+            {
+                accessMode = request.AccessMode,
+                isInviteOnly = group.IsInviteOnly,
+                isSearchable = group.IsSearchable
             });
         }
 
@@ -179,6 +217,13 @@ namespace FamilyEventPlanner.Api.Controllers
         private Guid GetAuthenticatedMemberId()
         {
             return Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId) ? memberId : Guid.Empty;
+        }
+
+        private static string GetAccessMode(bool isInviteOnly, bool isSearchable)
+        {
+            if (!isInviteOnly)
+                return "CommunitySearchableRequestToJoin";
+            return isSearchable ? "InviteOnlySearchable" : "InviteOnlyNotSearchable";
         }
     }
 }

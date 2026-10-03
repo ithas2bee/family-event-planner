@@ -10,8 +10,10 @@ import { getGroupMembers, getGroupMemberByUser, type GroupMember } from '@/servi
 import {
   getGroupDetails,
   updateGroupDescription,
+  updateGroupAccess,
   updateGroupMemberAdmin,
   type GroupDetails,
+  type GroupAccessMode,
 } from '@/services/groupDetailsService';
 import { loadSession } from '@/services/sessionService';
 
@@ -28,6 +30,7 @@ export default function GroupDetailsScreen() {
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [currentMemberId, setCurrentMemberId] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [accessModeDraft, setAccessModeDraft] = useState<GroupAccessMode>('InviteOnlyNotSearchable');
   const [editingDescription, setEditingDescription] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,6 +62,7 @@ export default function GroupDetailsScreen() {
       setMembers(groupMembers);
       setCurrentMemberId(memberId);
       setDescriptionDraft(group.description ?? '');
+      setAccessModeDraft(group.accessMode);
       if (
         contextGroupId !== groupId ||
         contextGroupName !== group.groupName ||
@@ -111,6 +115,29 @@ export default function GroupDetailsScreen() {
     }
   }
 
+  async function saveAccessMode() {
+    if (!details) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await updateGroupAccess(groupId, currentMemberId, accessModeDraft);
+      setDetails((current) =>
+        current
+          ? {
+              ...current,
+              accessMode: updated.accessMode,
+              isInviteOnly: updated.isInviteOnly,
+              isSearchable: updated.isSearchable,
+            }
+          : current,
+      );
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Could not update group access.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -144,6 +171,7 @@ export default function GroupDetailsScreen() {
                 <ThemedText style={styles.label}>Community type</ThemedText>
                 <ThemedText style={styles.value}>{details.groupType}</ThemedText>
               </View>
+              <ThemedText style={styles.adminHint}>Group name and community type are set at creation and can’t be changed.</ThemedText>
               <ThemedText style={styles.label}>Description</ThemedText>
               {editingDescription && details.isAdmin ? (
                 <TextInput
@@ -183,44 +211,89 @@ export default function GroupDetailsScreen() {
             <View style={styles.card}>
               <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Members · {members.length}</ThemedText>
               {details.isAdmin ? <ThemedText style={styles.accessTitle}>Manage Admins</ThemedText> : null}
-              {members.map((member, index) => {
-                const name = member.displayName?.trim() || 'Unknown member';
-                return (
-                  <View key={member.memberId ?? `${name}-${index}`} style={styles.memberRow}>
-                    <View style={styles.memberIcon}><ThemedText style={styles.initial}>{name[0]?.toUpperCase() ?? '?'}</ThemedText></View>
-                    <View style={styles.memberCopy}>
-                      <ThemedText type="defaultSemiBold" style={styles.memberName}>{name}</ThemedText>
-                      <ThemedText style={styles.memberRole}>{member.isAdmin ? 'Admin' : 'Member'}</ThemedText>
+              {(() => {
+                const adminCount = members.filter((entry) => entry.isAdmin).length;
+                return members.map((member, index) => {
+                  const name = member.displayName?.trim() || 'Unknown member';
+                  const isOnlyAdmin = member.isAdmin && adminCount === 1;
+                  return (
+                    <View key={member.memberId ?? `${name}-${index}`} style={styles.memberRow}>
+                      <View style={styles.memberIcon}><ThemedText style={styles.initial}>{name[0]?.toUpperCase() ?? '?'}</ThemedText></View>
+                      <View style={styles.memberCopy}>
+                        <ThemedText type="defaultSemiBold" style={styles.memberName}>{name}</ThemedText>
+                        <ThemedText style={styles.memberRole}>{member.isAdmin ? 'Admin' : 'Member'}</ThemedText>
+                      </View>
+                      {details.isAdmin && member.memberId ? (
+                        isOnlyAdmin ? (
+                          <ThemedText style={styles.memberRole}>Only admin</ThemedText>
+                        ) : (
+                          <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel={`${member.isAdmin ? 'Remove admin' : 'Make admin'} for ${name}`}
+                            disabled={saving}
+                            onPress={() => void toggleAdmin(member)}
+                            style={styles.roleButton}
+                          >
+                            <ThemedText style={styles.roleButtonText}>{member.isAdmin ? 'Remove admin' : 'Make admin'}</ThemedText>
+                          </Pressable>
+                        )
+                      ) : null}
                     </View>
-                    {details.isAdmin && member.memberId ? (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={`${member.isAdmin ? 'Remove admin' : 'Make admin'} for ${name}`}
-                        disabled={saving}
-                        onPress={() => void toggleAdmin(member)}
-                        style={styles.roleButton}
-                      >
-                        <ThemedText style={styles.roleButtonText}>{member.isAdmin ? 'Remove admin' : 'Make admin'}</ThemedText>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                );
-              })}
+                  );
+                });
+              })()}
             </View>
 
             {details.isAdmin ? (
               <View style={styles.card}>
                 <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Admin Controls</ThemedText>
                 <ThemedText style={styles.accessTitle}>Group Access</ThemedText>
-                <View style={styles.accessRow}>
-                  <MaterialIcons name="lock" size={20} color="#087D9F" />
-                  <ThemedText style={styles.accessText}>{details.isInviteOnly ? 'Invite Only' : 'Open to join'}</ThemedText>
-                </View>
-                <View style={styles.accessRow}>
-                  <MaterialIcons name={details.isSearchable ? 'search' : 'visibility-off'} size={20} color="#087D9F" />
-                  <ThemedText style={styles.accessText}>{details.isSearchable ? 'Searchable' : 'Not Searchable'}</ThemedText>
-                </View>
-                <ThemedText style={styles.adminHint}>Group name and community type are set at creation and can’t be changed.</ThemedText>
+                {[
+                  {
+                    value: 'InviteOnlyNotSearchable',
+                    title: 'Invite Only + Not Searchable',
+                    description: 'Members can only join with an invitation.',
+                  },
+                  {
+                    value: 'InviteOnlySearchable',
+                    title: 'Invite Only + Searchable',
+                    description: 'People can find this group, but need an invitation to join.',
+                  },
+                  {
+                    value: 'CommunitySearchableRequestToJoin',
+                    title: 'Community + Searchable + Request to Join',
+                    description: 'People can find the group and request to join.',
+                  },
+                ].map((option) => {
+                  const selected = accessModeDraft === option.value;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      onPress={() => setAccessModeDraft(option.value as GroupAccessMode)}
+                      style={[styles.accessOption, selected && styles.accessOptionSelected]}
+                    >
+                      <MaterialIcons
+                        name={selected ? 'radio-button-checked' : 'radio-button-unchecked'}
+                        size={22}
+                        color={selected ? '#087D9F' : '#7185A0'}
+                      />
+                      <View style={styles.accessOptionCopy}>
+                        <ThemedText type="defaultSemiBold" style={styles.value}>{option.title}</ThemedText>
+                        <ThemedText style={styles.accessText}>{option.description}</ThemedText>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={saving || accessModeDraft === details.accessMode}
+                  onPress={() => void saveAccessMode()}
+                  style={[styles.primaryButton, (saving || accessModeDraft === details.accessMode) && styles.disabledButton]}
+                >
+                  <ThemedText style={styles.primaryButtonText}>{saving ? 'Saving...' : 'Save Group Access'}</ThemedText>
+                </Pressable>
               </View>
             ) : null}
           </>
@@ -263,7 +336,10 @@ const styles = StyleSheet.create({
   roleButton: { backgroundColor: '#EAF5FF', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
   roleButtonText: { color: '#087D9F', fontSize: 12, fontWeight: '700' },
   accessTitle: { color: '#102A3D', fontSize: 16, fontWeight: '700', marginTop: 2 },
-  accessRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  accessOption: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: '#D9E4EC', borderRadius: 13, padding: 12 },
+  accessOptionSelected: { borderColor: '#087D9F', backgroundColor: '#F0FAFC' },
+  accessOptionCopy: { flex: 1, gap: 4 },
   accessText: { color: '#52677A', fontSize: 16 },
   adminHint: { color: '#6C7D8E', fontSize: 13, lineHeight: 19, marginTop: 4 },
+  disabledButton: { opacity: 0.55 },
 });

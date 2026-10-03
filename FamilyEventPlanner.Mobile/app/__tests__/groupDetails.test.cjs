@@ -31,6 +31,13 @@ test('Group details show immutable group identity and gate management controls t
   assert.match(detailsSource, /Admin Controls/);
   assert.match(detailsSource, /Manage Admins/);
   assert.match(detailsSource, /Edit description/);
+  assert.match(detailsSource, /Invite Only \+ Not Searchable/);
+  assert.match(detailsSource, /Invite Only \+ Searchable/);
+  assert.match(detailsSource, /Community \+ Searchable \+ Request to Join/);
+  assert.match(detailsSource, /Save Group Access/);
+  assert.match(detailsSource, /Only admin/);
+  assert.match(detailsSource, /Group name and community type are set at creation/);
+  assert.doesNotMatch(detailsSource, /Group Access (?:is )?set at creation|Group Access cannot be changed/);
   assert.match(detailsSource, /Make admin/);
   assert.match(detailsSource, /accessibilityLabel="Group description"/);
   assert.doesNotMatch(detailsSource, /accessibilityLabel="Group name"|accessibilityLabel="Community type"/);

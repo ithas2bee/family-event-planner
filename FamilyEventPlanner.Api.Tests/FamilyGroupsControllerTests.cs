@@ -165,6 +165,61 @@ public class FamilyGroupsControllerTests
         Assert.Equal("Sports & Fitness", group.GroupType);
     }
 
+    [Theory]
+    [InlineData("InviteOnlyNotSearchable", true, false)]
+    [InlineData("InviteOnlySearchable", true, true)]
+    [InlineData("CommunitySearchableRequestToJoin", false, true)]
+    public async Task AdminCanChangeGroupAccessAndSelectionPersists(
+        string accessMode,
+        bool isInviteOnly,
+        bool isSearchable)
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Group Admin");
+        var group = AddGroup(context, "Weekend Hikers");
+        var admin = Member(user, group);
+        admin.IsAdmin = true;
+        context.GroupMembers.Add(admin);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, admin.Id);
+
+        var result = await controller.UpdateAccess(group.Id, new UpdateGroupAccessRequest { AccessMode = accessMode });
+
+        Assert.IsType<OkObjectResult>(result);
+        await context.Entry(group).ReloadAsync();
+        Assert.Equal(isInviteOnly, group.IsInviteOnly);
+        Assert.Equal(isSearchable, group.IsSearchable);
+        Assert.Equal("Weekend Hikers", group.Name);
+    }
+
+    [Fact]
+    public async Task GroupAccessRejectsMembersAndUnsupportedConfigurations()
+    {
+        await using var context = CreateContext();
+        var adminUser = AddUser(context, "Group Admin");
+        var memberUser = AddUser(context, "Group Member");
+        var group = AddGroup(context, "Weekend Hikers");
+        var admin = Member(adminUser, group);
+        admin.IsAdmin = true;
+        var member = Member(memberUser, group);
+        context.GroupMembers.AddRange(admin, member);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+
+        SetMember(controller, member.Id);
+        Assert.IsType<ForbidResult>(await controller.UpdateAccess(group.Id, new UpdateGroupAccessRequest
+        {
+            AccessMode = "InviteOnlySearchable"
+        }));
+
+        SetMember(controller, admin.Id);
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateAccess(group.Id, new UpdateGroupAccessRequest
+        {
+            AccessMode = "CommunityNotSearchable"
+        }));
+    }
+
     private static AppDbContext CreateContext() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);

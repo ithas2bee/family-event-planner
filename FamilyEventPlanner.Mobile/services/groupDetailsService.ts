@@ -9,9 +9,15 @@ export type GroupDetails = {
   description: string | null;
   isInviteOnly: boolean;
   isSearchable: boolean;
+  accessMode: GroupAccessMode;
   memberCount: number;
   isAdmin: boolean;
 };
+
+export type GroupAccessMode =
+  | 'InviteOnlyNotSearchable'
+  | 'InviteOnlySearchable'
+  | 'CommunitySearchableRequestToJoin';
 
 async function sendRequest<T>(url: string, memberId: string, method = 'GET', body?: unknown): Promise<T> {
   let response: Response;
@@ -51,6 +57,19 @@ export function updateGroupDescription(
     memberId,
     'PUT',
     { description },
+  );
+}
+
+export function updateGroupAccess(
+  groupId: string,
+  memberId: string,
+  accessMode: GroupAccessMode,
+): Promise<{ accessMode: GroupAccessMode; isInviteOnly: boolean; isSearchable: boolean }> {
+  return sendRequest(
+    `${API_BASE_URL}/api/familygroups/${groupId}/access`,
+    memberId,
+    'PUT',
+    { accessMode },
   );
 }
 

@@ -47,6 +47,7 @@ public class GroupMembersControllerTests
         Assert.IsType<BadRequestObjectResult>(
             await controller.UpdateAdminRole(group.Id, admin.Id, new UpdateGroupMemberAdminRequest { IsAdmin = false }));
         Assert.True(admin.IsAdmin);
+        Assert.True(await context.GroupMembers.AnyAsync(member => member.Id == admin.Id && member.IsAdmin));
     }
 
     private static AppDbContext CreateContext() => new(new DbContextOptionsBuilder<AppDbContext>()
