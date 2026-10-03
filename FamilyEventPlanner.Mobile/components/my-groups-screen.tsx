@@ -15,6 +15,7 @@ export type MyGroup = {
   groupId: string;
   groupName: string;
   memberCount?: number;
+  isAdmin?: boolean;
 };
 
 export function mapGroups(raw: unknown): MyGroup[] {
@@ -29,6 +30,7 @@ export function mapGroups(raw: unknown): MyGroup[] {
         groupName?: string;
         name?: string;
         memberCount?: number;
+        isAdmin?: boolean;
       };
       const groupId = String(entry.groupId ?? entry.familyGroupId ?? entry.id ?? '').trim();
       if (!groupId) return null;
@@ -37,6 +39,7 @@ export function mapGroups(raw: unknown): MyGroup[] {
         groupId,
         groupName: String(entry.groupName ?? entry.name ?? '').trim() || 'Unnamed Group',
         memberCount: typeof entry.memberCount === 'number' ? entry.memberCount : undefined,
+        isAdmin: entry.isAdmin === true,
       };
     })
     .filter((group): group is MyGroup => group !== null);
@@ -70,6 +73,9 @@ export function GroupCard({
             ? 'Family group'
             : `${group.memberCount} member${group.memberCount === 1 ? '' : 's'}`}
         </ThemedText>
+        {group.isAdmin ? (
+          <ThemedText style={styles.adminBadge}>Admin</ThemedText>
+        ) : null}
         <View style={styles.groupHint}>
           <MaterialIcons name="event" size={17} color="#52677A" />
           <ThemedText style={styles.groupHintText}>Plan moments together</ThemedText>
@@ -118,7 +124,7 @@ function ActionCard({
 }
 
 export default function MyGroupsScreen() {
-  const { groupId: activeGroupId, setActiveGroup, clearActiveGroup, refreshMembership } = useActiveGroupContext();
+  const { groupId: activeGroupId, clearActiveGroup, refreshMembership } = useActiveGroupContext();
   const [session, setSession] = useState<AppSession | null>(null);
   const [groups, setGroups] = useState<MyGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -181,13 +187,12 @@ export default function MyGroupsScreen() {
         }
       }
 
-      await setActiveGroup({ groupId: group.groupId, groupName: group.groupName, memberId, memberName });
       router.push({
-        pathname: '/(tabs)/(main)/family-home',
-        params: { groupId: group.groupId, groupName: group.groupName, memberId, memberName },
+        pathname: '/group/[groupId]',
+        params: { groupId: group.groupId, groupName: group.groupName, memberId },
       });
     },
-    [setActiveGroup]
+    []
   );
 
   const handleLogout = useCallback(async () => {
@@ -237,17 +242,14 @@ export default function MyGroupsScreen() {
         ) : groupsError ? (
           <ThemedText style={styles.errorText}>{groupsError}</ThemedText>
         ) : groups.length > 0 ? (
-          (() => {
-            const currentGroup = groups.find((group) => group.groupId === activeGroupId) ?? groups[0];
-            return (
+          groups.map((group) => (
               <GroupCard
-                key={currentGroup.groupId}
-                group={currentGroup}
-                isActive
-                onPress={() => void handleOpenGroup(currentGroup)}
+                key={group.groupId}
+                group={group}
+                isActive={group.groupId === activeGroupId}
+                onPress={() => void handleOpenGroup(group)}
               />
-            );
-          })()
+          ))
         ) : (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
@@ -324,6 +326,7 @@ const styles = StyleSheet.create({
   cardTrailing: { alignItems: 'center', gap: 4 },
   groupName: { color: '#102A3D', fontSize: 20 },
   groupMeta: { color: '#52677A', fontSize: 16 },
+  adminBadge: { alignSelf: 'flex-start', color: '#087D9F', backgroundColor: '#DDF5FA', borderRadius: 10, overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 2, fontSize: 12, fontWeight: '700' },
   groupHint: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 5 },
   groupHintText: { color: '#52677A', fontSize: 13 },
   emptyState: { alignItems: 'center', paddingTop: 28, paddingBottom: 22 },

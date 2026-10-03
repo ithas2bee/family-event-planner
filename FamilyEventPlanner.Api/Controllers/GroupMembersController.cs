@@ -138,12 +138,43 @@ namespace FamilyEventPlanner.Api.Controllers
             {
                 memberId = m.Id,
                 userId = m.UserId,
-                displayName = m.User?.DisplayName ?? "Unknown User"
+                displayName = m.User?.DisplayName ?? "Unknown User",
+                isAdmin = m.IsAdmin
             }).ToList();
 
             System.Diagnostics.Debug.WriteLine($"[GET MEMBERS] Returning {result.Count} members");
 
             return Ok(result);
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
+        [HttpPut("{groupId}/{memberId}/admin")]
+        public async Task<IActionResult> UpdateAdminRole(
+            Guid groupId,
+            Guid memberId,
+            [FromBody] UpdateGroupMemberAdminRequest request)
+        {
+            var callerId = GetAuthenticatedMemberId();
+            var caller = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == callerId && m.FamilyGroupId == groupId);
+            if (caller == null || !caller.IsAdmin)
+                return Forbid();
+
+            var target = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == groupId);
+            if (target == null)
+                return NotFound();
+
+            if (target.IsAdmin && !request.IsAdmin &&
+                !await _context.GroupMembers.AnyAsync(m =>
+                    m.FamilyGroupId == groupId && m.IsAdmin && m.Id != target.Id))
+            {
+                return BadRequest(new { message = "A group must have at least one admin." });
+            }
+
+            target.IsAdmin = request.IsAdmin;
+            await _context.SaveChangesAsync();
+            return Ok(new { memberId = target.Id, isAdmin = target.IsAdmin });
         }
 
         /// <summary>
@@ -167,6 +198,11 @@ namespace FamilyEventPlanner.Api.Controllers
                 displayName = member.User?.DisplayName,
                 groupId = member.FamilyGroupId
             });
+        }
+
+        private Guid GetAuthenticatedMemberId()
+        {
+            return Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId) ? memberId : Guid.Empty;
         }
     }
 }

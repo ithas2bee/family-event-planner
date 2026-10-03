@@ -2,8 +2,10 @@ using FamilyEventPlanner.Api.Controllers;
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
 using FamilyEventPlanner.Api.Models.Responses;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace FamilyEventPlanner.Api.Tests;
 
@@ -107,6 +109,117 @@ public class FamilyGroupsControllerTests
         Assert.Equal("Only Family", onlyGroup.groupName);
     }
 
+    [Fact]
+    public async Task GetGroupReturnsDetailsAndAdminStatusOnlyToMembers()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Group Admin");
+        var group = AddGroup(context, "Weekend Hikers");
+        var admin = Member(user, group);
+        admin.IsAdmin = true;
+        context.GroupMembers.Add(admin);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, admin.Id);
+
+        var result = await controller.GetGroup(group.Id);
+
+        var value = Assert.IsType<OkObjectResult>(result).Value!;
+        Assert.Equal(group.Id, value.GetType().GetProperty("groupId")!.GetValue(value));
+        Assert.Equal("Weekend Hikers", value.GetType().GetProperty("groupName")!.GetValue(value));
+        Assert.Equal(true, value.GetType().GetProperty("isAdmin")!.GetValue(value));
+        Assert.Null(value.GetType().GetProperty("inviteCode"));
+
+        SetMember(controller, Guid.NewGuid());
+        Assert.IsType<ForbidResult>(await controller.GetGroup(group.Id));
+    }
+
+    [Fact]
+    public async Task UpdateDescriptionIsAdminOnlyAndCannotChangeNameOrCommunityType()
+    {
+        await using var context = CreateContext();
+        var adminUser = AddUser(context, "Group Admin");
+        var memberUser = AddUser(context, "Group Member");
+        var group = AddGroup(context, "Weekend Hikers");
+        group.GroupType = "Sports & Fitness";
+        var admin = Member(adminUser, group);
+        admin.IsAdmin = true;
+        var member = Member(memberUser, group);
+        context.GroupMembers.AddRange(admin, member);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+
+        SetMember(controller, member.Id);
+        Assert.IsType<ForbidResult>(await controller.UpdateDescription(group.Id, new UpdateGroupDescriptionRequest
+        {
+            Description = "Not allowed"
+        }));
+
+        SetMember(controller, admin.Id);
+        Assert.IsType<OkObjectResult>(await controller.UpdateDescription(group.Id, new UpdateGroupDescriptionRequest
+        {
+            Description = "  Weekend trail walks  "
+        }));
+        Assert.Equal("Weekend trail walks", group.Description);
+        Assert.Equal("Weekend Hikers", group.Name);
+        Assert.Equal("Sports & Fitness", group.GroupType);
+    }
+
+    [Theory]
+    [InlineData("InviteOnlyNotSearchable", true, false)]
+    [InlineData("InviteOnlySearchable", true, true)]
+    [InlineData("CommunitySearchableRequestToJoin", false, true)]
+    public async Task AdminCanChangeGroupAccessAndSelectionPersists(
+        string accessMode,
+        bool isInviteOnly,
+        bool isSearchable)
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Group Admin");
+        var group = AddGroup(context, "Weekend Hikers");
+        var admin = Member(user, group);
+        admin.IsAdmin = true;
+        context.GroupMembers.Add(admin);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, admin.Id);
+
+        var result = await controller.UpdateAccess(group.Id, new UpdateGroupAccessRequest { AccessMode = accessMode });
+
+        Assert.IsType<OkObjectResult>(result);
+        await context.Entry(group).ReloadAsync();
+        Assert.Equal(isInviteOnly, group.IsInviteOnly);
+        Assert.Equal(isSearchable, group.IsSearchable);
+        Assert.Equal("Weekend Hikers", group.Name);
+    }
+
+    [Fact]
+    public async Task GroupAccessRejectsMembersAndUnsupportedConfigurations()
+    {
+        await using var context = CreateContext();
+        var adminUser = AddUser(context, "Group Admin");
+        var memberUser = AddUser(context, "Group Member");
+        var group = AddGroup(context, "Weekend Hikers");
+        var admin = Member(adminUser, group);
+        admin.IsAdmin = true;
+        var member = Member(memberUser, group);
+        context.GroupMembers.AddRange(admin, member);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+
+        SetMember(controller, member.Id);
+        Assert.IsType<ForbidResult>(await controller.UpdateAccess(group.Id, new UpdateGroupAccessRequest
+        {
+            AccessMode = "InviteOnlySearchable"
+        }));
+
+        SetMember(controller, admin.Id);
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateAccess(group.Id, new UpdateGroupAccessRequest
+        {
+            AccessMode = "CommunityNotSearchable"
+        }));
+    }
+
     private static AppDbContext CreateContext() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);
@@ -146,4 +259,18 @@ public class FamilyGroupsControllerTests
         FamilyGroup = group,
         JoinedAt = DateTime.UtcNow
     };
+
+    private static void SetMember(ControllerBase controller, Guid memberId)
+    {
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim("memberId", memberId.ToString())
+                }, "test"))
+            }
+        };
+    }
 }
