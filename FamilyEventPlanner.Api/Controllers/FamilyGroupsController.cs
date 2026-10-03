@@ -3,6 +3,7 @@ using FamilyEventPlanner.Api.Models;
 using FamilyEventPlanner.Api.Models.Responses;
 using FamilyEventPlanner.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace FamilyEventPlanner.Api.Controllers
 {
@@ -116,12 +117,54 @@ namespace FamilyEventPlanner.Api.Controllers
         }
 
         [HttpGet("{id}")]
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
         public async Task<IActionResult> GetGroup(Guid id)
         {
             var g = await _context.FamilyGroups.FindAsync(id);
             if (g == null)
                 return NotFound();
-            return Ok(g);
+
+            var memberId = GetAuthenticatedMemberId();
+            var member = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == id);
+            if (member == null)
+                return Forbid();
+
+            var memberCount = await _context.GroupMembers.CountAsync(m => m.FamilyGroupId == id);
+            return Ok(new
+            {
+                groupId = g.Id,
+                groupName = g.Name,
+                groupType = g.GroupType,
+                description = g.Description,
+                isInviteOnly = g.IsInviteOnly,
+                isSearchable = g.IsSearchable,
+                memberCount,
+                isAdmin = member.IsAdmin
+            });
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
+        [HttpPut("{id}/description")]
+        public async Task<IActionResult> UpdateDescription(Guid id, [FromBody] UpdateGroupDescriptionRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var member = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == GetAuthenticatedMemberId() && m.FamilyGroupId == id);
+            if (member == null)
+                return Forbid();
+            if (!member.IsAdmin)
+                return Forbid();
+
+            var group = await _context.FamilyGroups.FindAsync(id);
+            if (group == null)
+                return NotFound();
+
+            group.Description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+            await _context.SaveChangesAsync();
+            return Ok(new { description = group.Description });
         }
 
         // Note: Removed public GetGroups() endpoint.
@@ -131,6 +174,11 @@ namespace FamilyEventPlanner.Api.Controllers
         private string GenerateInviteCode()
         {
             return Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+        }
+
+        private Guid GetAuthenticatedMemberId()
+        {
+            return Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId) ? memberId : Guid.Empty;
         }
     }
 }

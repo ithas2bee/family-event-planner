@@ -72,8 +72,8 @@ export default function AllGroupsScreen() {
 
       await setActiveGroup({ groupId: group.groupId, groupName: group.groupName, memberId, memberName });
       router.push({
-        pathname: '/(tabs)/(main)/family-home',
-        params: { groupId: group.groupId, groupName: group.groupName, memberId, memberName },
+        pathname: '/group/[groupId]',
+        params: { groupId: group.groupId, groupName: group.groupName, memberId },
       });
     },
     [setActiveGroup]

@@ -65,6 +65,7 @@ function NavigationGate() {
       <Stack.Screen name="group-required" options={{ headerShown: false }} />
       <Stack.Screen name="my-groups" options={{ headerShown: false }} />
       <Stack.Screen name="all-groups" options={{ headerShown: false }} />
+      <Stack.Screen name="group/[groupId]" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
       <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
