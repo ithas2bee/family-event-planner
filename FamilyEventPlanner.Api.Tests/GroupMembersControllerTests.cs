@@ -5,34 +5,85 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace FamilyEventPlanner.Api.Tests;
 
 public class GroupMembersControllerTests
 {
     [Fact]
-    public async Task UpdateAdminRoleRejectsRegularMembers()
+    public async Task UpdateAdminRoleRejectsRegularMembersPromotingOrRevoking()
     {
         await using var context = CreateContext();
         var group = AddGroup(context);
         var caller = AddMember(context, group, isAdmin: false);
-        var target = AddMember(context, group, isAdmin: false);
+        var member = AddMember(context, group, isAdmin: false);
+        var admin = AddMember(context, group, isAdmin: true);
         await context.SaveChangesAsync();
         var controller = CreateController(context, caller.Id);
 
-        var result = await controller.UpdateAdminRole(group.Id, target.Id, new UpdateGroupMemberAdminRequest { IsAdmin = true });
+        var promote = await controller.UpdateAdminRole(
+            group.Id, member.Id, new UpdateGroupMemberAdminRequest { IsAdmin = true });
+        var revoke = await controller.UpdateAdminRole(
+            group.Id, admin.Id, new UpdateGroupMemberAdminRequest { IsAdmin = false });
 
-        Assert.IsType<ForbidResult>(result);
-        Assert.False(target.IsAdmin);
+        Assert.IsType<ForbidResult>(promote);
+        Assert.IsType<ForbidResult>(revoke);
+        Assert.False(member.IsAdmin);
+        Assert.True(admin.IsAdmin);
     }
 
     [Fact]
-    public async Task AdminCanPromoteMemberAndCannotRemoveLastAdmin()
+    public async Task GetMembersReturnsNamesAndRolesOnlyForRequestedGroup()
     {
         await using var context = CreateContext();
         var group = AddGroup(context);
+        var otherGroup = AddGroup(context);
+        var caller = AddMember(context, group, isAdmin: true);
+        var member = AddMember(context, group, isAdmin: false);
+        var otherGroupMember = AddMember(context, otherGroup, isAdmin: true);
+        await context.SaveChangesAsync();
+        var controller = CreateController(context, caller.Id);
+
+        var result = Assert.IsType<OkObjectResult>(await controller.GetMembers(group.Id));
+        using var members = JsonDocument.Parse(JsonSerializer.Serialize(result.Value));
+        var returnedMembers = members.RootElement.EnumerateArray()
+            .Select(entry => (
+                MemberId: entry.GetProperty("memberId").GetGuid(),
+                DisplayName: entry.GetProperty("displayName").GetString(),
+                IsAdmin: entry.GetProperty("isAdmin").GetBoolean()))
+            .ToList();
+
+        Assert.Equal(2, returnedMembers.Count);
+        Assert.Contains(returnedMembers, entry => entry.MemberId == caller.Id && entry.IsAdmin);
+        Assert.Contains(returnedMembers, entry => entry.MemberId == member.Id && !entry.IsAdmin);
+        Assert.All(returnedMembers, entry => Assert.Equal("Member", entry.DisplayName));
+        Assert.DoesNotContain(returnedMembers, entry => entry.MemberId == otherGroupMember.Id);
+    }
+
+    [Fact]
+    public async Task GetMembersRejectsCallerWhoBelongsToAnotherGroup()
+    {
+        await using var context = CreateContext();
+        var group = AddGroup(context);
+        var otherGroup = AddGroup(context);
+        var caller = AddMember(context, otherGroup, isAdmin: true);
+        await context.SaveChangesAsync();
+        var controller = CreateController(context, caller.Id);
+
+        Assert.IsType<ForbidResult>(await controller.GetMembers(group.Id));
+    }
+
+    [Fact]
+    public async Task AdminCanPromoteAndRevokeAdminsWithoutChangingAnotherGroupsRole()
+    {
+        await using var context = CreateContext();
+        var group = AddGroup(context);
+        var otherGroup = AddGroup(context);
         var admin = AddMember(context, group, isAdmin: true);
         var target = AddMember(context, group, isAdmin: false);
+        var otherAdmin = AddMember(context, group, isAdmin: true);
+        var otherGroupMember = AddMember(context, otherGroup, isAdmin: false);
         await context.SaveChangesAsync();
         var controller = CreateController(context, admin.Id);
 
@@ -44,10 +95,23 @@ public class GroupMembersControllerTests
             await controller.UpdateAdminRole(group.Id, target.Id, new UpdateGroupMemberAdminRequest { IsAdmin = false }));
         Assert.False(target.IsAdmin);
 
+        Assert.IsType<OkObjectResult>(
+            await controller.UpdateAdminRole(group.Id, otherAdmin.Id, new UpdateGroupMemberAdminRequest { IsAdmin = false }));
+        Assert.False(otherAdmin.IsAdmin);
+
         Assert.IsType<BadRequestObjectResult>(
             await controller.UpdateAdminRole(group.Id, admin.Id, new UpdateGroupMemberAdminRequest { IsAdmin = false }));
         Assert.True(admin.IsAdmin);
+
+        Assert.IsType<NotFoundResult>(
+            await controller.UpdateAdminRole(group.Id, otherGroupMember.Id, new UpdateGroupMemberAdminRequest { IsAdmin = true }));
+        Assert.False(otherGroupMember.IsAdmin);
+
+        context.ChangeTracker.Clear();
+        Assert.True(await context.GroupMembers.AnyAsync(member => member.Id == target.Id && !member.IsAdmin));
+        Assert.True(await context.GroupMembers.AnyAsync(member => member.Id == otherAdmin.Id && !member.IsAdmin));
         Assert.True(await context.GroupMembers.AnyAsync(member => member.Id == admin.Id && member.IsAdmin));
+        Assert.True(await context.GroupMembers.AnyAsync(member => member.Id == otherGroupMember.Id && !member.IsAdmin));
     }
 
     private static AppDbContext CreateContext() => new(new DbContextOptionsBuilder<AppDbContext>()
