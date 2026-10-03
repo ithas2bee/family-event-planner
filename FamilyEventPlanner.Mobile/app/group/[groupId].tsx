@@ -5,7 +5,6 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { API_BASE_URL } from '@/config/api';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getGroupMembers, getGroupMemberByUser, type GroupMember } from '@/services/groupMemberService';
 import {
@@ -18,17 +17,11 @@ import {
 } from '@/services/groupDetailsService';
 import { loadSession } from '@/services/sessionService';
 
-type AvailableGroup = {
-  groupId: string;
-  groupName: string;
-  memberId: string;
-  isAdmin: boolean;
-};
-
 export default function GroupDetailsScreen() {
   const params = useLocalSearchParams<{ groupId: string; memberId?: string }>();
   const {
     groupId: contextGroupId,
+    groupName: contextGroupName,
     memberId: contextMemberId,
     setActiveGroup,
   } = useActiveGroupContext();
@@ -40,10 +33,8 @@ export default function GroupDetailsScreen() {
   const [accessModeDraft, setAccessModeDraft] = useState<GroupAccessMode>('InviteOnlyNotSearchable');
   const [editingDescription, setEditingDescription] = useState(false);
   const [switchGroupOpen, setSwitchGroupOpen] = useState(false);
-  const [availableGroups, setAvailableGroups] = useState<AvailableGroup[]>([]);
-  const [loadingGroups, setLoadingGroups] = useState(false);
   const [switchGroupError, setSwitchGroupError] = useState<string | null>(null);
-  const [switchingGroupId, setSwitchingGroupId] = useState('');
+  const [switchingGroup, setSwitchingGroup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,58 +77,14 @@ export default function GroupDetailsScreen() {
     void loadDetails();
   }, [loadDetails]);
 
-  async function toggleGroupList() {
-    if (switchGroupOpen) {
-      setSwitchGroupOpen(false);
-      return;
-    }
-    setSwitchGroupOpen(true);
-    setLoadingGroups(true);
+  function toggleGroupSwitch() {
+    setSwitchGroupOpen((open) => !open);
     setSwitchGroupError(null);
-    try {
-      const session = await loadSession();
-      if (!session?.userId) {
-        router.replace('/auth');
-        return;
-      }
-      const response = await fetch(`${API_BASE_URL}/api/familygroups/my/${session.userId}`, {
-        headers: { Accept: 'application/json' },
-      });
-      if (!response.ok) throw new Error(`Failed to load your groups (error ${response.status}).`);
-      const raw = (await response.json()) as unknown;
-      const groups = Array.isArray(raw)
-        ? raw.flatMap((item): AvailableGroup[] => {
-            if (!item || typeof item !== 'object') return [];
-            const entry = item as {
-              groupId?: string;
-              familyGroupId?: string;
-              id?: string;
-              groupName?: string;
-              name?: string;
-              memberId?: string;
-              isAdmin?: boolean;
-            };
-            const availableGroupId = String(entry.groupId ?? entry.familyGroupId ?? entry.id ?? '').trim();
-            if (!availableGroupId) return [];
-            return [{
-              groupId: availableGroupId,
-              groupName: String(entry.groupName ?? entry.name ?? '').trim() || 'Unnamed Group',
-              memberId: String(entry.memberId ?? ''),
-              isAdmin: entry.isAdmin === true,
-            }];
-          })
-        : [];
-      setAvailableGroups(groups);
-    } catch (loadError) {
-      setSwitchGroupError(loadError instanceof Error ? loadError.message : 'Could not load your groups.');
-    } finally {
-      setLoadingGroups(false);
-    }
   }
 
-  async function switchGroup(group: AvailableGroup) {
-    if (group.groupId === groupId) return;
-    setSwitchingGroupId(group.groupId);
+  async function confirmGroupSwitch() {
+    if (!details || !currentMemberId || contextGroupId === groupId) return;
+    setSwitchingGroup(true);
     setSwitchGroupError(null);
     try {
       const session = await loadSession();
@@ -145,24 +92,17 @@ export default function GroupDetailsScreen() {
         router.replace('/auth');
         return;
       }
-      const memberId = group.memberId ||
-        (await getGroupMemberByUser(group.groupId, session.userId)).memberId ||
-        '';
-      if (!memberId) throw new Error('Could not resolve your membership in this group.');
       await setActiveGroup({
-        groupId: group.groupId,
-        groupName: group.groupName,
-        memberId,
+        groupId,
+        groupName: details.groupName,
+        memberId: currentMemberId,
         memberName: session.displayName,
       });
-      router.replace({
-        pathname: '/group/[groupId]',
-        params: { groupId: group.groupId, memberId },
-      });
+      setSwitchGroupOpen(false);
     } catch (switchError) {
-      setSwitchGroupError(switchError instanceof Error ? switchError.message : 'Could not open this group.');
+      setSwitchGroupError(switchError instanceof Error ? switchError.message : 'Could not switch to this group.');
     } finally {
-      setSwitchingGroupId('');
+      setSwitchingGroup(false);
     }
   }
 
@@ -244,52 +184,53 @@ export default function GroupDetailsScreen() {
             <View style={styles.card}>
               <View style={styles.switchHeader}>
                 <View style={styles.switchCopy}>
-                  <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Your Groups</ThemedText>
-                  <ThemedText style={styles.accessText}>Switch to another group you belong to.</ThemedText>
+                  <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                    {contextGroupId === groupId ? 'Active group' : 'Switch active group'}
+                  </ThemedText>
+                  <ThemedText style={styles.accessText}>
+                    {contextGroupId === groupId
+                      ? details.groupName
+                      : `Currently active: ${contextGroupName || 'your current group'}`}
+                  </ThemedText>
                 </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={switchGroupOpen ? 'Hide groups' : 'Switch Group'}
-                  accessibilityState={{ expanded: switchGroupOpen }}
-                  onPress={() => void toggleGroupList()}
-                  style={styles.secondaryButton}
-                >
-                  <ThemedText style={styles.secondaryButtonText}>{switchGroupOpen ? 'Close' : 'Switch Group'}</ThemedText>
-                </Pressable>
+                {contextGroupId !== groupId ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={switchGroupOpen ? 'Cancel group switch' : 'Switch Group'}
+                    accessibilityState={{ expanded: switchGroupOpen }}
+                    onPress={toggleGroupSwitch}
+                    style={styles.secondaryButton}
+                  >
+                    <ThemedText style={styles.secondaryButtonText}>{switchGroupOpen ? 'Cancel' : 'Switch Group'}</ThemedText>
+                  </Pressable>
+                ) : (
+                  <MaterialIcons name="check-circle" size={24} color="#0A9B67" />
+                )}
               </View>
-              {switchGroupOpen ? (
+              {switchGroupOpen && contextGroupId !== groupId ? (
                 <View style={styles.switchGroupList}>
-                  {loadingGroups ? <ThemedText style={styles.feedback}>Loading your groups...</ThemedText> : null}
+                  <View style={styles.transitionGroup}>
+                    <ThemedText style={styles.label}>Current Active Group</ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.value}>
+                      {contextGroupName || 'Your current group'}
+                    </ThemedText>
+                  </View>
+                  <MaterialIcons name="arrow-downward" size={24} color="#087D9F" style={styles.transitionArrow} />
+                  <View style={[styles.transitionGroup, styles.destinationGroup]}>
+                    <ThemedText style={styles.label}>Switching to</ThemedText>
+                    <ThemedText type="defaultSemiBold" style={styles.value}>{details.groupName}</ThemedText>
+                  </View>
                   {switchGroupError ? <ThemedText accessibilityRole="alert" style={styles.error}>{switchGroupError}</ThemedText> : null}
-                  {!loadingGroups && !switchGroupError && availableGroups.map((group) => {
-                    const isCurrent = group.groupId === groupId;
-                    return (
-                      <Pressable
-                        key={group.groupId}
-                        accessibilityRole="button"
-                        accessibilityLabel={isCurrent ? `${group.groupName}, current group` : `Switch to ${group.groupName}`}
-                        accessibilityState={{ selected: isCurrent, disabled: isCurrent || switchingGroupId.length > 0 }}
-                        disabled={isCurrent || switchingGroupId.length > 0}
-                        onPress={() => void switchGroup(group)}
-                        style={[styles.switchGroupItem, isCurrent && styles.currentGroupItem]}
-                      >
-                        <View style={styles.switchGroupCopy}>
-                          <ThemedText type="defaultSemiBold" style={styles.value}>{group.groupName}</ThemedText>
-                          <ThemedText style={styles.memberRole}>{isCurrent ? 'Current group' : group.isAdmin ? 'Admin' : 'Member'}</ThemedText>
-                        </View>
-                        {isCurrent ? (
-                          <MaterialIcons name="check-circle" size={23} color="#0A9B67" />
-                        ) : switchingGroupId === group.groupId ? (
-                          <ThemedText style={styles.memberRole}>Opening...</ThemedText>
-                        ) : (
-                          <MaterialIcons name="chevron-right" size={25} color="#7185A0" />
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                  {!loadingGroups && !switchGroupError && availableGroups.length === 0 ? (
-                    <ThemedText style={styles.feedback}>No other groups are available.</ThemedText>
-                  ) : null}
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={switchingGroup}
+                    onPress={() => void confirmGroupSwitch()}
+                    style={[styles.primaryButton, switchingGroup && styles.disabledButton]}
+                  >
+                    <ThemedText style={styles.primaryButtonText}>
+                      {switchingGroup ? 'Switching...' : `Confirm Switch to ${details.groupName}`}
+                    </ThemedText>
+                  </Pressable>
                 </View>
               ) : null}
             </View>
@@ -471,10 +412,10 @@ const styles = StyleSheet.create({
   accessTitle: { color: '#102A3D', fontSize: 16, fontWeight: '700', marginTop: 2 },
   switchHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   switchCopy: { flex: 1, gap: 4 },
-  switchGroupList: { gap: 8 },
-  switchGroupItem: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#D9E4EC', borderRadius: 13, padding: 12 },
-  currentGroupItem: { borderColor: '#91D8C3', backgroundColor: '#F0FAF6' },
-  switchGroupCopy: { flex: 1, gap: 3 },
+  switchGroupList: { gap: 10 },
+  transitionGroup: { borderWidth: 1, borderColor: '#D9E4EC', borderRadius: 13, padding: 13, gap: 4 },
+  destinationGroup: { borderColor: '#91D8C3', backgroundColor: '#F0FAF6' },
+  transitionArrow: { alignSelf: 'center' },
   accessOption: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: '#D9E4EC', borderRadius: 13, padding: 12 },
   accessOptionSelected: { borderColor: '#087D9F', backgroundColor: '#F0FAFC' },
   accessOptionCopy: { flex: 1, gap: 4 },

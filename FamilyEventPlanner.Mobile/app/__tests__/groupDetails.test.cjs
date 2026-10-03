@@ -27,18 +27,17 @@ test('My Groups lists each group and opens its direct details route', () => {
   assert.doesNotMatch(allGroupsOpenHandler, /setActiveGroup/);
 });
 
-test('Group Management allows direct switching and identifies the current group', () => {
-  assert.match(detailsSource, /accessibilityLabel=\{switchGroupOpen \? 'Hide groups' : 'Switch Group'\}/);
-  assert.match(detailsSource, /familygroups\/my\/\$\{session\.userId\}/);
-  assert.match(detailsSource, /Current group/);
-  assert.match(detailsSource, /group\.groupId === groupId/);
-  assert.match(detailsSource, /router\.replace\(\{[\s\S]*pathname: '\/group\/\[groupId\]'/);
-  assert.match(detailsSource, /groupName: group\.groupName/);
-  assert.match(detailsSource, /memberId,[\s\S]*?\}\);\s*router\.replace/);
+test('Group Management confirms a focused active-to-viewed group transition', () => {
+  assert.match(detailsSource, /accessibilityLabel=\{switchGroupOpen \? 'Cancel group switch' : 'Switch Group'\}/);
+  assert.match(detailsSource, /Current Active Group/);
+  assert.match(detailsSource, /Switching to/);
+  assert.match(detailsSource, /Confirm Switch to \$\{details\.groupName\}/);
+  assert.doesNotMatch(detailsSource, /familygroups\/my\/\$\{session\.userId\}/);
   const detailsLoader = detailsSource.match(/const loadDetails = useCallback\([\s\S]*?\n  \}, \[[^\]]*\]\);/)?.[0] ?? '';
   assert.doesNotMatch(detailsLoader, /setActiveGroup/);
-  const switchHandler = detailsSource.match(/async function switchGroup\([\s\S]*?\n  \}/)?.[0] ?? '';
+  const switchHandler = detailsSource.match(/async function confirmGroupSwitch\([\s\S]*?\n  \}/)?.[0] ?? '';
   assert.match(switchHandler, /setActiveGroup/);
+  assert.match(switchHandler, /setSwitchGroupOpen\(false\)/);
 });
 
 test('Group details show immutable group identity and gate management controls to admins', () => {
