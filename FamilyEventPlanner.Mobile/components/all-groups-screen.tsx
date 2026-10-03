@@ -13,7 +13,7 @@ import { getGroupMemberByUser } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
 
 export default function AllGroupsScreen() {
-  const { groupId: activeGroupId, setActiveGroup } = useActiveGroupContext();
+  const { groupId: activeGroupId } = useActiveGroupContext();
   const [groups, setGroups] = useState<MyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,13 +70,12 @@ export default function AllGroupsScreen() {
         // The destination can resolve the member if this lookup is unavailable.
       }
 
-      await setActiveGroup({ groupId: group.groupId, groupName: group.groupName, memberId, memberName });
       router.push({
         pathname: '/group/[groupId]',
         params: { groupId: group.groupId, groupName: group.groupName, memberId },
       });
     },
-    [setActiveGroup]
+    []
   );
 
   return (

@@ -29,7 +29,6 @@ export default function GroupDetailsScreen() {
   const params = useLocalSearchParams<{ groupId: string; memberId?: string }>();
   const {
     groupId: contextGroupId,
-    groupName: contextGroupName,
     memberId: contextMemberId,
     setActiveGroup,
   } = useActiveGroupContext();
@@ -76,24 +75,12 @@ export default function GroupDetailsScreen() {
       setCurrentMemberId(memberId);
       setDescriptionDraft(group.description ?? '');
       setAccessModeDraft(group.accessMode);
-      if (
-        contextGroupId !== groupId ||
-        contextGroupName !== group.groupName ||
-        contextMemberId !== memberId
-      ) {
-        await setActiveGroup({
-          groupId,
-          groupName: group.groupName,
-          memberId,
-          memberName: session.displayName,
-        });
-      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Could not load this group.');
     } finally {
       setLoading(false);
     }
-  }, [contextGroupId, contextGroupName, contextMemberId, groupId, params.memberId, setActiveGroup]);
+  }, [contextGroupId, contextMemberId, groupId, params.memberId]);
 
   useEffect(() => {
     void loadDetails();

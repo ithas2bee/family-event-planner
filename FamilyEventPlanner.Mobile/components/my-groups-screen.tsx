@@ -124,7 +124,7 @@ function ActionCard({
 }
 
 export default function MyGroupsScreen() {
-  const { groupId: activeGroupId, setActiveGroup, clearActiveGroup, refreshMembership } = useActiveGroupContext();
+  const { groupId: activeGroupId, clearActiveGroup, refreshMembership } = useActiveGroupContext();
   const [session, setSession] = useState<AppSession | null>(null);
   const [groups, setGroups] = useState<MyGroup[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(true);
@@ -187,13 +187,12 @@ export default function MyGroupsScreen() {
         }
       }
 
-      await setActiveGroup({ groupId: group.groupId, groupName: group.groupName, memberId, memberName });
       router.push({
         pathname: '/group/[groupId]',
         params: { groupId: group.groupId, groupName: group.groupName, memberId },
       });
     },
-    [setActiveGroup]
+    []
   );
 
   const handleLogout = useCallback(async () => {

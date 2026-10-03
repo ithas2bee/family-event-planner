@@ -5,6 +5,7 @@ const test = require('node:test');
 
 const mobileRoot = process.cwd();
 const myGroupsSource = fs.readFileSync(path.join(mobileRoot, 'components/my-groups-screen.tsx'), 'utf8');
+const allGroupsSource = fs.readFileSync(path.join(mobileRoot, 'components/all-groups-screen.tsx'), 'utf8');
 const detailsSource = fs.readFileSync(path.join(mobileRoot, 'app/group/[groupId].tsx'), 'utf8');
 const detailsService = fs.readFileSync(path.join(mobileRoot, 'services/groupDetailsService.ts'), 'utf8');
 const groupController = fs.readFileSync(
@@ -20,6 +21,10 @@ test('My Groups lists each group and opens its direct details route', () => {
   assert.match(myGroupsSource, /groups\.map\(\(group\)/);
   assert.match(myGroupsSource, /pathname: '\/group\/\[groupId\]'/);
   assert.match(myGroupsSource, /isAdmin: entry\.isAdmin === true/);
+  const openGroupHandler = myGroupsSource.match(/const handleOpenGroup = useCallback\([\s\S]*?\n  \);/)?.[0] ?? '';
+  assert.doesNotMatch(openGroupHandler, /setActiveGroup/);
+  const allGroupsOpenHandler = allGroupsSource.match(/const openGroup = useCallback\([\s\S]*?\n  \);/)?.[0] ?? '';
+  assert.doesNotMatch(allGroupsOpenHandler, /setActiveGroup/);
 });
 
 test('Group Management allows direct switching and identifies the current group', () => {
@@ -30,6 +35,10 @@ test('Group Management allows direct switching and identifies the current group'
   assert.match(detailsSource, /router\.replace\(\{[\s\S]*pathname: '\/group\/\[groupId\]'/);
   assert.match(detailsSource, /groupName: group\.groupName/);
   assert.match(detailsSource, /memberId,[\s\S]*?\}\);\s*router\.replace/);
+  const detailsLoader = detailsSource.match(/const loadDetails = useCallback\([\s\S]*?\n  \}, \[[^\]]*\]\);/)?.[0] ?? '';
+  assert.doesNotMatch(detailsLoader, /setActiveGroup/);
+  const switchHandler = detailsSource.match(/async function switchGroup\([\s\S]*?\n  \}/)?.[0] ?? '';
+  assert.match(switchHandler, /setActiveGroup/);
 });
 
 test('Group details show immutable group identity and gate management controls to admins', () => {
