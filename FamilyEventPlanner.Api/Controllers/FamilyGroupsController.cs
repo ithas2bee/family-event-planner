@@ -135,7 +135,7 @@ namespace FamilyEventPlanner.Api.Controllers
 
             var searchTerm = query?.Trim();
             if (string.IsNullOrEmpty(searchTerm))
-                return Ok(Array.Empty<GroupSearchResponse>());
+                return Ok(new List<GroupSearchResponse>());
 
             var normalizedSearchTerm = searchTerm.ToLowerInvariant();
             var groupsQuery = _context.FamilyGroups

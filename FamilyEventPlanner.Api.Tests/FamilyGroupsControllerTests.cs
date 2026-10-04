@@ -188,7 +188,7 @@ public class FamilyGroupsControllerTests
 
         var result = await controller.SearchGroups(query);
 
-        var groups = Assert.IsType<GroupSearchResponse[]>(Assert.IsType<OkObjectResult>(result).Value);
+        var groups = Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.Empty(groups);
     }
 
