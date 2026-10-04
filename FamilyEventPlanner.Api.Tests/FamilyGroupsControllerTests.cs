@@ -145,7 +145,7 @@ public class FamilyGroupsControllerTests
     }
 
     [Fact]
-    public async Task SearchGroupsIdentifiesInviteOnlyAndCommunityAccessAndReturnsAllForEmptyQuery()
+    public async Task SearchGroupsIdentifiesInviteOnlyAndCommunityAccess()
     {
         await using var context = CreateContext();
         var user = AddUser(context, "Search User");
@@ -158,7 +158,7 @@ public class FamilyGroupsControllerTests
         var controller = new FamilyGroupsController(context);
         SetUser(controller, user.Id);
 
-        var result = await controller.SearchGroups("  ");
+        var result = await controller.SearchGroups("a");
 
         var groups = Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.Equal(2, groups.Count);
@@ -170,6 +170,26 @@ public class FamilyGroupsControllerTests
             group.groupName == "Garage Crew" &&
             group.accessMode == "CommunitySearchableRequestToJoin" &&
             !group.isInviteOnly);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task SearchGroupsReturnsNoResultsForEmptyOrWhitespaceQuery(string? query)
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Search User");
+        var searchableGroup = AddGroup(context, "Searchable Group");
+        searchableGroup.IsSearchable = true;
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetUser(controller, user.Id);
+
+        var result = await controller.SearchGroups(query);
+
+        var groups = Assert.IsType<GroupSearchResponse[]>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Empty(groups);
     }
 
     [Fact]

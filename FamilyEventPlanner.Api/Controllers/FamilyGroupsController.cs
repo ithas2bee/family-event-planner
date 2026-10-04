@@ -133,16 +133,15 @@ namespace FamilyEventPlanner.Api.Controllers
             if (userId == null)
                 return Unauthorized();
 
+            var searchTerm = query?.Trim();
+            if (string.IsNullOrEmpty(searchTerm))
+                return Ok(Array.Empty<GroupSearchResponse>());
+
+            var normalizedSearchTerm = searchTerm.ToLowerInvariant();
             var groupsQuery = _context.FamilyGroups
                 .Where(g => g.IsSearchable &&
-                    !_context.GroupMembers.Any(m => m.FamilyGroupId == g.Id && m.UserId == userId.Value));
-
-            var searchTerm = query?.Trim();
-            if (!string.IsNullOrEmpty(searchTerm))
-            {
-                var normalizedSearchTerm = searchTerm.ToLowerInvariant();
-                groupsQuery = groupsQuery.Where(g => g.Name.ToLower().Contains(normalizedSearchTerm));
-            }
+                    !_context.GroupMembers.Any(m => m.FamilyGroupId == g.Id && m.UserId == userId.Value) &&
+                    g.Name.ToLower().Contains(normalizedSearchTerm));
 
             var groups = await groupsQuery
                 .OrderBy(g => g.Name)

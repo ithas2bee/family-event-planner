@@ -14,7 +14,10 @@ test('Join a Group searches names and presents public access information', () =>
   assert.match(screenSource, /Invite Only • Invitation Required/);
   assert.match(screenSource, /Community • Request to Join/);
   assert.match(screenSource, /No groups found/);
+  assert.match(screenSource, /Search for a group/);
+  assert.match(screenSource, /Enter a group name above to find searchable groups/);
   assert.match(screenSource, /Searching groups/);
+  assert.doesNotMatch(screenSource, /void runSearch\('', existing\)/);
 });
 
 test('Selecting a result only reveals its public information without joining or switching groups', () => {

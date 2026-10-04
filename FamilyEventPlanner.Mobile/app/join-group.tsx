@@ -57,7 +57,6 @@ export default function JoinGroupScreen() {
         return;
       }
       setSession(existing);
-      void runSearch('', existing);
     }
 
     restoreSession();
@@ -160,11 +159,15 @@ export default function JoinGroupScreen() {
         </View>
       ) : null}
 
-      {!searchLoading && !searchError && hasSearched && groups.length === 0 ? (
+      {!searchLoading && !searchError && groups.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={30} color="#5B7FEA" />
-          <Text style={styles.emptyTitle}>No groups found</Text>
-          <Text style={styles.emptyCopy}>Try another group name or check your spelling.</Text>
+          <Text style={styles.emptyTitle}>{hasSearched ? 'No groups found' : 'Search for a group'}</Text>
+          <Text style={styles.emptyCopy}>
+            {hasSearched
+              ? 'Try another group name or check your spelling.'
+              : 'Enter a group name above to find searchable groups.'}
+          </Text>
         </View>
       ) : null}
 
