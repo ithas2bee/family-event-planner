@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
+import { InviteCommunityMembersModal } from '@/components/invite-community-members-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
@@ -129,13 +129,13 @@ export default function MembersScreen() {
             <MaterialIcons name="arrow-back-ios" size={24} color="#405675" />
           </Pressable>
           <View style={styles.heading}>
-            <ThemedText type="title" style={styles.title}>Family Members</ThemedText>
+            <ThemedText type="title" style={styles.title}>Community Members</ThemedText>
             <ThemedText style={styles.subtitle}>
-              The people who make our family special 💙
+              The people who make our community special 💙
             </ThemedText>
           </View>
           <Pressable
-            accessibilityLabel="Invite family members"
+            accessibilityLabel="Invite community members"
             accessibilityRole="button"
             onPress={() => setInviteVisible(true)}
             style={styles.inviteButton}
@@ -194,7 +194,7 @@ export default function MembersScreen() {
                   Stronger Together
                 </ThemedText>
                 <ThemedText style={styles.strongerText}>
-                  Family is better with everyone here.{'\n'}Invite more family members to join!
+                  Communities are better with everyone here.{'\n'}Invite more community members to join!
                 </ThemedText>
               </View>
             </View>
@@ -202,7 +202,7 @@ export default function MembersScreen() {
         )}
       </ScrollView>
 
-      <InviteFamilyMembersModal
+      <InviteCommunityMembersModal
         visible={inviteVisible}
         inviteCode={inviteCode}
         onClose={() => setInviteVisible(false)}

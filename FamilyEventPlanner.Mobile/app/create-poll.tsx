@@ -122,7 +122,7 @@ export default function CreatePollScreen() {
           <View style={styles.hero}>
             <View style={styles.heroCopy}>
               <ThemedText style={styles.title}>Create a Poll</ThemedText>
-              <ThemedText style={styles.subtitle}>Get quick opinions from your family.</ThemedText>
+              <ThemedText style={styles.subtitle}>Get quick opinions from your community.</ThemedText>
             </View>
             <View style={styles.heroIcon} accessible accessibilityLabel="Poll">
               <MaterialIcons name="insert-chart" size={42} color="#6955E8" />
@@ -220,15 +220,15 @@ export default function CreatePollScreen() {
               style={styles.settingRow}
               onPress={() => setNotifyFamily((current) => !current)}
               accessibilityRole="switch"
-              accessibilityLabel="Notify Family"
+              accessibilityLabel="Notify Community"
               accessibilityState={{ checked: notifyFamily }}
             >
               <View style={[styles.settingIcon, styles.notifyIcon]}>
                 <MaterialIcons name="groups" size={25} color="#16834F" />
               </View>
               <View style={styles.settingCopy}>
-                <ThemedText style={styles.settingLabel}>Notify Family</ThemedText>
-                <ThemedText style={styles.settingHint}>Let family members know about this poll.</ThemedText>
+                <ThemedText style={styles.settingLabel}>Notify Community</ThemedText>
+                <ThemedText style={styles.settingHint}>Let community members know about this poll.</ThemedText>
               </View>
               <View style={[styles.toggle, !notifyFamily && styles.toggleOff]}>
                 <View style={[styles.toggleKnob, !notifyFamily && styles.toggleKnobOff]} />

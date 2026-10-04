@@ -129,12 +129,12 @@ export default function EventDetailsScreen() {
   const isCreator = Boolean(event?.createdByMemberId && currentMemberId && event.createdByMemberId === currentMemberId);
   const eventImagePresetSource = event ? getEventImagePresetSource(event.eventImagePresetKey) : undefined;
   const memberNames = new Map(
-    groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Family member']),
+    groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Member']),
   );
   const attendees = attendance
     .map((item) => ({
       ...item,
-      name: memberNames.get(item.memberId) || 'Family member',
+      name: memberNames.get(item.memberId) || 'Member',
       response: item.rsvp === 1 ? 'Going' : item.rsvp === 3 ? 'Maybe' : "Can't Go",
     }));
   const maybeCount = attendance.filter((item) => item.rsvp === 3).length;
@@ -299,7 +299,7 @@ export default function EventDetailsScreen() {
           ) : (
             <>
               {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
-              <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
+              <ThemedText style={styles.heroLabel}>COMMUNITY EVENT</ThemedText>
             </>
           )}
         </View>
@@ -441,7 +441,7 @@ export default function EventDetailsScreen() {
               <View style={styles.additionalDetailsHeading}>
                 <ThemedText type="title" style={styles.additionalDetailsTitle}>Additional Details</ThemedText>
                 <ThemedText style={styles.additionalDetailsDescription}>
-                  Extra details to help your family know what to expect.
+                  Extra details to help your community know what to expect.
                 </ThemedText>
               </View>
               {isCreator ? (
@@ -500,14 +500,14 @@ export default function EventDetailsScreen() {
                 </View>
                 <View>
                   <ThemedText style={styles.editSectionTitle}>Event Details</ThemedText>
-                  <ThemedText style={styles.editSectionHint}>Tell your family about this event</ThemedText>
+                  <ThemedText style={styles.editSectionHint}>Tell your community about this event</ThemedText>
                 </View>
               </View>
             <FormInput
               label="Event Title"
               value={event.title}
               onChangeText={(text) => setEvent({ ...event, title: text })}
-              placeholder="Family Game Night"
+              placeholder="Community Game Night"
               autoCapitalize="words"
               maxLength={60}
               style={styles.lightInput}
@@ -577,7 +577,7 @@ export default function EventDetailsScreen() {
                 </View>
                 <View style={styles.assignmentHeaderCopy}>
                   <ThemedText style={styles.editSectionTitle}>Assignments</ThemedText>
-                  <ThemedText style={styles.editSectionHint}>Assign tasks to family members</ThemedText>
+                  <ThemedText style={styles.editSectionHint}>Assign tasks to community members</ThemedText>
                 </View>
                 <View style={styles.assignmentCount}>
                   <ThemedText style={styles.assignmentCountText}>{event.assignments?.length ?? 0}</ThemedText>
@@ -595,7 +595,7 @@ export default function EventDetailsScreen() {
                     <View key={idx} style={styles.assignmentEditCard}>
                       <View style={styles.assignmentCardHeader}>
                         <View style={styles.assignmentAvatar}>
-                          <ThemedText style={styles.assignmentAvatarText}>{getInitials(assignment.memberName || 'Family member')}</ThemedText>
+                          <ThemedText style={styles.assignmentAvatarText}>{getInitials(assignment.memberName || 'Member')}</ThemedText>
                         </View>
                         <ThemedText style={styles.assignmentNumber}>Assignment {idx + 1}</ThemedText>
                         <Pressable
@@ -612,7 +612,7 @@ export default function EventDetailsScreen() {
                         </Pressable>
                       </View>
                       <FormInput
-                        label="Family member"
+                        label="Community member"
                         value={assignment.memberName}
                         onFocus={() => setActiveAssignmentIndex(idx)}
                         onChangeText={text => {
@@ -621,7 +621,7 @@ export default function EventDetailsScreen() {
                           setEvent({ ...event, assignments: updated });
                           setActiveAssignmentIndex(idx);
                         }}
-                        placeholder="Select a family member"
+                        placeholder="Select a community member"
                         style={styles.lightInput}
                         maxLength={32}
                       />

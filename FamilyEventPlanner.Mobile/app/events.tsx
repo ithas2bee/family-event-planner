@@ -254,7 +254,7 @@ export default function EventsScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.heading}>
-            <ThemedText type="title" style={styles.title}>Family Events</ThemedText>
+            <ThemedText type="title" style={styles.title}>Community Events</ThemedText>
             <ThemedText style={styles.subtitle}>Make time for what matters 📅</ThemedText>
           </View>
           <Pressable

@@ -82,7 +82,7 @@ async function getEventHeaders(): Promise<Record<string, string>> {
 
 function resolveErrorMessage(status: number, serverMessage: string): string {
   if (status === 404) {
-    return 'Family group not found.';
+    return 'Community not found.';
   }
 
   if (status >= 500) {

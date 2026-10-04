@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config/api';
+import { COMMUNITY_LABEL, COMMUNITIES_LABEL } from '@/constants/communityTerminology';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getGroupMemberByUser } from '@/services/groupMemberService';
 import { clearSession, loadSession, type AppSession } from '@/services/sessionService';
@@ -70,7 +71,7 @@ export function GroupCard({
         </ThemedText>
         <ThemedText style={styles.groupMeta}>
           {group.memberCount === undefined
-            ? 'Family group'
+            ? COMMUNITY_LABEL
             : `${group.memberCount} member${group.memberCount === 1 ? '' : 's'}`}
         </ThemedText>
         {group.isAdmin ? (
@@ -183,7 +184,7 @@ export default function MyGroupsScreen() {
           memberId = String(member.memberId ?? '');
           memberName = String(member.displayName ?? currentSession.displayName ?? '');
         } catch {
-          // The family home can resolve the member if this lookup is unavailable.
+          // The home screen can resolve the member if this lookup is unavailable.
         }
       }
 
@@ -214,16 +215,16 @@ export default function MyGroupsScreen() {
         </View>
 
         <ThemedText type="title" style={styles.title}>
-          My Groups
+          My {COMMUNITIES_LABEL}
         </ThemedText>
         <ThemedText style={styles.welcome}>
           Welcome, {session?.displayName || 'friend'} 👋
         </ThemedText>
-        <ThemedText style={styles.subtitle}>Family moments are better together.</ThemedText>
+        <ThemedText style={styles.subtitle}>Community moments are better together.</ThemedText>
 
         <View style={styles.sectionHeader}>
           <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-            Your Groups
+            Your {COMMUNITIES_LABEL}
           </ThemedText>
           {groups.length > 0 ? (
             <Pressable
@@ -276,13 +277,13 @@ export default function MyGroupsScreen() {
           <ActionCard
             icon="add"
             title="Create a Group"
-            description="Start a new group for your family or friends."
+            description="Start a community for friends, coworkers, neighbors, or any group you belong to."
             color="#EAF5FF"
             onPress={() => router.push('/create-group')}
           />
         </View>
 
-        <ThemedText style={styles.footer}>Family. Friends. Moments. Together.</ThemedText>
+        <ThemedText style={styles.footer}>Communities. Moments. Together.</ThemedText>
         <Pressable accessibilityRole="button" onPress={() => void handleLogout()} style={styles.logout}>
           <ThemedText style={styles.logoutText}>Log Out</ThemedText>
         </Pressable>

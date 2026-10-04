@@ -140,7 +140,7 @@ export default function CreateEventScreen() {
           </View>
 
           <ThemedText style={styles.pageTitle}>Event Details</ThemedText>
-          <ThemedText style={styles.subtitle}>Tell your family about the event</ThemedText>
+          <ThemedText style={styles.subtitle}>Tell your community about the event</ThemedText>
 
           <View style={styles.formCard}>
             <ThemedText style={styles.label}>Event Title <ThemedText style={styles.required}>*</ThemedText></ThemedText>
@@ -148,7 +148,7 @@ export default function CreateEventScreen() {
               style={styles.input}
               value={title}
               onChangeText={setTitle}
-              placeholder="e.g. Family Game Night"
+              placeholder="e.g. Community Game Night"
               placeholderTextColor="#8CA0B8"
               autoCapitalize="words"
               autoCorrect={false}

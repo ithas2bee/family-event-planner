@@ -199,7 +199,7 @@ export default function CreateKickbackScreen() {
               <ThemedText style={styles.eyebrow}>MAKE IT HAPPEN</ThemedText>
               <ThemedText style={styles.title}>{isEditing ? 'Edit Kickback' : 'Create a Kickback'}</ThemedText>
               <ThemedText style={styles.subtitle}>
-                {isEditing ? 'Update the details of your current kickback.' : 'Something spontaneous for the family, without the fuss.'}
+                {isEditing ? 'Update the details of your current kickback.' : 'Something spontaneous for your community, without the fuss.'}
               </ThemedText>
               <View style={styles.nowBadge}>
                 <MaterialIcons name="bolt" size={15} color="#21865B" />
@@ -237,7 +237,7 @@ export default function CreateKickbackScreen() {
               </View>
               <View style={styles.sectionCopy}>
                 <ThemedText style={styles.sectionTitle}>What&apos;s the vibe?</ThemedText>
-                <ThemedText style={styles.sectionHint}>Pick one to get the family excited.</ThemedText>
+                <ThemedText style={styles.sectionHint}>Pick one to get your community excited.</ThemedText>
               </View>
             </View>
             <View style={styles.vibeGrid}>
@@ -273,7 +273,7 @@ export default function CreateKickbackScreen() {
               </View>
               <View style={styles.sectionCopy}>
                 <ThemedText style={styles.sectionTitle}>Add a note (optional)</ThemedText>
-                <ThemedText style={styles.sectionHint}>Anything the family should know?</ThemedText>
+                <ThemedText style={styles.sectionHint}>Anything the community should know?</ThemedText>
               </View>
             </View>
             <TextInput

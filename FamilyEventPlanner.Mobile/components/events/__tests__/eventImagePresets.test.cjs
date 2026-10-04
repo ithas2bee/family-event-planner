@@ -230,7 +230,7 @@ test('Event Details uses a landscape preset hero with its title and preserves ex
   assert.match(eventDetailsSource, /heroImage: \{[\s\S]*width: '100%'[\s\S]*height: '100%'/);
   assert.match(eventDetailsSource, /eventImagePresetSource \? \([\s\S]*<Image source=\{eventImagePresetSource\} style=\{styles\.heroImage\} resizeMode="contain" \/>[\s\S]*\) : event\.imageUrl \? \([\s\S]*<Image source=\{\{ uri: event\.imageUrl \}\} style=\{styles\.heroImage\} \/>/);
   assert.match(eventDetailsSource, /eventImagePresetSource \? \([\s\S]*<ThemedText type="title" style=\{styles\.presetHeroTitle\}/);
-  assert.match(eventDetailsSource, /eventImagePresetSource \? \([\s\S]*<ThemedText type="title" style=\{styles\.presetHeroTitle\}[\s\S]*\) : \([\s\S]*<ThemedText style=\{styles\.heroLabel\}>FAMILY EVENT/);
+  assert.match(eventDetailsSource, /eventImagePresetSource \? \([\s\S]*<ThemedText type="title" style=\{styles\.presetHeroTitle\}[\s\S]*\) : \([\s\S]*<ThemedText style=\{styles\.heroLabel\}>COMMUNITY EVENT/);
   assert.match(eventDetailsSource, /\{!eventImagePresetSource \? \([\s\S]*styles\.titleRow/);
   assert.match(eventDetailsSource, /!event\.imageUrl \? <MaterialIcons name="celebration"/);
 });

@@ -94,7 +94,7 @@ export default function CreateAnnouncementScreen() {
           <View style={[styles.hero, isCompact && styles.compactHero]}>
             <View style={[styles.heroCopy, isCompact && styles.compactHeroCopy]}>
               <ThemedText style={styles.title}>Create an Announcement</ThemedText>
-              <ThemedText style={styles.subtitle}>Share important news with your family. ❤️</ThemedText>
+              <ThemedText style={styles.subtitle}>Share important news with your community. ❤️</ThemedText>
             </View>
             <View
               style={[styles.heroIcon, isCompact && styles.compactHeroIcon]}

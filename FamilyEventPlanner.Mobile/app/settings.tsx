@@ -22,9 +22,9 @@ const sections: { title: string; options: SettingOption[] }[] = [
     ],
   },
   {
-    title: 'Family & Groups',
+    title: 'Communities & Groups',
     options: [
-      { title: 'Family Group', icon: 'groups', route: '/(tabs)/(main)/my-groups' },
+      { title: 'Communities', icon: 'groups', route: '/(tabs)/(main)/my-groups' },
       { title: 'Manage Members', icon: 'group', route: '/(tabs)/(main)/members' },
     ],
   },

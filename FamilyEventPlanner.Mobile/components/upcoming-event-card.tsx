@@ -138,7 +138,7 @@ export function UpcomingEventCard({ item, index, onPress }: UpcomingEventCardPro
   const contextLabel =
     item.participantCount && item.participantCount > 0
       ? `${item.participantCount} plan${item.participantCount === 1 ? '' : 's'} assigned`
-      : 'Family event';
+      : 'Community event';
   const accessibilityLabel = dateParts.hasValidDate
     ? `${item.title}. ${statusLabel}. ${dateParts.shortDate} at ${dateParts.time}.`
     : `${item.title}. ${statusLabel}. ${dateParts.shortDate}.`;

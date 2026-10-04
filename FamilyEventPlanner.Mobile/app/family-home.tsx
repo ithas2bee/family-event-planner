@@ -9,10 +9,10 @@ import { API_BASE_URL } from '@/config/api';
 import { AnnouncementCard, type AnnouncementCardItem } from '@/components/announcement-card';
 import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
 import { DashboardSection } from '@/components/dashboard-section';
-import { FamilyMembersSection } from '@/components/family-members-section';
+import { CommunityMembersSection } from '@/components/community-members-section';
 import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
 import { HomeEmptyStateCard } from '@/components/home-empty-state-card';
-import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
+import { InviteCommunityMembersModal } from '@/components/invite-community-members-modal';
 import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -119,7 +119,7 @@ function getInitials(name: string): string {
   return initials || '?';
 }
 
-export default function FamilyHomeScreen() {
+export default function CommunityHomeScreen() {
   const insets = useSafeAreaInsets();
   const {
     groupId: contextGroupId,
@@ -365,12 +365,12 @@ export default function FamilyHomeScreen() {
 
           <View style={styles.headerCopy}>
             <ThemedText type="title" style={styles.title}>
-              Family Home
+              Community Home
             </ThemedText>
             <ThemedText type="subtitle" style={styles.greeting}>
               Good morning, {memberName || 'there'}!
             </ThemedText>
-            <ThemedText style={styles.supportingMessage}>Great families make great memories 💙</ThemedText>
+            <ThemedText style={styles.supportingMessage}>Great communities make great memories 💙</ThemedText>
           </View>
 
           <View style={styles.headerActions}>
@@ -395,7 +395,7 @@ export default function FamilyHomeScreen() {
           </View>
         </View>
 
-        <FamilyMembersSection
+        <CommunityMembersSection
           members={membersPreview}
           currentMemberId={memberId}
           loading={loadingPreviews}
@@ -436,7 +436,7 @@ export default function FamilyHomeScreen() {
             <HomeEmptyStateCard
               title="Announcements"
               message="No announcements yet."
-              supportingText="Be the first to share an update with your family!"
+              supportingText="Be the first to share an update with your community!"
               actionLabel="Create Announcement"
               icon="campaign"
               colors={{ background: '#F7F0FF', iconBackground: '#E7D9FF', icon: '#7040D8', action: '#5D32D6' }}
@@ -461,7 +461,7 @@ export default function FamilyHomeScreen() {
             <HomeEmptyStateCard
               title="Polls"
               message="No polls to preview yet."
-              supportingText="Create a poll to get your family's opinions!"
+              supportingText="Create a poll to get your community's opinions!"
               actionLabel="Create Poll"
               icon="poll"
               colors={{ background: '#EEF7FF', iconBackground: '#D8EBFF', icon: '#1678E8', action: '#1678E8' }}
@@ -487,7 +487,7 @@ export default function FamilyHomeScreen() {
             <HomeEmptyStateCard
               title="Recent Kickbacks"
               message="No kickbacks to preview yet."
-              supportingText="Plan a casual get-together with your family!"
+              supportingText="Plan a casual get-together with your community!"
               actionLabel="Create Kickback"
               icon="groups"
               colors={{ background: '#EEFBF6', iconBackground: '#D5F5E7', icon: '#0D9F7A', action: '#0D9F7A' }}
@@ -570,7 +570,7 @@ export default function FamilyHomeScreen() {
               </View>
               <View style={styles.menuItemCopy}>
                 <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Join a Group</ThemedText>
-                <ThemedText style={styles.menuItemDescription}>Connect with another family</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Connect with another community</ThemedText>
               </View>
               <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
             </Pressable>
@@ -649,7 +649,7 @@ export default function FamilyHomeScreen() {
           </View>
         </View>
       </Modal>
-      <InviteFamilyMembersModal
+      <InviteCommunityMembersModal
         visible={inviteModalVisible}
         inviteCode={inviteCode}
         onClose={() => setInviteModalVisible(false)}

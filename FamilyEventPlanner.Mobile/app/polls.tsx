@@ -117,7 +117,7 @@ export default function PollsScreen() {
             <View style={styles.headerRow}>
               <View style={styles.headerCopy}>
                 <ThemedText type="title" style={styles.title}>Polls</ThemedText>
-                <ThemedText style={styles.subtitle}>Help your family make decisions together.</ThemedText>
+                <ThemedText style={styles.subtitle}>Help your community make decisions together.</ThemedText>
               </View>
               <View style={styles.headerIcon}>
                 <MaterialIcons name="poll" size={28} color="#087CF2" />
@@ -164,7 +164,7 @@ export default function PollsScreen() {
                     <ThemedText style={[styles.statusText, closed ? styles.closedText : styles.activeText]}>{closed ? 'Closed' : 'Active'}</ThemedText>
                   </View>
                 </View>
-                <ThemedText style={styles.preview} numberOfLines={1}>{item.question || 'Family decision poll'}</ThemedText>
+                <ThemedText style={styles.preview} numberOfLines={1}>{item.question || 'Community decision poll'}</ThemedText>
                 <ThemedText style={styles.metadata}>{item.options.length} options  •  {voteCount} votes  •  by {item.creatorDisplayName || 'Unknown Member'}</ThemedText>
                 <View style={styles.dateRow}>
                   <ThemedText style={styles.date}>{formatPollDate(item.createdAt)}</ThemedText>

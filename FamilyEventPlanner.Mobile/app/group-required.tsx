@@ -31,7 +31,7 @@ export default function GroupRequiredScreen() {
           You&apos;re not part{'\n'}of a group yet
         </ThemedText>
         <ThemedText style={styles.description}>
-          Huddle Up is built around family groups.{'\n'}Join an existing group or create your own
+          Huddle Up brings communities together.{'\n'}Join an existing group or create your own
           to start planning, sharing, and making memories together.
         </ThemedText>
 
@@ -53,7 +53,7 @@ export default function GroupRequiredScreen() {
           <View style={styles.rule} />
         </View>
         <ThemedText type="defaultSemiBold" style={styles.footerTitle}>
-          Family. Friends. Moments. Together.
+          Communities. Moments. Together.
         </ThemedText>
         <ThemedText style={styles.footerText}>That&apos;s what Huddle Up is all about.</ThemedText>
       </ScrollView>

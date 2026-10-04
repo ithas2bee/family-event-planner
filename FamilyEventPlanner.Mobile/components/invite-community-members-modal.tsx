@@ -4,18 +4,19 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, Share, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { COMMUNITY_MEMBERS_LABEL } from '@/constants/communityTerminology';
 
-type InviteFamilyMembersModalProps = {
+type InviteCommunityMembersModalProps = {
   visible: boolean;
   inviteCode: string | null;
   onClose: () => void;
 };
 
-export function InviteFamilyMembersModal({
+export function InviteCommunityMembersModal({
   visible,
   inviteCode,
   onClose,
-}: InviteFamilyMembersModalProps) {
+}: InviteCommunityMembersModalProps) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -33,7 +34,7 @@ export function InviteFamilyMembersModal({
   const shareCode = async () => {
     if (!inviteCode) return;
     await Share.share({
-      message: `Join my family group using this invite code: ${inviteCode}`,
+      message: `Join my community using this invite code: ${inviteCode}`,
     });
   };
 
@@ -48,7 +49,7 @@ export function InviteFamilyMembersModal({
       <View style={styles.overlay}>
         <View style={styles.card}>
           <Pressable
-            accessibilityLabel="Close invite family members"
+            accessibilityLabel={`Close invite ${COMMUNITY_MEMBERS_LABEL.toLowerCase()}`}
             accessibilityRole="button"
             hitSlop={10}
             onPress={onClose}
@@ -60,19 +61,19 @@ export function InviteFamilyMembersModal({
           <View style={styles.iconCircle}>
             <MaterialIcons name="group" size={54} color="#1674E8" />
           </View>
-          <ThemedText type="title" style={styles.title}>Invite Family Members</ThemedText>
+          <ThemedText type="title" style={styles.title}>Invite {COMMUNITY_MEMBERS_LABEL}</ThemedText>
           <ThemedText style={styles.description}>
-            Share this code with family members so they can join your family group.
+            Share this code with community members so they can join your community.
           </ThemedText>
 
           <View style={styles.codeCard}>
-            <ThemedText style={styles.codeLabel}>Your Family Invite Code</ThemedText>
+            <ThemedText style={styles.codeLabel}>Your Community Invite Code</ThemedText>
             <View style={styles.codeRow}>
               <ThemedText selectable style={styles.code}>
                 {inviteCode ?? 'Unavailable'}
               </ThemedText>
               <Pressable
-                accessibilityLabel="Copy family invite code"
+                accessibilityLabel="Copy community invite code"
                 accessibilityRole="button"
                 disabled={!inviteCode}
                 onPress={copyCode}
@@ -86,7 +87,7 @@ export function InviteFamilyMembersModal({
           </View>
 
           <Pressable
-            accessibilityLabel="Share family invite code"
+            accessibilityLabel="Share community invite code"
             accessibilityRole="button"
             disabled={!inviteCode}
             onPress={shareCode}
@@ -100,7 +101,7 @@ export function InviteFamilyMembersModal({
             <MaterialIcons name="info-outline" size={28} color="#1674E8" />
             <View style={styles.reminderCopy}>
               <ThemedText type="defaultSemiBold" style={styles.reminderTitle}>
-                Anyone with this code can join your family group.
+                Anyone with this code can join your community.
               </ThemedText>
               <ThemedText style={styles.reminderText}>Share it only with people you trust.</ThemedText>
             </View>

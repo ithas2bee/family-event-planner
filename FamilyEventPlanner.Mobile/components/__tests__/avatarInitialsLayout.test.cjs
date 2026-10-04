@@ -20,7 +20,7 @@ test('profile avatar initials have enough line height for their font size', () =
   assert.ok(lineHeight > fontSize);
 });
 
-test('family member avatar initials have enough line height for their font size', () => {
+test('community member avatar initials have enough line height for their font size', () => {
   const { fontSize, lineHeight } = getAvatarTextMetrics(membersSource);
   assert.ok(lineHeight > fontSize);
 });
