@@ -230,7 +230,7 @@ public class FamilyGroupsControllerTests
         var controller = new FamilyGroupsController(context);
         SetMember(controller, member.Id);
 
-        var result = await controller.SearchGroups(null);
+        var result = await controller.SearchGroups("Search");
 
         var groups = Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value);
         Assert.Equal("Searchable Group", Assert.Single(groups).groupName);
