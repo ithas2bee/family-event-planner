@@ -13,6 +13,7 @@ namespace FamilyEventPlanner.Api.Data
 
         public DbSet<FamilyGroup> FamilyGroups { get; set; }
         public DbSet<GroupMember> GroupMembers { get; set; }
+        public DbSet<GroupMembershipRequest> GroupMembershipRequests { get; set; }
 
         // Event planning entities
         public DbSet<FamilyEvent> FamilyEvents { get; set; }
@@ -103,6 +104,16 @@ namespace FamilyEventPlanner.Api.Data
             modelBuilder.Entity<FamilyGroup>()
                 .HasIndex(g => g.InviteCode)
                 .IsUnique();
+
+            modelBuilder.Entity<GroupMembershipRequest>()
+                .HasIndex(r => new { r.UserId, r.FamilyGroupId })
+                .HasFilter("[Status] = 'Pending'")
+                .IsUnique();
+
+            modelBuilder.Entity<GroupMembershipRequest>()
+                .Property(r => r.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
 
             modelBuilder.Entity<FamilyGroup>()
                 .Property(g => g.GroupType)

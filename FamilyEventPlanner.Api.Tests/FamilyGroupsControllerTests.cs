@@ -237,6 +237,147 @@ public class FamilyGroupsControllerTests
     }
 
     [Fact]
+    public async Task RequestMembershipCreatesPendingRequestWithoutAddingMemberAndSearchPersistsStatus()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = "requester@example.com",
+            DisplayName = "Requester",
+            CreatedAt = DateTime.UtcNow
+        };
+        var group = new FamilyGroup
+        {
+            Id = Guid.NewGuid(),
+            Name = "Open Community",
+            IsInviteOnly = false,
+            IsSearchable = true,
+            CreatedAt = DateTime.UtcNow
+        };
+        await using (var context = new AppDbContext(options))
+        {
+            context.Users.Add(user);
+            context.FamilyGroups.Add(group);
+            await context.SaveChangesAsync();
+            var controller = new FamilyGroupsController(context);
+            SetUser(controller, user.Id);
+
+            var result = await controller.RequestMembership(group.Id);
+
+            var response = Assert.IsType<OkObjectResult>(result).Value!;
+            Assert.Equal("Pending", response.GetType().GetProperty("requestStatus")!.GetValue(response));
+            Assert.Equal(user.Id, Assert.Single(context.GroupMembershipRequests).UserId);
+            Assert.Empty(context.GroupMembers);
+        }
+
+        await using (var reopenedContext = new AppDbContext(options))
+        {
+            var controller = new FamilyGroupsController(reopenedContext);
+            SetUser(controller, user.Id);
+
+            var result = await controller.SearchGroups("Open");
+
+            var searchResult = Assert.Single(Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value));
+            Assert.Equal("Pending", searchResult.requestStatus);
+        }
+    }
+
+    [Fact]
+    public async Task RequestMembershipRejectsDuplicatePendingRequestsAndExistingMembers()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Requester");
+        var duplicateGroup = AddGroup(context, "Duplicate Request");
+        duplicateGroup.IsInviteOnly = false;
+        duplicateGroup.IsSearchable = true;
+        var memberGroup = AddGroup(context, "Existing Member");
+        memberGroup.IsInviteOnly = false;
+        memberGroup.IsSearchable = true;
+        context.GroupMembershipRequests.Add(new GroupMembershipRequest
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            FamilyGroupId = duplicateGroup.Id,
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        context.GroupMembers.Add(Member(user, memberGroup));
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetUser(controller, user.Id);
+
+        Assert.IsType<ConflictObjectResult>(await controller.RequestMembership(duplicateGroup.Id));
+        Assert.IsType<ConflictObjectResult>(await controller.RequestMembership(memberGroup.Id));
+        Assert.Single(context.GroupMembershipRequests);
+    }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(false, true, true)]
+    public async Task RequestMembershipOnlyAllowsSearchableCommunityGroups(
+        bool isInviteOnly,
+        bool isSearchable,
+        bool succeeds)
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Requester");
+        var group = AddGroup(context, "Access Rules");
+        group.IsInviteOnly = isInviteOnly;
+        group.IsSearchable = isSearchable;
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetUser(controller, user.Id);
+
+        var result = await controller.RequestMembership(group.Id);
+
+        if (succeeds)
+        {
+            Assert.IsType<OkObjectResult>(result);
+            Assert.Equal("Pending", Assert.Single(context.GroupMembershipRequests).Status);
+        }
+        else
+        {
+            Assert.IsType<ForbidResult>(result);
+            Assert.Empty(context.GroupMembershipRequests);
+        }
+    }
+
+    [Fact]
+    public async Task RequestMembershipUsesAuthenticatedIdentityAndRequiresAuthentication()
+    {
+        var authorization = typeof(FamilyGroupsController)
+            .GetMethod(nameof(FamilyGroupsController.RequestMembership))!
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+            .Cast<AuthorizeAttribute>()
+            .Single();
+        Assert.Equal("Bearer,MemberId", authorization.AuthenticationSchemes);
+
+        await using var context = CreateContext();
+        var caller = AddUser(context, "Authenticated User");
+        var otherUser = AddUser(context, "Other User");
+        var group = AddGroup(context, "Identity Check");
+        group.IsInviteOnly = false;
+        group.IsSearchable = true;
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+
+        Assert.IsType<UnauthorizedResult>(await controller.RequestMembership(group.Id));
+
+        SetUser(controller, caller.Id);
+        Assert.IsType<OkObjectResult>(await controller.RequestMembership(group.Id));
+        Assert.Equal(caller.Id, Assert.Single(context.GroupMembershipRequests).UserId);
+        Assert.NotEqual(otherUser.Id, context.GroupMembershipRequests.Single().UserId);
+    }
+
+    [Fact]
     public async Task GetGroupReturnsDetailsAndAdminStatusOnlyToMembers()
     {
         await using var context = CreateContext();

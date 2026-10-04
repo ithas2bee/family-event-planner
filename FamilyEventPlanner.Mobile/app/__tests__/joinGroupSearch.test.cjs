@@ -29,6 +29,19 @@ test('Selecting a result only reveals its public information without joining or 
   assert.match(screenSource, /<Text style=\{styles\.selectedInfoLabel\}>Access<\/Text>/);
 });
 
+test('Community search results can submit one request and show persisted pending status', () => {
+  assert.match(screenSource, /group\.accessMode === 'InviteOnlySearchable'/);
+  assert.match(screenSource, /!requiresInvitation/);
+  assert.match(screenSource, /handleRequestToJoin\.bind\(null, group\)/);
+  assert.match(screenSource, /Request to Join/);
+  assert.match(screenSource, /Request Pending/);
+  assert.match(screenSource, /A Group Admin must approve your membership/);
+  assert.match(screenSource, /disabled=\{requestLoadingGroupId !== null\}/);
+  assert.match(serviceSource, /requestGroupMembership/);
+  assert.match(serviceSource, /membership-requests/);
+  assert.match(serviceSource, /method: 'POST'/);
+});
+
 test('Group search requests carry account or member authentication and encode the search term', () => {
   assert.match(serviceSource, /\/api\/familygroups\/search\?query=\$\{encodeURIComponent\(query\)\}/);
   assert.match(serviceSource, /Authorization:/);

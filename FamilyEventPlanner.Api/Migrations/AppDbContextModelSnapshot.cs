@@ -252,6 +252,7 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.Property<string>("GroupType")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)")
                         .HasDefaultValue("Other");
@@ -260,10 +261,12 @@ namespace FamilyEventPlanner.Api.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsInviteOnly")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
                     b.Property<bool>("IsSearchable")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
@@ -305,6 +308,42 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("GroupMembers");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.GroupMembershipRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FamilyGroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyGroupId");
+
+                    b.HasIndex("UserId", "FamilyGroupId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Pending'");
+
+                    b.ToTable("GroupMembershipRequests");
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Kickback", b =>
@@ -669,6 +708,25 @@ namespace FamilyEventPlanner.Api.Migrations
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.GroupMember", b =>
+                {
+                    b.HasOne("FamilyEventPlanner.Api.Models.FamilyGroup", "FamilyGroup")
+                        .WithMany()
+                        .HasForeignKey("FamilyGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyEventPlanner.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FamilyGroup");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.GroupMembershipRequest", b =>
                 {
                     b.HasOne("FamilyEventPlanner.Api.Models.FamilyGroup", "FamilyGroup")
                         .WithMany()

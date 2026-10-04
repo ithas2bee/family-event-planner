@@ -121,14 +121,7 @@ namespace FamilyEventPlanner.Api.Controllers
         [HttpGet("search")]
         public async Task<IActionResult> SearchGroups([FromQuery] string? query)
         {
-            Guid? userId = null;
-            if (Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var authenticatedUserId))
-                userId = authenticatedUserId;
-            else if (Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId))
-                userId = await _context.GroupMembers
-                    .Where(m => m.Id == memberId)
-                    .Select(m => (Guid?)m.UserId)
-                    .SingleOrDefaultAsync();
+            var userId = await GetAuthenticatedUserIdAsync();
 
             if (userId == null)
                 return Unauthorized();
@@ -153,11 +146,71 @@ namespace FamilyEventPlanner.Api.Controllers
                     isInviteOnly = g.IsInviteOnly,
                     accessMode = g.IsInviteOnly
                         ? "InviteOnlySearchable"
-                        : "CommunitySearchableRequestToJoin"
+                        : "CommunitySearchableRequestToJoin",
+                    requestStatus = _context.GroupMembershipRequests
+                        .Where(r => r.FamilyGroupId == g.Id && r.UserId == userId.Value && r.Status == "Pending")
+                        .Select(r => r.Status)
+                        .FirstOrDefault()
                 })
                 .ToListAsync();
 
             return Ok(groups);
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + ",MemberId")]
+        [HttpPost("{id}/membership-requests")]
+        public async Task<IActionResult> RequestMembership(Guid id)
+        {
+            var userId = await GetAuthenticatedUserIdAsync();
+            if (userId == null)
+                return Unauthorized();
+            if (!await _context.Users.AnyAsync(u => u.Id == userId.Value))
+                return Unauthorized();
+
+            var group = await _context.FamilyGroups.FindAsync(id);
+            if (group == null)
+                return NotFound();
+            if (group.IsInviteOnly || !group.IsSearchable)
+                return Forbid();
+
+            if (await _context.GroupMembers.AnyAsync(m => m.FamilyGroupId == id && m.UserId == userId.Value))
+                return Conflict(new { message = "You are already a member of this group." });
+
+            if (await _context.GroupMembershipRequests.AnyAsync(r =>
+                    r.FamilyGroupId == id && r.UserId == userId.Value && r.Status == "Pending"))
+                return Conflict(new { message = "A membership request is already pending." });
+
+            var now = DateTime.UtcNow;
+            var request = new GroupMembershipRequest
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId.Value,
+                FamilyGroupId = id,
+                Status = "Pending",
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            _context.GroupMembershipRequests.Add(request);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                if (!await _context.GroupMembershipRequests.AnyAsync(r =>
+                        r.FamilyGroupId == id && r.UserId == userId.Value && r.Status == "Pending"))
+                    throw;
+
+                return Conflict(new { message = "A membership request is already pending." });
+            }
+
+            return Ok(new
+            {
+                requestStatus = request.Status,
+                createdAt = request.CreatedAt,
+                updatedAt = request.UpdatedAt
+            });
         }
 
         [HttpGet("{id}")]
@@ -261,6 +314,22 @@ namespace FamilyEventPlanner.Api.Controllers
         private Guid GetAuthenticatedMemberId()
         {
             return Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId) ? memberId : Guid.Empty;
+        }
+
+        private async Task<Guid?> GetAuthenticatedUserIdAsync()
+        {
+            if (Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId))
+                return userId;
+
+            if (Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId))
+            {
+                return await _context.GroupMembers
+                    .Where(m => m.Id == memberId)
+                    .Select(m => (Guid?)m.UserId)
+                    .SingleOrDefaultAsync();
+            }
+
+            return null;
         }
 
         private static string GetAccessMode(bool isInviteOnly, bool isSearchable)
