@@ -2,6 +2,7 @@ using FamilyEventPlanner.Api.Controllers;
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
 using FamilyEventPlanner.Api.Models.Responses;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -107,6 +108,132 @@ public class FamilyGroupsControllerTests
         var groups = Assert.IsType<List<GroupSummaryResponse>>(Assert.IsType<OkObjectResult>(result).Value);
         var onlyGroup = Assert.Single(groups);
         Assert.Equal("Only Family", onlyGroup.groupName);
+    }
+
+    [Fact]
+    public async Task SearchGroupsReturnsCaseInsensitivePartialMatchesWithoutPrivateOrMemberGroups()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Search User");
+        var matchingCommunity = AddGroup(context, "Garage Crew");
+        matchingCommunity.GroupType = "Sports & Fitness";
+        matchingCommunity.IsInviteOnly = false;
+        matchingCommunity.IsSearchable = true;
+        var matchingInviteOnly = AddGroup(context, "Atlanta Parents");
+        matchingInviteOnly.IsSearchable = true;
+        var privateGroup = AddGroup(context, "Garage Hidden");
+        var memberGroup = AddGroup(context, "Garage Members");
+        memberGroup.IsSearchable = true;
+        context.GroupMembers.Add(Member(user, memberGroup));
+        context.GroupMembers.Add(Member(AddUser(context, "Other User"), matchingCommunity));
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetUser(controller, user.Id);
+
+        var result = await controller.SearchGroups("gArAgE");
+
+        var groups = Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value);
+        var community = Assert.Single(groups);
+        Assert.Equal("Garage Crew", community.groupName);
+        Assert.Equal("Sports & Fitness", community.groupType);
+        Assert.Equal("CommunitySearchableRequestToJoin", community.accessMode);
+        Assert.False(community.isInviteOnly);
+        Assert.DoesNotContain(groups, group => group.groupName == privateGroup.Name);
+        Assert.DoesNotContain(groups, group => group.groupName == memberGroup.Name);
+        Assert.Null(community.GetType().GetProperty("description"));
+        Assert.Null(community.GetType().GetProperty("inviteCode"));
+    }
+
+    [Fact]
+    public async Task SearchGroupsIdentifiesInviteOnlyAndCommunityAccess()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Search User");
+        var inviteOnly = AddGroup(context, "Atlanta Parents");
+        inviteOnly.IsSearchable = true;
+        var community = AddGroup(context, "Garage Crew");
+        community.IsInviteOnly = false;
+        community.IsSearchable = true;
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetUser(controller, user.Id);
+
+        var result = await controller.SearchGroups("a");
+
+        var groups = Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal(2, groups.Count);
+        Assert.Contains(groups, group =>
+            group.groupName == "Atlanta Parents" &&
+            group.accessMode == "InviteOnlySearchable" &&
+            group.isInviteOnly);
+        Assert.Contains(groups, group =>
+            group.groupName == "Garage Crew" &&
+            group.accessMode == "CommunitySearchableRequestToJoin" &&
+            !group.isInviteOnly);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task SearchGroupsReturnsNoResultsForEmptyOrWhitespaceQuery(string? query)
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Search User");
+        var searchableGroup = AddGroup(context, "Searchable Group");
+        searchableGroup.IsSearchable = true;
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetUser(controller, user.Id);
+
+        var result = await controller.SearchGroups(query);
+
+        var groups = Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Empty(groups);
+    }
+
+    [Fact]
+    public async Task SearchGroupsRequiresAuthenticatedUserIdentity()
+    {
+        var authorization = typeof(FamilyGroupsController)
+            .GetMethod(nameof(FamilyGroupsController.SearchGroups))!
+            .GetCustomAttributes(typeof(AuthorizeAttribute), inherit: true)
+            .Cast<AuthorizeAttribute>()
+            .Single();
+        Assert.Equal("Bearer,MemberId", authorization.AuthenticationSchemes);
+
+        await using var context = CreateContext();
+        var group = AddGroup(context, "Private Group");
+        group.IsSearchable = false;
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+
+        Assert.IsType<UnauthorizedResult>(await controller.SearchGroups(null));
+    }
+
+    [Fact]
+    public async Task SearchGroupsUsesAuthenticatedMembersUserAndExcludesTheirMemberships()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Search User");
+        var memberGroup = AddGroup(context, "Current Group");
+        memberGroup.IsSearchable = true;
+        var discoverableGroup = AddGroup(context, "Searchable Group");
+        discoverableGroup.IsSearchable = true;
+        var member = Member(user, memberGroup);
+        context.GroupMembers.Add(member);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, member.Id);
+
+        var result = await controller.SearchGroups("Search");
+
+        var groups = Assert.IsType<List<GroupSearchResponse>>(Assert.IsType<OkObjectResult>(result).Value);
+        Assert.Equal("Searchable Group", Assert.Single(groups).groupName);
     }
 
     [Fact]
@@ -269,6 +396,20 @@ public class FamilyGroupsControllerTests
                 User = new ClaimsPrincipal(new ClaimsIdentity(new[]
                 {
                     new Claim("memberId", memberId.ToString())
+                }, "test"))
+            }
+        };
+    }
+
+    private static void SetUser(ControllerBase controller, Guid userId)
+    {
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, userId.ToString())
                 }, "test"))
             }
         };

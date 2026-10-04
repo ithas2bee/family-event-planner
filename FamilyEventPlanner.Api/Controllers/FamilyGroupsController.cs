@@ -4,6 +4,7 @@ using FamilyEventPlanner.Api.Models.Responses;
 using FamilyEventPlanner.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace FamilyEventPlanner.Api.Controllers
 {
@@ -110,6 +111,49 @@ namespace FamilyEventPlanner.Api.Controllers
                     isAdmin = m.IsAdmin,
                     memberId = m.Id,
                     joinedAt = m.JoinedAt
+                })
+                .ToListAsync();
+
+            return Ok(groups);
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + ",MemberId")]
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchGroups([FromQuery] string? query)
+        {
+            Guid? userId = null;
+            if (Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var authenticatedUserId))
+                userId = authenticatedUserId;
+            else if (Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId))
+                userId = await _context.GroupMembers
+                    .Where(m => m.Id == memberId)
+                    .Select(m => (Guid?)m.UserId)
+                    .SingleOrDefaultAsync();
+
+            if (userId == null)
+                return Unauthorized();
+
+            var searchTerm = query?.Trim();
+            if (string.IsNullOrEmpty(searchTerm))
+                return Ok(new List<GroupSearchResponse>());
+
+            var normalizedSearchTerm = searchTerm.ToLowerInvariant();
+            var groupsQuery = _context.FamilyGroups
+                .Where(g => g.IsSearchable &&
+                    !_context.GroupMembers.Any(m => m.FamilyGroupId == g.Id && m.UserId == userId.Value) &&
+                    g.Name.ToLower().Contains(normalizedSearchTerm));
+
+            var groups = await groupsQuery
+                .OrderBy(g => g.Name)
+                .Select(g => new GroupSearchResponse
+                {
+                    groupId = g.Id,
+                    groupName = g.Name,
+                    groupType = g.GroupType,
+                    isInviteOnly = g.IsInviteOnly,
+                    accessMode = g.IsInviteOnly
+                        ? "InviteOnlySearchable"
+                        : "CommunitySearchableRequestToJoin"
                 })
                 .ToListAsync();
 
