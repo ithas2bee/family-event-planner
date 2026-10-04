@@ -7,5 +7,6 @@ namespace FamilyEventPlanner.Api.Models.Responses
         public string groupType { get; set; }
         public bool isInviteOnly { get; set; }
         public string accessMode { get; set; }
+        public string? requestStatus { get; set; }
     }
 }

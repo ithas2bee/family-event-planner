@@ -12,7 +12,11 @@ import {
 } from 'react-native';
 
 import { useActiveGroupContext } from '@/contexts/active-group-context';
-import { searchGroups, type GroupSearchResult } from '@/services/groupSearchService';
+import {
+  requestGroupMembership,
+  searchGroups,
+  type GroupSearchResult,
+} from '@/services/groupSearchService';
 import { joinFamilyGroup } from '@/services/groupMemberService';
 import { loadSession, saveSession, type AppSession } from '@/services/sessionService';
 
@@ -28,6 +32,12 @@ export default function JoinGroupScreen() {
   const [inviteCode, setInviteCode] = useState('');
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [requestLoadingGroupId, setRequestLoadingGroupId] = useState<string | null>(null);
+  const [requestFeedback, setRequestFeedback] = useState<{
+    groupId: string;
+    message: string;
+    isError: boolean;
+  } | null>(null);
 
   const runSearch = useCallback(async (query: string, currentSession: AppSession | null) => {
     if (!currentSession?.authToken && !currentSession?.memberId) {
@@ -111,6 +121,45 @@ export default function JoinGroupScreen() {
     }
   }
 
+  async function handleRequestToJoin(group: GroupSearchResult) {
+    if (!session) {
+      setRequestFeedback({
+        groupId: group.groupId,
+        message: 'Please sign in again to request membership.',
+        isError: true,
+      });
+      return;
+    }
+
+    setRequestLoadingGroupId(group.groupId);
+    setRequestFeedback(null);
+    try {
+      const result = await requestGroupMembership(
+        group.groupId,
+        session.authToken,
+        session.memberId,
+      );
+      setGroups((current) =>
+        current.map((entry) =>
+          entry.groupId === group.groupId ? { ...entry, requestStatus: result.requestStatus } : entry,
+        ),
+      );
+      setRequestFeedback({
+        groupId: group.groupId,
+        message: 'Request sent. A Group Admin must approve your membership.',
+        isError: false,
+      });
+    } catch (err: unknown) {
+      setRequestFeedback({
+        groupId: group.groupId,
+        message: err instanceof Error ? err.message : 'Could not request to join this group.',
+        isError: true,
+      });
+    } finally {
+      setRequestLoadingGroupId(null);
+    }
+  }
+
   return (
     <ScrollView
       style={styles.screen}
@@ -176,24 +225,27 @@ export default function JoinGroupScreen() {
         const accessLabel = requiresInvitation ? 'Invite Only • Invitation Required' : 'Community • Request to Join';
         const isSelected = selectedGroupId === group.groupId;
         return (
-          <Pressable
+          <View
             key={group.groupId}
             style={styles.resultCard}
-            onPress={() => setSelectedGroupId(isSelected ? null : group.groupId)}
-            accessibilityRole="button"
-            accessibilityLabel={`View ${group.groupName}`}
-            accessibilityState={{ expanded: isSelected }}
           >
-            <View style={styles.resultHeading}>
-              <View style={styles.resultIcon}>
-                <Ionicons name="people" size={21} color="#2588EA" />
+            <Pressable
+              onPress={() => setSelectedGroupId(isSelected ? null : group.groupId)}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${group.groupName}`}
+              accessibilityState={{ expanded: isSelected }}
+            >
+              <View style={styles.resultHeading}>
+                <View style={styles.resultIcon}>
+                  <Ionicons name="people" size={21} color="#2588EA" />
+                </View>
+                <View style={styles.resultCopy}>
+                  <Text style={styles.resultName}>{group.groupName}</Text>
+                  <Text style={styles.resultType}>Community type · {group.groupType}</Text>
+                </View>
+                <Ionicons name={isSelected ? 'chevron-up' : 'chevron-down'} size={20} color="#687994" />
               </View>
-              <View style={styles.resultCopy}>
-                <Text style={styles.resultName}>{group.groupName}</Text>
-                <Text style={styles.resultType}>Community type · {group.groupType}</Text>
-              </View>
-              <Ionicons name={isSelected ? 'chevron-up' : 'chevron-down'} size={20} color="#687994" />
-            </View>
+            </Pressable>
             <Text style={[styles.accessLabel, requiresInvitation ? styles.inviteLabel : styles.communityLabel]}>
               {accessLabel}
             </Text>
@@ -203,9 +255,40 @@ export default function JoinGroupScreen() {
                 <Text style={styles.selectedInfoValue}>{group.groupType}</Text>
                 <Text style={styles.selectedInfoLabel}>Access</Text>
                 <Text style={styles.selectedInfoValue}>{accessLabel}</Text>
+                {!requiresInvitation ? (
+                  group.requestStatus === 'Pending' ? (
+                    <Text accessibilityRole="text" style={styles.requestPending}>
+                      Request Pending
+                    </Text>
+                  ) : (
+                    <Pressable
+                      style={[
+                        styles.requestButton,
+                        requestLoadingGroupId === group.groupId && styles.joinButtonDisabled,
+                      ]}
+                      onPress={handleRequestToJoin.bind(null, group)}
+                      disabled={requestLoadingGroupId !== null}
+                      accessibilityRole="button"
+                    >
+                      {requestLoadingGroupId === group.groupId ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.joinButtonText}>Request to Join</Text>
+                      )}
+                    </Pressable>
+                  )
+                ) : null}
+                {requestFeedback?.groupId === group.groupId ? (
+                  <Text
+                    accessibilityRole={requestFeedback.isError ? 'alert' : 'text'}
+                    style={requestFeedback.isError ? styles.feedbackError : styles.requestSuccess}
+                  >
+                    {requestFeedback.message}
+                  </Text>
+                ) : null}
               </View>
             ) : null}
-          </Pressable>
+          </View>
         );
       })}
 
@@ -420,5 +503,25 @@ const styles = StyleSheet.create({
   selectedInfoValue: {
     color: '#101C4C',
     fontSize: 15,
+  },
+  requestButton: {
+    minHeight: 48,
+    marginTop: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2588EA',
+  },
+  requestPending: {
+    marginTop: 12,
+    color: '#17613D',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  requestSuccess: {
+    marginTop: 10,
+    color: '#17613D',
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
