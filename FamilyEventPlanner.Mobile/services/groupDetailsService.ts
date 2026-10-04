@@ -14,6 +14,17 @@ export type GroupDetails = {
   isAdmin: boolean;
 };
 
+export type MembershipRequest = {
+  requestId: string;
+  userId: string;
+  displayName: string | null;
+  profilePictureUrl: string | null;
+  age: number | null;
+  location: string | null;
+  bio: string | null;
+  createdAt: string;
+};
+
 export type GroupAccessMode =
   | 'InviteOnlyNotSearchable'
   | 'InviteOnlySearchable'
@@ -37,6 +48,8 @@ async function sendRequest<T>(url: string, memberId: string, method = 'GET', bod
 
   if (!response.ok) {
     if (response.status === 403) throw new Error('You do not have permission to manage this group.');
+    if (response.status === 404) throw new Error('This group or request could not be found.');
+    if (response.status === 409) throw new Error('This membership request has already been processed.');
     throw new Error(`Could not load or update group details (error ${response.status}).`);
   }
 
@@ -84,5 +97,22 @@ export function updateGroupMemberAdmin(
     memberId,
     'PUT',
     { isAdmin },
+  );
+}
+
+export function getPendingMembershipRequests(groupId: string, memberId: string): Promise<MembershipRequest[]> {
+  return sendRequest(`${API_BASE_URL}/api/familygroups/${groupId}/membership-requests`, memberId);
+}
+
+export function processMembershipRequest(
+  groupId: string,
+  requestId: string,
+  memberId: string,
+  decision: 'approve' | 'reject',
+): Promise<{ requestId: string; status: 'Approved' | 'Rejected'; memberId?: string }> {
+  return sendRequest(
+    `${API_BASE_URL}/api/familygroups/${groupId}/membership-requests/${requestId}/${decision}`,
+    memberId,
+    'POST',
   );
 }

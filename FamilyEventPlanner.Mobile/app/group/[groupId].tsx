@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -12,8 +12,11 @@ import {
   updateGroupDescription,
   updateGroupAccess,
   updateGroupMemberAdmin,
+  getPendingMembershipRequests,
+  processMembershipRequest,
   type GroupDetails,
   type GroupAccessMode,
+  type MembershipRequest,
 } from '@/services/groupDetailsService';
 import { loadSession } from '@/services/sessionService';
 
@@ -28,6 +31,7 @@ export default function GroupDetailsScreen() {
   const groupId = String(params.groupId ?? contextGroupId);
   const [details, setDetails] = useState<GroupDetails | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
+  const [joinRequests, setJoinRequests] = useState<MembershipRequest[]>([]);
   const [currentMemberId, setCurrentMemberId] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [accessModeDraft, setAccessModeDraft] = useState<GroupAccessMode>('InviteOnlyNotSearchable');
@@ -37,6 +41,7 @@ export default function GroupDetailsScreen() {
   const [switchingGroup, setSwitchingGroup] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -62,8 +67,12 @@ export default function GroupDetailsScreen() {
         getGroupDetails(groupId, memberId),
         getGroupMembers(groupId, memberId),
       ]);
+      const requests = group.isAdmin && group.accessMode === 'CommunitySearchableRequestToJoin'
+        ? await getPendingMembershipRequests(groupId, memberId)
+        : [];
       setDetails(group);
       setMembers(groupMembers);
+      setJoinRequests(requests);
       setCurrentMemberId(memberId);
       setDescriptionDraft(group.description ?? '');
       setAccessModeDraft(group.accessMode);
@@ -178,6 +187,49 @@ export default function GroupDetailsScreen() {
       setError(saveError instanceof Error ? saveError.message : 'Could not update group access.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  function confirmMembershipRequest(request: MembershipRequest, decision: 'approve' | 'reject') {
+    const name = request.displayName?.trim() || 'This user';
+    const approved = decision === 'approve';
+    Alert.alert(
+      `${approved ? 'Approve' : 'Reject'} join request?`,
+      `${approved ? 'Add' : 'Do not add'} ${name} ${approved ? 'as a group member' : 'to this group'}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: approved ? 'Approve' : 'Reject',
+          style: approved ? 'default' : 'destructive',
+          onPress: () => void processRequest(request, decision),
+        },
+      ],
+    );
+  }
+
+  async function processRequest(request: MembershipRequest, decision: 'approve' | 'reject') {
+    setProcessingRequestId(request.requestId);
+    setError(null);
+    setSuccess(null);
+    try {
+      const result = await processMembershipRequest(groupId, request.requestId, currentMemberId, decision);
+      setJoinRequests((current) => current.filter((entry) => entry.requestId !== request.requestId));
+      if (decision === 'approve') {
+        setDetails((current) => current ? { ...current, memberCount: current.memberCount + 1 } : current);
+        if (result.memberId) {
+          setMembers((current) => [...current, {
+            memberId: result.memberId,
+            userId: request.userId,
+            displayName: request.displayName ?? undefined,
+            isAdmin: false,
+          }]);
+        }
+      }
+      setSuccess(`${request.displayName?.trim() || 'The user'} was ${decision === 'approve' ? 'approved' : 'rejected'}.`);
+    } catch (processError) {
+      setError(processError instanceof Error ? processError.message : 'Could not process this join request.');
+    } finally {
+      setProcessingRequestId(null);
     }
   }
 
@@ -344,6 +396,69 @@ export default function GroupDetailsScreen() {
               })()}
             </View>
 
+            {details.isAdmin && details.accessMode === 'CommunitySearchableRequestToJoin' ? (
+              <View style={styles.card}>
+                <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                  Join Requests · {joinRequests.length}
+                </ThemedText>
+                {joinRequests.length === 0 ? (
+                  <ThemedText style={styles.accessText}>No pending requests.</ThemedText>
+                ) : joinRequests.map((request) => {
+                  const name = request.displayName?.trim() || 'Unknown user';
+                  return (
+                    <View key={request.requestId} style={styles.requestCard}>
+                      <View style={styles.requestHeader}>
+                        {request.profilePictureUrl ? (
+                          <Image source={{ uri: request.profilePictureUrl }} style={styles.requestAvatar} />
+                        ) : (
+                          <View style={styles.requestAvatarFallback}>
+                            <ThemedText style={styles.initial}>{name[0]?.toUpperCase() ?? '?'}</ThemedText>
+                          </View>
+                        )}
+                        <View style={styles.memberCopy}>
+                          <ThemedText type="defaultSemiBold" style={styles.memberName}>{name}</ThemedText>
+                          <ThemedText style={styles.memberRole}>Requesting to join</ThemedText>
+                        </View>
+                      </View>
+                      {request.age !== null || request.location ? (
+                        <ThemedText style={styles.accessText}>
+                          {[request.age === null ? null : `${request.age} years old`, request.location].filter(Boolean).join(' · ')}
+                        </ThemedText>
+                      ) : null}
+                      {request.bio ? <ThemedText style={styles.requestBio}>{request.bio}</ThemedText> : null}
+                      <ThemedText style={styles.memberRole}>
+                        Requested {new Date(request.createdAt).toLocaleDateString()}
+                      </ThemedText>
+                      <View style={styles.requestActions}>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Approve ${name}`}
+                          disabled={processingRequestId !== null}
+                          onPress={() => confirmMembershipRequest(request, 'approve')}
+                          style={[styles.approveButton, processingRequestId === request.requestId && styles.disabledButton]}
+                        >
+                          <ThemedText style={styles.approveButtonText}>
+                            {processingRequestId === request.requestId ? 'Processing...' : 'Approve'}
+                          </ThemedText>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Reject ${name}`}
+                          disabled={processingRequestId !== null}
+                          onPress={() => confirmMembershipRequest(request, 'reject')}
+                          style={[styles.rejectButton, processingRequestId === request.requestId && styles.disabledButton]}
+                        >
+                          <ThemedText style={styles.rejectButtonText}>
+                            {processingRequestId === request.requestId ? 'Processing...' : 'Reject'}
+                          </ThemedText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+
             {details.isAdmin ? (
               <View style={styles.card}>
                 <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Admin Controls</ThemedText>
@@ -434,6 +549,16 @@ const styles = StyleSheet.create({
   memberCopy: { flex: 1 },
   memberName: { color: '#102A3D', fontSize: 16 },
   memberRole: { color: '#6C7D8E', fontSize: 13, marginTop: 2 },
+  requestCard: { borderTopWidth: 1, borderColor: '#E3EBF0', paddingTop: 13, gap: 10 },
+  requestHeader: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  requestAvatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#DDF5FA' },
+  requestAvatarFallback: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#DDF5FA', alignItems: 'center', justifyContent: 'center' },
+  requestBio: { color: '#52677A', fontSize: 14, lineHeight: 20 },
+  requestActions: { flexDirection: 'row', gap: 10 },
+  approveButton: { flex: 1, alignItems: 'center', backgroundColor: '#087D9F', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  approveButtonText: { color: '#FFFFFF', fontWeight: '700' },
+  rejectButton: { flex: 1, alignItems: 'center', backgroundColor: '#FFF0F0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  rejectButtonText: { color: '#B13E4B', fontWeight: '700' },
   roleButton: { backgroundColor: '#EAF5FF', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
   roleButtonText: { color: '#087D9F', fontSize: 12, fontWeight: '700' },
   accessTitle: { color: '#102A3D', fontSize: 16, fontWeight: '700', marginTop: 2 },

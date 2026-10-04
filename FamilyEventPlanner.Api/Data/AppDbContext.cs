@@ -113,7 +113,8 @@ namespace FamilyEventPlanner.Api.Data
             modelBuilder.Entity<GroupMembershipRequest>()
                 .Property(r => r.Status)
                 .HasMaxLength(20)
-                .HasDefaultValue("Pending");
+                .HasDefaultValue("Pending")
+                .IsConcurrencyToken();
 
             modelBuilder.Entity<FamilyGroup>()
                 .Property(g => g.GroupType)

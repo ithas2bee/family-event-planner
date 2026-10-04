@@ -488,6 +488,142 @@ public class FamilyGroupsControllerTests
         }));
     }
 
+    [Fact]
+    public async Task AdminCanListOnlyPendingRequestsForTheirSearchableCommunityGroup()
+    {
+        await using var context = CreateContext();
+        var adminUser = AddUser(context, "Group Admin");
+        var requester = AddUser(context, "Requesting Member");
+        var group = AddGroup(context, "Community Group");
+        group.IsInviteOnly = false;
+        group.IsSearchable = true;
+        var admin = Member(adminUser, group);
+        admin.IsAdmin = true;
+        context.GroupMembers.Add(admin);
+        var pending = new GroupMembershipRequest
+        {
+            Id = Guid.NewGuid(), UserId = requester.Id, User = requester, FamilyGroupId = group.Id,
+            FamilyGroup = group, Status = "Pending", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        };
+        context.GroupMembershipRequests.Add(pending);
+        context.GroupMembershipRequests.Add(new GroupMembershipRequest
+        {
+            Id = Guid.NewGuid(), UserId = AddUser(context, "Already Reviewed").Id,
+            FamilyGroupId = group.Id, Status = "Rejected", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, admin.Id);
+        var result = Assert.IsType<OkObjectResult>(await controller.GetPendingMembershipRequests(group.Id));
+
+        var item = Assert.Single(Assert.IsAssignableFrom<System.Collections.IEnumerable>(result.Value)
+            .Cast<object>());
+        Assert.Equal(pending.Id, item.GetType().GetProperty("requestId")!.GetValue(item));
+        Assert.Equal(requester.DisplayName, item.GetType().GetProperty("displayName")!.GetValue(item));
+
+        var member = Member(AddUser(context, "Regular Member"), group);
+        context.GroupMembers.Add(member);
+        await context.SaveChangesAsync();
+        SetMember(controller, member.Id);
+        Assert.IsType<ForbidResult>(await controller.GetPendingMembershipRequests(group.Id));
+        Assert.IsType<ForbidResult>(await controller.ApproveMembershipRequest(group.Id, pending.Id));
+        Assert.IsType<ForbidResult>(await controller.RejectMembershipRequest(group.Id, pending.Id));
+    }
+
+    [Fact]
+    public async Task AdminApprovalAddsRegularMemberAndCannotBeRepeatedOrRequestedAgain()
+    {
+        await using var context = CreateContext();
+        var adminUser = AddUser(context, "Group Admin");
+        var requester = AddUser(context, "Requester");
+        var group = AddGroup(context, "Community Group");
+        group.IsInviteOnly = false;
+        group.IsSearchable = true;
+        var admin = Member(adminUser, group);
+        admin.IsAdmin = true;
+        var request = new GroupMembershipRequest
+        {
+            Id = Guid.NewGuid(), UserId = requester.Id, User = requester, FamilyGroupId = group.Id,
+            FamilyGroup = group, Status = "Pending", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        };
+        context.GroupMembers.Add(admin);
+        context.GroupMembershipRequests.Add(request);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, admin.Id);
+
+        Assert.IsType<OkObjectResult>(await controller.ApproveMembershipRequest(group.Id, request.Id));
+        var newMember = await context.GroupMembers.SingleAsync(m => m.UserId == requester.Id);
+        Assert.False(newMember.IsAdmin);
+        Assert.Equal("Approved", request.Status);
+        Assert.IsType<ConflictObjectResult>(await controller.ApproveMembershipRequest(group.Id, request.Id));
+
+        var requesterController = new FamilyGroupsController(context);
+        SetUser(requesterController, requester.Id);
+        Assert.IsType<ConflictObjectResult>(await requesterController.RequestMembership(group.Id));
+    }
+
+    [Fact]
+    public async Task AdminRejectionDoesNotCreateMembershipAndCannotBeRepeated()
+    {
+        await using var context = CreateContext();
+        var adminUser = AddUser(context, "Group Admin");
+        var requester = AddUser(context, "Requester");
+        var group = AddGroup(context, "Community Group");
+        group.IsInviteOnly = false;
+        group.IsSearchable = true;
+        var admin = Member(adminUser, group);
+        admin.IsAdmin = true;
+        var request = new GroupMembershipRequest
+        {
+            Id = Guid.NewGuid(), UserId = requester.Id, User = requester, FamilyGroupId = group.Id,
+            FamilyGroup = group, Status = "Pending", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        };
+        context.GroupMembers.Add(admin);
+        context.GroupMembershipRequests.Add(request);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, admin.Id);
+
+        Assert.IsType<OkObjectResult>(await controller.RejectMembershipRequest(group.Id, request.Id));
+        Assert.Equal("Rejected", request.Status);
+        Assert.Empty(await context.GroupMembers.Where(m => m.UserId == requester.Id).ToListAsync());
+        Assert.IsType<ConflictObjectResult>(await controller.RejectMembershipRequest(group.Id, request.Id));
+    }
+
+    [Fact]
+    public async Task AdminCannotProcessRequestsFromAnotherGroupOrInviteOnlyGroups()
+    {
+        await using var context = CreateContext();
+        var adminUser = AddUser(context, "Group Admin");
+        var requester = AddUser(context, "Requester");
+        var adminGroup = AddGroup(context, "Admin Group");
+        adminGroup.IsInviteOnly = false;
+        adminGroup.IsSearchable = true;
+        var otherGroup = AddGroup(context, "Other Group");
+        otherGroup.IsInviteOnly = false;
+        otherGroup.IsSearchable = true;
+        var admin = Member(adminUser, adminGroup);
+        admin.IsAdmin = true;
+        var request = new GroupMembershipRequest
+        {
+            Id = Guid.NewGuid(), UserId = requester.Id, FamilyGroupId = otherGroup.Id,
+            Status = "Pending", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow
+        };
+        context.GroupMembers.Add(admin);
+        context.GroupMembershipRequests.Add(request);
+        await context.SaveChangesAsync();
+        var controller = new FamilyGroupsController(context);
+        SetMember(controller, admin.Id);
+
+        Assert.IsType<NotFoundResult>(await controller.ApproveMembershipRequest(adminGroup.Id, request.Id));
+        Assert.Equal("Pending", request.Status);
+
+        adminGroup.IsInviteOnly = true;
+        Assert.IsType<ForbidResult>(await controller.GetPendingMembershipRequests(adminGroup.Id));
+    }
+
     private static AppDbContext CreateContext() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);

@@ -213,6 +213,124 @@ namespace FamilyEventPlanner.Api.Controllers
             });
         }
 
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
+        [HttpGet("{id}/membership-requests")]
+        public async Task<IActionResult> GetPendingMembershipRequests(Guid id)
+        {
+            var admin = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == GetAuthenticatedMemberId() && m.FamilyGroupId == id);
+            if (admin == null || !admin.IsAdmin)
+                return Forbid();
+
+            var group = await _context.FamilyGroups.FindAsync(id);
+            if (group == null)
+                return NotFound();
+            if (group.IsInviteOnly || !group.IsSearchable)
+                return Forbid();
+
+            var requests = await _context.GroupMembershipRequests
+                .Where(r => r.FamilyGroupId == id && r.Status == "Pending")
+                .OrderBy(r => r.CreatedAt)
+                .Select(r => new
+                {
+                    requestId = r.Id,
+                    userId = r.UserId,
+                    displayName = r.User.DisplayName,
+                    profilePictureUrl = r.User.ProfilePictureUrl,
+                    age = r.User.Age,
+                    location = r.User.Location,
+                    bio = r.User.Bio,
+                    createdAt = r.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(requests);
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
+        [HttpPost("{id}/membership-requests/{requestId}/approve")]
+        public async Task<IActionResult> ApproveMembershipRequest(Guid id, Guid requestId)
+        {
+            var admin = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == GetAuthenticatedMemberId() && m.FamilyGroupId == id);
+            if (admin == null || !admin.IsAdmin)
+                return Forbid();
+
+            var group = await _context.FamilyGroups.FindAsync(id);
+            if (group == null)
+                return NotFound();
+            if (group.IsInviteOnly || !group.IsSearchable)
+                return Forbid();
+
+            var request = await _context.GroupMembershipRequests
+                .FirstOrDefaultAsync(r => r.Id == requestId && r.FamilyGroupId == id);
+            if (request == null)
+                return NotFound();
+            if (request.Status != "Pending")
+                return Conflict(new { message = "This membership request has already been processed." });
+            if (await _context.GroupMembers.AnyAsync(m => m.FamilyGroupId == id && m.UserId == request.UserId))
+                return Conflict(new { message = "The requester is already a member of this group." });
+
+            request.Status = "Approved";
+            request.UpdatedAt = DateTime.UtcNow;
+            var newMember = new GroupMember
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = id,
+                UserId = request.UserId,
+                IsAdmin = false,
+                JoinedAt = DateTime.UtcNow
+            };
+            _context.GroupMembers.Add(newMember);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "This membership request has already been processed." });
+            }
+
+            return Ok(new { requestId = request.Id, status = request.Status, memberId = newMember.Id });
+        }
+
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
+        [HttpPost("{id}/membership-requests/{requestId}/reject")]
+        public async Task<IActionResult> RejectMembershipRequest(Guid id, Guid requestId)
+        {
+            var admin = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == GetAuthenticatedMemberId() && m.FamilyGroupId == id);
+            if (admin == null || !admin.IsAdmin)
+                return Forbid();
+
+            var group = await _context.FamilyGroups.FindAsync(id);
+            if (group == null)
+                return NotFound();
+            if (group.IsInviteOnly || !group.IsSearchable)
+                return Forbid();
+
+            var request = await _context.GroupMembershipRequests
+                .FirstOrDefaultAsync(r => r.Id == requestId && r.FamilyGroupId == id);
+            if (request == null)
+                return NotFound();
+            if (request.Status != "Pending")
+                return Conflict(new { message = "This membership request has already been processed." });
+
+            request.Status = "Rejected";
+            request.UpdatedAt = DateTime.UtcNow;
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "This membership request has already been processed." });
+            }
+
+            return Ok(new { requestId = request.Id, status = request.Status });
+        }
+
         [HttpGet("{id}")]
         [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = "MemberId")]
         public async Task<IActionResult> GetGroup(Guid id)

@@ -327,7 +327,8 @@ namespace FamilyEventPlanner.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Pending");
+                        .HasDefaultValue("Pending")
+                        .IsConcurrencyToken();
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
