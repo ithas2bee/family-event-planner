@@ -44,7 +44,7 @@ export default function CreateAccountScreen() {
           <ThemedText style={styles.brand}>Huddle Up</ThemedText>
           <ThemedText style={styles.tagline}>Plan together. Make more memories.</ThemedText>
           <ThemedText type="title" style={styles.title}>Create Account</ThemedText>
-          <ThemedText style={styles.subtitle}>Join Huddle Up and start planning with your family.</ThemedText>
+          <ThemedText style={styles.subtitle}>Join Huddle Up and start planning with your community.</ThemedText>
 
           <View style={styles.fieldGroup}><ThemedText style={styles.label}>Email</ThemedText><View style={styles.inputWrap}><Ionicons name="mail-outline" size={21} color="#5C6F8D" /><TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="email@example.com" placeholderTextColor="#7183A0" autoCapitalize="none" keyboardType="email-address" autoCorrect={false} /></View></View>
           <View style={styles.fieldGroup}><ThemedText style={styles.label}>Username</ThemedText><View style={styles.inputWrap}><Ionicons name="person-outline" size={21} color="#5C6F8D" /><TextInput style={styles.input} value={username} onChangeText={setUsername} placeholder="Choose a username" placeholderTextColor="#7183A0" autoCapitalize="none" autoCorrect={false} /></View><ThemedText style={styles.help}>This will be your public name in the app.</ThemedText></View>

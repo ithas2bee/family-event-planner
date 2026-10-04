@@ -123,7 +123,7 @@ export default function AnnouncementsScreen() {
             Announcements
           </ThemedText>
           <ThemedText style={styles.subtitle}>
-            Stay up to date with what&apos;s happening in your family group.
+            Stay up to date with what&apos;s happening in your community.
           </ThemedText>
         </View>
         <View style={styles.headerIcon}>

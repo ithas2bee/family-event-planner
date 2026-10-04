@@ -62,7 +62,7 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <InfoRow icon="calendar-outline" label="Age" value={profile.age ? String(profile.age) : 'Not provided'} />
         <InfoRow icon="location-outline" label="Location" value={profile.location || 'Not provided'} />
-        {profile.familyNames.length > 0 && <InfoRow icon="people-outline" label="Family" value={profile.familyNames.join(', ')} />}
+        {profile.familyNames.length > 0 && <InfoRow icon="people-outline" label="Communities" value={profile.familyNames.join(', ')} />}
         <View style={styles.infoRow}>
           <Ionicons name="person-outline" size={22} color="#1769E0" />
           <ThemedText style={styles.label}>Roles</ThemedText>
@@ -72,7 +72,7 @@ export default function ProfileScreen() {
 
       <View style={styles.card}>
         <ThemedText style={styles.cardTitle}>Bio</ThemedText>
-        <ThemedText style={styles.bio}>{profile.bio || 'Tell your family a little about yourself.'}</ThemedText>
+        <ThemedText style={styles.bio}>{profile.bio || 'Tell your community a little about yourself.'}</ThemedText>
       </View>
 
       {!!error && <ThemedText style={styles.error}>{error}</ThemedText>}

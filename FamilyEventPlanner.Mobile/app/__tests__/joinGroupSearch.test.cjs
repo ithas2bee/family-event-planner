@@ -24,7 +24,7 @@ test('Selecting a result only reveals its public information without joining or 
   const selectHandler = screenSource.match(/onPress=\{\(\) => setSelectedGroupId\([^}]+\)\}/)?.[0] ?? '';
 
   assert.ok(selectHandler);
-  assert.doesNotMatch(selectHandler, /setActiveGroup|joinFamilyGroup|router\./);
+  assert.doesNotMatch(selectHandler, /setActiveGroup|joinCommunityGroup|router\./);
   assert.match(screenSource, /Community type<\/Text>/);
   assert.match(screenSource, /<Text style=\{styles\.selectedInfoLabel\}>Access<\/Text>/);
 });
@@ -50,6 +50,6 @@ test('Group search requests carry account or member authentication and encode th
 });
 
 test('Joining with an existing invite code remains available separately from search results', () => {
-  assert.match(screenSource, /joinFamilyGroup\(\{/);
+  assert.match(screenSource, /joinCommunityGroup\(\{/);
   assert.match(screenSource, /Join with Code/);
 });

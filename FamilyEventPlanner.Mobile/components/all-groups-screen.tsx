@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GroupCard, mapGroups, type MyGroup } from '@/components/my-groups-screen';
 import { ThemedText } from '@/components/themed-text';
 import { API_BASE_URL } from '@/config/api';
+import { COMMUNITIES_LABEL } from '@/constants/communityTerminology';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getGroupMemberByUser } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
@@ -83,14 +84,14 @@ export default function AllGroupsScreen() {
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Back to My Groups"
+          accessibilityLabel={`Back to My ${COMMUNITIES_LABEL}`}
           onPress={() => router.back()}
           style={styles.backButton}
         >
           <MaterialIcons name="arrow-back" size={24} color="#102A3D" />
           <ThemedText style={styles.backText}>Back</ThemedText>
         </Pressable>
-        <ThemedText type="title" style={styles.title}>All Groups</ThemedText>
+        <ThemedText type="title" style={styles.title}>All {COMMUNITIES_LABEL}</ThemedText>
         <ThemedText style={styles.subtitle}>Groups you&apos;re part of</ThemedText>
 
         {loading ? <ThemedText style={styles.statusText}>Loading your groups...</ThemedText> : null}

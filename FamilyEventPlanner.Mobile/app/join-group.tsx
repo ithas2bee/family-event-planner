@@ -17,7 +17,7 @@ import {
   searchGroups,
   type GroupSearchResult,
 } from '@/services/groupSearchService';
-import { joinFamilyGroup } from '@/services/groupMemberService';
+import { joinCommunityGroup } from '@/services/groupMemberService';
 import { loadSession, saveSession, type AppSession } from '@/services/sessionService';
 
 export default function JoinGroupScreen() {
@@ -83,7 +83,7 @@ export default function JoinGroupScreen() {
     setJoinError(null);
     setJoinLoading(true);
     try {
-      const result = await joinFamilyGroup({
+      const result = await joinCommunityGroup({
         inviteCode: inviteCode.trim(),
         userId: session.userId,
       });

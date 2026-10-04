@@ -2,9 +2,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { COMMUNITY_LABEL, COMMUNITY_MEMBERS_LABEL } from '@/constants/communityTerminology';
 import type { GroupMember } from '@/services/groupMemberService';
 
-type FamilyMembersSectionProps = {
+type CommunityMembersSectionProps = {
   members: GroupMember[];
   currentMemberId: string;
   loading?: boolean;
@@ -21,18 +22,18 @@ export function getMemberInitials(name: string): string {
     .join('');
 }
 
-export function FamilyMembersSection({
+export function CommunityMembersSection({
   members,
   currentMemberId,
   loading = false,
   onViewAll,
   onInvite,
-}: FamilyMembersSectionProps) {
+}: CommunityMembersSectionProps) {
   return (
     <ThemedView style={styles.section}>
       <View style={styles.sectionHeader}>
         <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-          Family Members
+          {COMMUNITY_MEMBERS_LABEL}
         </ThemedText>
         <Pressable onPress={onViewAll} hitSlop={8} accessibilityRole="button">
           <ThemedText type="defaultSemiBold" style={styles.viewAllText}>
@@ -76,7 +77,7 @@ export function FamilyMembersSection({
               style={styles.member}
               onPress={onInvite}
               accessibilityRole="button"
-              accessibilityLabel="Invite Family"
+              accessibilityLabel={`Invite ${COMMUNITY_LABEL}`}
             >
               <View style={styles.inviteAvatar}>
                 <ThemedText style={styles.invitePlus}>+</ThemedText>
@@ -85,7 +86,7 @@ export function FamilyMembersSection({
                 Invite
               </ThemedText>
               <ThemedText style={styles.memberRole} numberOfLines={1}>
-                Family
+                Community
               </ThemedText>
             </Pressable>
           </>

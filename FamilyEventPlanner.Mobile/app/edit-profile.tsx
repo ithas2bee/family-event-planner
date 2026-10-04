@@ -74,7 +74,7 @@ export default function EditProfileScreen() {
         return <Pressable key={role} onPress={() => setRoles((current) => selected ? current.filter((item) => item !== role) : [...current, role])} style={[styles.role, selected && styles.selectedRole]}><ThemedText style={[styles.roleText, selected && styles.selectedRoleText]}>{role}</ThemedText>{selected && <Ionicons name="checkmark" size={17} color="#1769E0" />}</Pressable>;
       })}</View>
       <ThemedText style={styles.label}>Bio</ThemedText>
-      <TextInput value={bio} onChangeText={setBio} placeholder="Tell your family a little about yourself." placeholderTextColor="#8A96AA" style={[styles.input, styles.bioInput]} multiline />
+      <TextInput value={bio} onChangeText={setBio} placeholder="Tell your community a little about yourself." placeholderTextColor="#8A96AA" style={[styles.input, styles.bioInput]} multiline />
       {!!error && <ThemedText style={styles.error}>{error}</ThemedText>}
     </ScrollView>
   );

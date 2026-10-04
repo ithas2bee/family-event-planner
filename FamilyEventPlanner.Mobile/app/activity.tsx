@@ -285,7 +285,7 @@ export default function ActivityScreen() {
               <MaterialIcons name="done-all" size={19} color="#1677E8" />
               <ThemedText style={styles.markReadText}>Mark all read</ThemedText>
             </Pressable>
-            <ThemedText style={styles.subtitle}>Stay up to date with your family. 💙</ThemedText>
+            <ThemedText style={styles.subtitle}>Stay up to date with your community. 💙</ThemedText>
           </View>
         </View>
 

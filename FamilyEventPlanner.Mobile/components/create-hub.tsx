@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const creationOptions = [
   {
     title: 'Create Group',
-    description: 'Start a new family group to keep everyone connected.',
+    description: 'Start a new community to keep everyone connected.',
     icon: 'groups',
     iconColor: '#1687D9',
     backgroundColor: '#EAF5FF',
@@ -33,7 +33,7 @@ const creationOptions = [
   },
   {
     title: 'Create Poll',
-    description: 'Get quick opinions from your family.',
+    description: 'Get quick opinions from your community.',
     icon: 'poll',
     iconColor: '#6841D8',
     backgroundColor: '#F5EEFF',
@@ -42,7 +42,7 @@ const creationOptions = [
   },
   {
     title: 'Create Announcement',
-    description: 'Share important news with your family.',
+    description: 'Share important news with your community.',
     icon: 'campaign',
     iconColor: '#D9364D',
     backgroundColor: '#FFF0F2',
@@ -65,7 +65,7 @@ export function CreateHub() {
             <View>
               <Text style={styles.heading}>Create</Text>
               <Text style={styles.subtitle}>
-                Bring your family closer. Create{'\n'}something special. ✨
+                Bring your community closer. Create{'\n'}something special. ✨
               </Text>
             </View>
             <MaterialIcons name="celebration" size={52} color="#F5B82E" />

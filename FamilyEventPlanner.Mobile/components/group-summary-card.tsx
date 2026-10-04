@@ -102,7 +102,7 @@ export function GroupSummaryCard({ item, onPress }: GroupSummaryCardProps) {
           ) : null}
         </View>
         <ThemedText style={styles.description} numberOfLines={2}>
-          Family events, updates and more...
+          Community events, updates and more...
         </ThemedText>
       </View>
 
