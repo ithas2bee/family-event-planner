@@ -8,6 +8,10 @@ const myGroupsSource = fs.readFileSync(path.join(mobileRoot, 'components/my-grou
 const allGroupsSource = fs.readFileSync(path.join(mobileRoot, 'components/all-groups-screen.tsx'), 'utf8');
 const detailsSource = fs.readFileSync(path.join(mobileRoot, 'app/group/[groupId].tsx'), 'utf8');
 const detailsService = fs.readFileSync(path.join(mobileRoot, 'services/groupDetailsService.ts'), 'utf8');
+const membershipRequestController = fs.readFileSync(
+  path.resolve(mobileRoot, '../FamilyEventPlanner.Api/Controllers/FamilyGroupsController.cs'),
+  'utf8',
+);
 const groupController = fs.readFileSync(
   path.resolve(mobileRoot, '../FamilyEventPlanner.Api/Controllers/FamilyGroupsController.cs'),
   'utf8',
@@ -73,4 +77,20 @@ test('Group management APIs require group membership and enforce admin-only upda
   assert.match(memberController, /isAdmin = m\.IsAdmin/);
   assert.match(detailsService, /\/description/);
   assert.match(detailsService, /\/admin/);
+});
+
+test('Join requests are available only to community admins and support reviewed decisions', () => {
+  assert.match(detailsSource, /details\.isAdmin && details\.accessMode === 'CommunitySearchableRequestToJoin'/);
+  assert.match(detailsSource, /Join Requests · \{joinRequests\.length\}/);
+  assert.match(detailsSource, /No pending requests\./);
+  assert.match(detailsSource, /Requesting to join/);
+  assert.match(detailsSource, /confirmMembershipRequest/);
+  assert.match(detailsSource, /Approve/);
+  assert.match(detailsSource, /Reject/);
+  assert.match(detailsService, /getPendingMembershipRequests/);
+  assert.match(detailsService, /processMembershipRequest/);
+  assert.match(membershipRequestController, /Authorize\(AuthenticationSchemes = "MemberId"\)[\s\S]*?HttpGet\("\{id\}\/membership-requests"\)/);
+  assert.match(membershipRequestController, /request\.Status = "Approved"[\s\S]*?IsAdmin = false/);
+  assert.match(membershipRequestController, /request\.Status = "Rejected"/);
+  assert.match(membershipRequestController, /request\.Status != "Pending"/);
 });
