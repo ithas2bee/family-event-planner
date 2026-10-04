@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -38,6 +38,7 @@ export default function GroupDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const loadDetails = useCallback(async () => {
     setLoading(true);
@@ -121,13 +122,35 @@ export default function GroupDetailsScreen() {
     }
   }
 
-  async function toggleAdmin(member: GroupMember) {
+  function toggleAdmin(member: GroupMember) {
     if (!member.memberId || !details) return;
+    const isAdmin = !member.isAdmin;
+    const name = member.displayName?.trim() || 'This member';
+    Alert.alert(
+      isAdmin ? 'Promote to Admin?' : 'Revoke Admin status?',
+      `This will change ${name}'s role to ${isAdmin ? 'Admin' : 'Member'}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isAdmin ? 'Promote' : 'Revoke',
+          style: isAdmin ? 'default' : 'destructive',
+          onPress: () => void saveAdminRole(member, isAdmin),
+        },
+      ],
+    );
+  }
+
+  async function saveAdminRole(member: GroupMember, isAdmin: boolean) {
+    if (!member.memberId) return;
     setSaving(true);
     setError(null);
+    setSuccess(null);
     try {
-      await updateGroupMemberAdmin(groupId, member.memberId, currentMemberId, !member.isAdmin);
-      await loadDetails();
+      const updated = await updateGroupMemberAdmin(groupId, member.memberId, currentMemberId, isAdmin);
+      setMembers((current) =>
+        current.map((entry) => entry.memberId === updated.memberId ? { ...entry, isAdmin: updated.isAdmin } : entry),
+      );
+      setSuccess(`${member.displayName?.trim() || 'Member'} is now ${updated.isAdmin ? 'an Admin' : 'a Member'}.`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not update the admin role.');
     } finally {
@@ -168,6 +191,7 @@ export default function GroupDetailsScreen() {
 
         {loading ? <ThemedText style={styles.feedback}>Loading group details...</ThemedText> : null}
         {error ? <ThemedText accessibilityRole="alert" style={styles.error}>{error}</ThemedText> : null}
+        {success ? <ThemedText accessibilityRole="status" style={styles.success}>{success}</ThemedText> : null}
 
         {!loading && details ? (
           <>
@@ -300,7 +324,7 @@ export default function GroupDetailsScreen() {
                       {details.isAdmin && member.memberId ? (
                         isOnlyAdmin ? (
                           <ThemedText style={styles.memberRole}>Only admin</ThemedText>
-                        ) : (
+                        ) : member.memberId !== currentMemberId ? (
                           <Pressable
                             accessibilityRole="button"
                             accessibilityLabel={`${member.isAdmin ? 'Remove admin' : 'Make admin'} for ${name}`}
@@ -310,6 +334,8 @@ export default function GroupDetailsScreen() {
                           >
                             <ThemedText style={styles.roleButtonText}>{member.isAdmin ? 'Remove admin' : 'Make admin'}</ThemedText>
                           </Pressable>
+                        ) : (
+                          null
                         )
                       ) : null}
                     </View>
@@ -384,6 +410,7 @@ const styles = StyleSheet.create({
   backText: { color: '#102A3D', fontSize: 16, fontWeight: '600' },
   feedback: { color: '#52677A', paddingVertical: 20 },
   error: { color: '#B13E4B', paddingVertical: 8 },
+  success: { color: '#087D55', paddingVertical: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 8 },
   groupIcon: { width: 64, height: 64, borderRadius: 20, backgroundColor: '#DDF5FA', alignItems: 'center', justifyContent: 'center' },
   titleCopy: { flex: 1 },

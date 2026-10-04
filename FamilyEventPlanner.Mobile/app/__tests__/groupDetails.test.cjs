@@ -57,6 +57,10 @@ test('Group details show immutable group identity and gate management controls t
   assert.match(detailsSource, /Group name and community type are set at creation/);
   assert.doesNotMatch(detailsSource, /Group Access (?:is )?set at creation|Group Access cannot be changed/);
   assert.match(detailsSource, /Make admin/);
+  assert.match(detailsSource, /Alert\.alert\(/);
+  assert.match(detailsSource, /text: 'Cancel'/);
+  assert.match(detailsSource, /member\.memberId !== currentMemberId/);
+  assert.match(detailsSource, /accessibilityRole="status" style={styles\.success}/);
   assert.match(detailsSource, /accessibilityLabel="Group description"/);
   assert.doesNotMatch(detailsSource, /accessibilityLabel="Group name"|accessibilityLabel="Community type"/);
 });
