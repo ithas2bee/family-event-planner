@@ -12,6 +12,7 @@ import { DashboardSection } from '@/components/dashboard-section';
 import { CommunityMembersSection } from '@/components/community-members-section';
 import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
 import { HomeEmptyStateCard } from '@/components/home-empty-state-card';
+import { HomeLoadingSkeleton } from '@/components/home-loading-skeleton';
 import { InviteCommunityMembersModal } from '@/components/invite-community-members-modal';
 import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
@@ -144,7 +145,7 @@ export default function CommunityHomeScreen() {
   const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
   const [kickbacksPreview, setKickbacksPreview] = useState<KickbackCardItem[]>([]);
   const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
-  const [loadingPreviews, setLoadingPreviews] = useState(false);
+  const [loadingPreviews, setLoadingPreviews] = useState(Boolean(groupId));
   const [menuVisible, setMenuVisible] = useState(false);
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -348,6 +349,14 @@ export default function CommunityHomeScreen() {
   };
 
   const closeMenu = () => setMenuVisible(false);
+
+  if (loadingPreviews) {
+    return (
+      <ThemedView style={styles.container}>
+        <HomeLoadingSkeleton topInset={Math.max(insets.top, 8)} />
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
