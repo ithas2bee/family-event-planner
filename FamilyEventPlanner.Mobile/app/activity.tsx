@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
 import {
   Pressable,
@@ -12,6 +12,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
+import {
+  getNotificationPreferenceCategory,
+  loadNotificationPreferences,
+} from '@/services/notificationPreferencesService';
+import type {
+  NotificationPreferenceCategory,
+  NotificationPreferences,
+} from '@/services/notificationPreferencesService';
 import {
   getActivityByGroup,
   markAllNotificationsRead,
@@ -26,7 +34,7 @@ type ActivityMetadata = {
   location?: string;
 };
 
-type NotificationCategory = 'All' | 'Events' | 'Kickbacks' | 'Groups' | 'Polls' | 'Announcements';
+type NotificationCategory = 'All' | NotificationPreferenceCategory;
 
 const categories: NotificationCategory[] = [
   'All',
@@ -51,12 +59,7 @@ function parseMetadata(metadataJson?: string): ActivityMetadata {
 }
 
 function getCategory(item: ActivityFeedItem): NotificationCategory {
-  if (item.activityType.startsWith('Event')) return 'Events';
-  if (item.activityType.startsWith('Kickback')) return 'Kickbacks';
-  if (item.activityType === 'MemberJoined' || item.activityType === 'GroupCreated') return 'Groups';
-  if (item.activityType.startsWith('Poll')) return 'Polls';
-  if (item.activityType.startsWith('Announcement')) return 'Announcements';
-  return 'All';
+  return getNotificationPreferenceCategory(item.activityType) ?? 'All';
 }
 
 function toSentence(item: ActivityFeedItem): string {
@@ -170,6 +173,7 @@ export default function ActivityScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<NotificationCategory>('All');
   const [markingRead, setMarkingRead] = useState(false);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
 
   useEffect(() => {
     const update: { groupId?: string; memberId?: string } = {};
@@ -228,9 +232,34 @@ export default function ActivityScreen() {
     };
   }, [groupIdValue, memberIdValue, isReady, isResolvingMember]);
 
-  const filteredActivities = activities.filter(
-    (item) => selectedCategory === 'All' || getCategory(item) === selectedCategory,
-  );
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+
+    loadNotificationPreferences()
+      .then((loadedPreferences) => {
+        if (!cancelled) {
+          setPreferences(loadedPreferences);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPreferences(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []));
+
+  const filteredActivities = activities.filter((item) => {
+    const category = getCategory(item);
+    if (category !== 'All' && preferences?.[category] === false) {
+      return false;
+    }
+
+    return selectedCategory === 'All' || category === selectedCategory;
+  });
   const groupedActivities = ['Today', 'Yesterday', 'This Week', 'Earlier'].map((label) => ({
     label,
     items: filteredActivities.filter((item) => getTimeGroup(item.createdAtUtc) === label),
