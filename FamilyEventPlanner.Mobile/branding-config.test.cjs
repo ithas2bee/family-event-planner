@@ -23,7 +23,9 @@ test('uses Huddle Up branding for launch and app icons', () => {
   assert.equal(expoConfig.android.adaptiveIcon.backgroundImage, './assets/images/android-icon-background.png');
   assert.equal(expoConfig.android.adaptiveIcon.monochromeImage, './assets/images/android-icon-monochrome.png');
   assert.ok(splashPlugin);
-  assert.equal(splashPlugin[1].image, './assets/images/splash-icon.png');
+  assert.equal(splashPlugin[1].image, './assets/images/android-icon-foreground.png');
+  assert.equal(splashPlugin[1].imageWidth, 200);
+  assert.equal(splashPlugin[1].resizeMode, 'contain');
   assert.equal(splashPlugin[1].backgroundColor, '#F4F5F7');
 
   for (const assetPath of requiredAssetPaths) {
