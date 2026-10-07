@@ -9,7 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 type SettingOption = {
   title: string;
   icon: keyof typeof MaterialIcons.glyphMap;
-  route?: '/profile' | '/(tabs)/(main)/my-groups' | '/(tabs)/(main)/members';
+  route?: '/profile' | '/(tabs)/(main)/my-groups' | '/(tabs)/(main)/members' | '/app-information';
 };
 
 const sections: { title: string; options: SettingOption[] }[] = [
@@ -37,7 +37,7 @@ const sections: { title: string; options: SettingOption[] }[] = [
   },
   {
     title: 'About',
-    options: [{ title: 'App Information', icon: 'info-outline' }],
+    options: [{ title: 'App Information', icon: 'info-outline', route: '/app-information' }],
   },
 ];
 
