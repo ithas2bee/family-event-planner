@@ -84,6 +84,7 @@ function NavigationGate() {
       <Stack.Screen name="app-information" options={{ headerShown: false }} />
       <Stack.Screen name="app-information/[section]" options={{ headerShown: false }} />
       <Stack.Screen name="help-support" options={{ headerShown: false }} />
+      <Stack.Screen name="quick-help/[section]" options={{ headerShown: false }} />
       <Stack.Screen name="under-construction" options={{ headerShown: false }} />
     </Stack>
   );

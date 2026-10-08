@@ -10,9 +10,9 @@ const sections = [
   {
     title: 'Quick Help',
     options: [
-      { title: 'FAQs', icon: 'quiz' as const },
-      { title: 'How-To Guides', icon: 'menu-book' as const },
-      { title: 'Tips & Best Practices', icon: 'lightbulb-outline' as const },
+      { title: 'FAQs', icon: 'quiz' as const, section: 'faqs' },
+      { title: 'How-To Guides', icon: 'menu-book' as const, section: 'how-to-guides' },
+      { title: 'Tips & Best Practices', icon: 'lightbulb-outline' as const, section: 'tips-best-practices' },
     ],
   },
   {
@@ -50,7 +50,11 @@ export default function HelpSupportScreen() {
                   key={option.title}
                   accessibilityLabel={option.title}
                   accessibilityRole="button"
-                  onPress={() => router.push({ pathname: '/under-construction', params: { feature: option.title } })}
+                  onPress={() =>
+                    'section' in option && option.section
+                      ? router.push({ pathname: '/quick-help/[section]', params: { section: option.section } })
+                      : router.push({ pathname: '/under-construction', params: { feature: option.title } })
+                  }
                   style={[styles.option, index < section.options.length - 1 && styles.optionBorder]}
                 >
                   <View style={styles.iconCircle}>
