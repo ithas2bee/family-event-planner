@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
+import { deleteCommunityContent } from '@/services/communityContentService';
 
 export type Announcement = {
   id: string;
@@ -149,6 +150,40 @@ export async function getAnnouncementsByGroup(groupId: string): Promise<Announce
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
+export async function getAnnouncementById(announcementId: string): Promise<Announcement> {
+  let response: Response;
+  const headers = await getAnnouncementHeaders();
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/announcements/${announcementId}`, {
+      method: 'GET',
+      headers,
+    });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    // Ignore non-JSON responses.
+  }
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Announcement not found.');
+    }
+    throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('The server returned an unexpected response.');
+  }
+
+  return mapAnnouncement(payload);
+}
+
 export async function createAnnouncement(request: CreateAnnouncementRequest): Promise<Announcement> {
   let response: Response;
   const headers = await getAnnouncementHeaders();
@@ -184,4 +219,8 @@ export async function createAnnouncement(request: CreateAnnouncementRequest): Pr
   }
 
   return mapAnnouncement(parsedBody);
+}
+
+export async function deleteAnnouncement(announcementId: string): Promise<void> {
+  await deleteCommunityContent('announcements', announcementId, await getAnnouncementHeaders());
 }

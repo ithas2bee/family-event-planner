@@ -167,6 +167,11 @@ export async function getGroupMembers(groupId: string, memberId: string): Promis
   return data;
 }
 
+export async function isGroupAdmin(groupId: string, memberId: string): Promise<boolean> {
+  const members = await getGroupMembers(groupId, memberId);
+  return members.some((member) => member.memberId === memberId && member.isAdmin === true);
+}
+
 export type GetMemberByUserResponse = {
   memberId?: string;
   displayName?: string;

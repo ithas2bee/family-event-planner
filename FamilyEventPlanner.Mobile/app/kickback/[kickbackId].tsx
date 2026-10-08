@@ -5,7 +5,11 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { getKickbacksByGroup, type Kickback } from '@/services/kickbackService';
+import { CommunityDeleteButton } from '@/components/community-delete-button';
+import { deleteKickback, getKickbacksByGroup, type Kickback } from '@/services/kickbackService';
+import { confirmCommunityContentDeletion } from '@/services/communityContentDeletion';
+import { isGroupAdmin } from '@/services/groupMemberService';
+import { loadSession } from '@/services/sessionService';
 
 function formatTime(value: string): string {
   const date = new Date(value);
@@ -20,19 +24,32 @@ export default function KickbackDetailsScreen() {
     memberId: string;
   }>();
   const [kickback, setKickback] = useState<Kickback | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setIsAdmin(false);
 
     async function loadKickback() {
       try {
         const kickbacks = await getKickbacksByGroup(String(groupId ?? ''));
         const result = kickbacks.find((item) => item.id === String(kickbackId ?? ''));
         if (!result) throw new Error('Kickback not found.');
+        const session = await loadSession();
+        let admin = false;
+        if (session?.memberId) {
+          try {
+            admin = await isGroupAdmin(result.familyGroupId, session.memberId);
+          } catch {
+            admin = false;
+          }
+        }
         if (!cancelled) {
           setKickback(result);
+          setIsAdmin(admin);
           setError(null);
         }
       } catch (err: unknown) {
@@ -49,6 +66,16 @@ export default function KickbackDetailsScreen() {
   }, [groupId, kickbackId]);
 
   const isCreator = Boolean(kickback?.createdByMemberId && kickback.createdByMemberId === memberId);
+
+  function handleDeleteKickback() {
+    if (!kickback || isDeleting) return;
+    confirmCommunityContentDeletion({
+      contentName: 'Kickback',
+      onDelete: () => deleteKickback(kickback.id),
+      onDeleted: () => router.back(),
+      onDeleting: setIsDeleting,
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
@@ -117,6 +144,9 @@ export default function KickbackDetailsScreen() {
                 <MaterialIcons name="edit" size={19} color="#FFFFFF" />
                 <ThemedText style={styles.editButtonText}>Edit Kickback</ThemedText>
               </Pressable>
+            ) : null}
+            {isAdmin ? (
+              <CommunityDeleteButton contentName="Kickback" deleting={isDeleting} onPress={handleDeleteKickback} />
             ) : null}
           </View>
         )}

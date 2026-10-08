@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
+import { deleteCommunityContent } from '@/services/communityContentService';
 import { EventLocation } from '@/services/locationService';
 
 export type EventAssignment = {
@@ -329,4 +330,8 @@ export async function updateEvent(eventId: string, updates: UpdateEventRequest):
   }
 
   return mapEvent(parsedBody);
+}
+
+export async function deleteEvent(eventId: string): Promise<void> {
+  await deleteCommunityContent('events', eventId, await getEventHeaders());
 }

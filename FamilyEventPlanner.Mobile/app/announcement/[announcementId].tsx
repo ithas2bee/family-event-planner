@@ -1,26 +1,86 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { formatAnnouncementDate } from '@/services/announcementService';
+import { CommunityDeleteButton } from '@/components/community-delete-button';
+import { confirmCommunityContentDeletion } from '@/services/communityContentDeletion';
+import {
+  deleteAnnouncement,
+  formatAnnouncementDate,
+  getAnnouncementById,
+  type Announcement,
+} from '@/services/announcementService';
+import { isGroupAdmin } from '@/services/groupMemberService';
+import { loadSession } from '@/services/sessionService';
 
 export default function AnnouncementDetailsScreen() {
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{
-    title?: string;
-    body?: string;
-    creatorDisplayName?: string;
-    createdAt?: string;
-    expiresAt?: string;
-  }>();
-  const title = String(params.title ?? 'Untitled announcement');
-  const body = String(params.body ?? '');
-  const author = String(params.creatorDisplayName ?? 'Unknown member');
-  const createdAt = String(params.createdAt ?? '');
-  const expiresAt = String(params.expiresAt ?? '');
+  const { announcementId } = useLocalSearchParams<{ announcementId?: string }>();
+  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAnnouncement(null);
+    setLoading(true);
+    setError(null);
+    if (!announcementId) {
+      setError('Announcement not found.');
+      setLoading(false);
+      return;
+    }
+    void getAnnouncementById(String(announcementId))
+      .then((result) => {
+        if (!cancelled) setAnnouncement(result);
+      })
+      .catch((loadError: unknown) => {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Unable to load this announcement.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [announcementId]);
+
+  const familyGroupId = announcement?.familyGroupId ?? '';
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsAdmin(false);
+    void (async () => {
+      try {
+        const session = await loadSession();
+        if (!session?.memberId || !familyGroupId) return;
+        const admin = await isGroupAdmin(familyGroupId, session.memberId);
+        if (!cancelled) setIsAdmin(admin);
+      } catch {
+        if (!cancelled) setIsAdmin(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [familyGroupId]);
+
+  function handleDeleteAnnouncement() {
+    if (!announcement || isDeleting) return;
+    confirmCommunityContentDeletion({
+      contentName: 'Announcement',
+      onDelete: () => deleteAnnouncement(announcement.id),
+      onDeleted: () => router.back(),
+      onDeleting: setIsDeleting,
+    });
+  }
   return (
     <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.navigation}>
@@ -38,6 +98,9 @@ export default function AnnouncementDetailsScreen() {
         <View style={styles.navigationSpacer} />
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {loading ? <ActivityIndicator color="#1476E8" /> : null}
+        {!loading && error ? <ThemedText style={styles.body}>{error}</ThemedText> : null}
+        {!loading && announcement ? (
         <View style={styles.detailCard}>
           <View style={styles.detailHeader}>
             <View style={styles.iconCircle}>
@@ -46,35 +109,39 @@ export default function AnnouncementDetailsScreen() {
             <View style={styles.typePill}>
               <ThemedText style={styles.typeText}>Announcement</ThemedText>
             </View>
-            <ThemedText style={styles.date}>{formatAnnouncementDate(createdAt)}</ThemedText>
+            <ThemedText style={styles.date}>{formatAnnouncementDate(announcement.createdAt)}</ThemedText>
           </View>
           <ThemedText type="title" style={styles.title}>
-            {title}
+            {announcement.title || 'Untitled announcement'}
           </ThemedText>
-          <ThemedText style={styles.body}>{body || 'No message provided.'}</ThemedText>
+          <ThemedText style={styles.body}>{announcement.body || 'No message provided.'}</ThemedText>
           <View style={styles.divider} />
           <View style={styles.metadata}>
             <View style={styles.avatar}>
               <ThemedText type="defaultSemiBold" style={styles.avatarText}>
-                {author.slice(0, 2).toUpperCase()}
+                {(announcement.creatorDisplayName || 'Unknown member').slice(0, 2).toUpperCase()}
               </ThemedText>
             </View>
             <View>
               <ThemedText style={styles.metadataLabel}>Posted by</ThemedText>
               <ThemedText type="defaultSemiBold" style={styles.author}>
-                {author}
+                {announcement.creatorDisplayName || 'Unknown member'}
               </ThemedText>
             </View>
           </View>
-          {expiresAt ? (
+          {announcement.expiresAt ? (
             <View style={styles.expiration}>
               <MaterialIcons name="schedule" size={18} color="#5D7396" />
               <ThemedText style={styles.expirationText}>
-                Expires {formatAnnouncementDate(expiresAt)}
+                Expires {formatAnnouncementDate(announcement.expiresAt)}
               </ThemedText>
             </View>
           ) : null}
+          {isAdmin ? (
+            <CommunityDeleteButton contentName="Announcement" deleting={isDeleting} onPress={handleDeleteAnnouncement} />
+          ) : null}
         </View>
+        ) : null}
       </ScrollView>
     </ThemedView>
   );

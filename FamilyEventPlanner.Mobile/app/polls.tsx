@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
@@ -58,7 +58,7 @@ export default function PollsScreen() {
     void setActiveGroup(update);
   }, [groupId, memberId, setActiveGroup]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
 
     async function refreshPolls() {
@@ -97,7 +97,7 @@ export default function PollsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, memberIdValue, refreshTokenValue, isReady, isResolvingMember]);
+  }, [groupIdValue, memberIdValue, refreshTokenValue, isReady, isResolvingMember]));
 
   const visiblePolls = polls.filter((poll) => {
     if (filter === 'Active') return !isPollClosed(poll);

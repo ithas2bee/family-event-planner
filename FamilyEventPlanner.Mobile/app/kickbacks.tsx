@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -182,7 +182,7 @@ export default function KickbacksScreen() {
     if (Object.keys(update).length > 0) void setActiveGroup(update);
   }, [groupId, memberId, setActiveGroup]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
     async function loadKickbacks() {
       setLoading(true);
@@ -206,7 +206,7 @@ export default function KickbacksScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, memberIdValue, refreshToken, isReady, isResolvingMember]);
+  }, [groupIdValue, memberIdValue, refreshToken, isReady, isResolvingMember]));
 
   const filteredKickbacks = useMemo(() => {
     if (selectedFilter === 'My Kickbacks') return kickbacks.filter((kickback) => isMyKickback(kickback, memberIdValue));

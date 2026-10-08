@@ -1,4 +1,5 @@
 import { ThemedText } from '@/components/themed-text';
+import { CommunityDeleteButton } from '@/components/community-delete-button';
 import { EventDateModal } from '@/components/events/EventDateModal';
 import { EventImageSelector } from '@/components/events/EventImageSelector';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
@@ -11,10 +12,11 @@ import { ImmersiveButton } from '@/components/ui/immersive-button';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { getEventAttendance, saveEventAttendance, AttendanceResponse } from '@/services/eventAttendanceService';
-import { Event, getEventById, updateEvent } from '@/services/eventService';
+import { deleteEvent, Event, getEventById, updateEvent } from '@/services/eventService';
 import { EventLocation } from '@/services/locationService';
 import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
+import { confirmCommunityContentDeletion } from '@/services/communityContentDeletion';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -27,6 +29,8 @@ export default function EventDetailsScreen() {
   const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<Event | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<string>('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -43,6 +47,7 @@ export default function EventDetailsScreen() {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   useEffect(() => {
+    setIsAdmin(false);
     if (!eventId || typeof eventId !== 'string') {
       setError('Invalid event ID.');
       setLoading(false);
@@ -74,6 +79,7 @@ export default function EventDetailsScreen() {
         if (!cancelled) {
           setEvent(eventData);
           setCurrentMemberId(session?.memberId || '');
+          setIsAdmin(Boolean(members.find((member) => member.memberId === session?.memberId)?.isAdmin));
           setGroupMembers(members);
           setAttendance(eventAttendance);
           setSelectedResponse(eventAttendance.find((item) => item.memberId === session?.memberId)?.rsvp ?? 0);
@@ -94,6 +100,16 @@ export default function EventDetailsScreen() {
 
     return () => {
       cancelled = true;
+    };
+
+    const handleDeleteEvent = () => {
+      if (!event || isDeleting) return;
+      confirmCommunityContentDeletion({
+        contentName: 'Event',
+        onDelete: () => deleteEvent(event.id),
+        onDeleted: () => router.back(),
+        onDeleting: setIsDeleting,
+      });
     };
   }, [eventId]);
 
@@ -415,6 +431,9 @@ export default function EventDetailsScreen() {
               <ThemedText style={styles.actionText}>Edit Event</ThemedText>
               <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
             </Pressable>
+          ) : null}
+          {isAdmin ? (
+            <CommunityDeleteButton contentName="Event" deleting={isDeleting} onPress={handleDeleteEvent} />
           ) : null}
         </View>
 

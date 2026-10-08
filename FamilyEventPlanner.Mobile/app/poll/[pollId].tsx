@@ -6,7 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getPollById, type Poll, voteOnPoll } from '@/services/pollService';
+import { CommunityDeleteButton } from '@/components/community-delete-button';
+import { confirmCommunityContentDeletion } from '@/services/communityContentDeletion';
+import { isGroupAdmin } from '@/services/groupMemberService';
+import { deletePoll, getPollById, type Poll, voteOnPoll } from '@/services/pollService';
+import { loadSession } from '@/services/sessionService';
 
 function formatPollDate(value: string): string {
   const date = new Date(value);
@@ -28,6 +32,8 @@ export default function PollDetailsScreen() {
   const { pollId } = useLocalSearchParams<{ pollId: string }>();
   const insets = useSafeAreaInsets();
   const [poll, setPoll] = useState<Poll | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +46,20 @@ export default function PollDetailsScreen() {
     }
 
     let cancelled = false;
+    setIsAdmin(false);
     void getPollById(String(pollId))
-      .then((data) => {
-        if (!cancelled) setPoll(data);
+      .then(async (data) => {
+        if (cancelled) return;
+        setPoll(data);
+        try {
+          const session = await loadSession();
+          if (session?.memberId) {
+            const admin = await isGroupAdmin(data.familyGroupId, session.memberId);
+            if (!cancelled) setIsAdmin(admin);
+          }
+        } catch {
+          if (!cancelled) setIsAdmin(false);
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load this poll.');
@@ -66,6 +83,16 @@ export default function PollDetailsScreen() {
       setError(err instanceof Error ? err.message : 'Unable to submit your vote.');
     } finally {
       setVoting(false);
+    }
+
+    function handleDeletePoll() {
+      if (!poll || isDeleting) return;
+      confirmCommunityContentDeletion({
+        contentName: 'Poll',
+        onDelete: () => deletePoll(poll.id),
+        onDeleted: () => router.back(),
+        onDeleting: setIsDeleting,
+      });
     }
   }
 
@@ -145,6 +172,7 @@ export default function PollDetailsScreen() {
         {voting ? <ThemedText style={styles.feedback}>Submitting vote...</ThemedText> : null}
         {closed ? <ThemedText style={styles.closedMessage}>This poll is closed. Voting is no longer available.</ThemedText> : null}
         {!closed && hasVoted ? <ThemedText style={styles.votedMessage}>Your vote has been recorded.</ThemedText> : null}
+        {isAdmin ? <CommunityDeleteButton contentName="Poll" deleting={isDeleting} onPress={handleDeletePoll} /> : null}
       </ScrollView>
     </ThemedView>
   );

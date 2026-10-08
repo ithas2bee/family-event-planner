@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
+import { deleteCommunityContent } from '@/services/communityContentService';
 
 export type PollOption = {
   id: string;
@@ -220,4 +221,8 @@ export async function voteOnPoll(pollOptionId: string): Promise<void> {
     const serverMessage = extractServerMessage(payload);
     throw new Error(resolveErrorMessage(response.status, serverMessage));
   }
+}
+
+export async function deletePoll(pollId: string): Promise<void> {
+  await deleteCommunityContent('polls', pollId, await getPollHeaders());
 }

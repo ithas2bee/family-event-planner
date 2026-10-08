@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -77,7 +77,7 @@ export default function AnnouncementsScreen() {
     if (groupId) void setActiveGroup({ groupId: String(groupId) });
   }, [groupId, setActiveGroup]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
     async function loadAnnouncements() {
       setLoading(true);
@@ -101,7 +101,7 @@ export default function AnnouncementsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, refreshTokenValue, isReady]);
+  }, [groupIdValue, refreshTokenValue, isReady]));
 
   return (
     <ThemedView
@@ -156,14 +156,7 @@ export default function AnnouncementsScreen() {
               onPress={() =>
                 router.push({
                   pathname: '/(tabs)/(main)/announcement/[announcementId]',
-                  params: {
-                    announcementId: item.id,
-                    title: item.title,
-                    body: item.body,
-                    creatorDisplayName: item.creatorDisplayName ?? '',
-                    createdAt: item.createdAt,
-                    expiresAt: item.expiresAt ?? '',
-                  },
+                  params: { announcementId: item.id },
                 })
               }
             />

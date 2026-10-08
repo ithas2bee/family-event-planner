@@ -348,6 +348,8 @@ namespace FamilyEventPlanner.Api.Controllers
 
             _context.ActivityFeed.RemoveRange(_context.ActivityFeed.Where(a =>
                 a.RelatedEntityId == poll.Id && a.RelatedEntityType == "Poll"));
+            _context.Notifications.RemoveRange(_context.Notifications.Where(n =>
+                n.Type == "PollCreated" && n.Link == $"/poll/{poll.Id}"));
             _context.Polls.Remove(poll);
             await _context.SaveChangesAsync();
 

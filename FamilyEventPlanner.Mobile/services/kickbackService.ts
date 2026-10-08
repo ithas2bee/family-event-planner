@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
+import { deleteCommunityContent } from '@/services/communityContentService';
 
 export type KickbackResponseType = 'PullingUp' | 'Maybe';
 
@@ -257,6 +258,10 @@ export async function respondToKickback(request: RespondToKickbackRequest): Prom
     } catch {
       parsedBody = rawBody;
     }
+  }
+
+  export async function deleteKickback(kickbackId: string): Promise<void> {
+    await deleteCommunityContent('kickbacks', kickbackId, await getKickbackHeaders());
   }
 
   if (!response.ok) {

@@ -28,6 +28,7 @@ public class CommunityContentDeletionTests
         Assert.Empty(await context.PollOptions.ToListAsync());
         Assert.Empty(await context.PollVotes.ToListAsync());
         Assert.Empty(await context.ActivityFeed.ToListAsync());
+        Assert.Empty(await context.Notifications.ToListAsync());
     }
 
     [Fact]
@@ -45,6 +46,7 @@ public class CommunityContentDeletionTests
         Assert.Equal(1, await context.Kickbacks.CountAsync());
         Assert.Equal(1, await context.Polls.CountAsync());
         Assert.Equal(1, await context.Announcements.CountAsync());
+        Assert.Single(await context.Notifications.ToListAsync());
     }
 
     [Fact]
@@ -66,6 +68,7 @@ public class CommunityContentDeletionTests
         Assert.Equal(1, await context.Kickbacks.CountAsync());
         Assert.Equal(1, await context.Polls.CountAsync());
         Assert.Equal(1, await context.Announcements.CountAsync());
+        Assert.Single(await context.Notifications.ToListAsync());
     }
 
     private static async Task<SeededContent> SeedContent(AppDbContext context)
@@ -108,6 +111,16 @@ public class CommunityContentDeletionTests
             MemberId = member.Id,
             CreatedAt = DateTime.UtcNow
         };
+        var pollNotification = new Notification
+        {
+            Id = Guid.NewGuid(),
+            MemberId = member.Id,
+            Member = member,
+            Message = "A poll was created.",
+            Type = "PollCreated",
+            Link = $"/poll/{poll.Id}",
+            CreatedAt = DateTime.UtcNow
+        };
         var announcement = new Announcement
         {
             Id = Guid.NewGuid(),
@@ -123,6 +136,7 @@ public class CommunityContentDeletionTests
         context.Polls.Add(poll);
         context.PollOptions.Add(option);
         context.PollVotes.Add(vote);
+        context.Notifications.Add(pollNotification);
         context.Announcements.Add(announcement);
         context.ActivityFeed.AddRange(
             CreateActivity(group.Id, familyEvent.Id, "Event"),
