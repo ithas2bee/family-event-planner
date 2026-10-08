@@ -328,5 +328,30 @@ namespace FamilyEventPlanner.Api.Controllers
 
             return Ok(new { vote.Id, vote.PollOptionId, vote.MemberId, vote.CreatedAt });
         }
+
+        // DELETE: api/polls/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var poll = await _context.Polls.FirstOrDefaultAsync(p => p.Id == id);
+            if (poll == null)
+                return NotFound(new { message = "Poll not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var member = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == poll.FamilyGroupId);
+            if (member == null || !member.IsAdmin)
+                return Forbid();
+
+            _context.ActivityFeed.RemoveRange(_context.ActivityFeed.Where(a =>
+                a.RelatedEntityId == poll.Id && a.RelatedEntityType == "Poll"));
+            _context.Polls.Remove(poll);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
     }
 }

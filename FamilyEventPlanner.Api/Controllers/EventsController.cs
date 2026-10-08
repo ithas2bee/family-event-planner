@@ -568,18 +568,16 @@ namespace FamilyEventPlanner.Api.Controllers
             if (ev == null)
                 return NotFound(new { message = "Event not found." });
 
-            // Only allow deletion by event creator or a group admin
             var memberIdClaim = User.FindFirst("memberId")?.Value;
             if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
                 return Forbid();
 
             var member = await _context.GroupMembers.FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == ev.FamilyGroupId);
-            if (member == null)
+            if (member == null || !member.IsAdmin)
                 return Forbid();
 
-            if (ev.CreatedByMemberId != memberId && !member.IsAdmin)
-                return Forbid();
-
+            _context.ActivityFeed.RemoveRange(_context.ActivityFeed.Where(a =>
+                a.RelatedEntityId == ev.Id && a.RelatedEntityType == "Event"));
             _context.FamilyEvents.Remove(ev);
             await _context.SaveChangesAsync();
 

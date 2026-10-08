@@ -300,5 +300,30 @@ namespace FamilyEventPlanner.Api.Controllers
 
             return Ok(new { kickbackId = request.KickbackId, memberId, responseType = request.ResponseType });
         }
+
+        // DELETE: api/kickbacks/{id}
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var kickback = await _context.Kickbacks.FirstOrDefaultAsync(k => k.Id == id);
+            if (kickback == null)
+                return NotFound(new { message = "Kickback not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var member = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == kickback.FamilyGroupId);
+            if (member == null || !member.IsAdmin)
+                return Forbid();
+
+            _context.ActivityFeed.RemoveRange(_context.ActivityFeed.Where(a =>
+                a.RelatedEntityId == kickback.Id && a.RelatedEntityType == "Kickback"));
+            _context.Kickbacks.Remove(kickback);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
     }
 }

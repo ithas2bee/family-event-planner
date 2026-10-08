@@ -233,10 +233,11 @@ namespace FamilyEventPlanner.Api.Controllers
             if (member == null)
                 return Forbid();
 
-            // Only creator or admin can delete
-            if (ann.CreatedByMemberId.HasValue && ann.CreatedByMemberId != memberId && !member.IsAdmin)
+            if (!member.IsAdmin)
                 return Forbid();
 
+            _context.ActivityFeed.RemoveRange(_context.ActivityFeed.Where(a =>
+                a.RelatedEntityId == ann.Id && a.RelatedEntityType == "Announcement"));
             _context.Announcements.Remove(ann);
             await _context.SaveChangesAsync();
 
