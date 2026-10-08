@@ -80,6 +80,7 @@ function NavigationGate() {
       <Stack.Screen name="event/[eventId]" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="notification-preferences" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy" options={{ headerShown: false }} />
       <Stack.Screen name="app-information" options={{ headerShown: false }} />
       <Stack.Screen name="app-information/[section]" options={{ headerShown: false }} />
       <Stack.Screen name="help-support" options={{ headerShown: false }} />

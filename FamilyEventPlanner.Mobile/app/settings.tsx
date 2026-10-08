@@ -14,7 +14,8 @@ type SettingOption = {
     | '/(tabs)/(main)/my-groups'
     | '/(tabs)/(main)/members'
     | '/app-information'
-    | '/notification-preferences';
+    | '/notification-preferences'
+    | '/privacy';
 };
 
 const sections: { title: string; options: SettingOption[] }[] = [
@@ -22,7 +23,7 @@ const sections: { title: string; options: SettingOption[] }[] = [
     title: 'Account',
     options: [
       { title: 'Profile', icon: 'person-outline', route: '/profile' },
-      { title: 'Privacy', icon: 'lock-outline' },
+      { title: 'Privacy', icon: 'lock-outline', route: '/privacy' },
       {
         title: 'Notification Preferences',
         icon: 'notifications-none',
