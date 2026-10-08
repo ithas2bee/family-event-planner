@@ -8,6 +8,7 @@ const helpSource = read('app/help-support.tsx');
 const quickHelpSource = read('app/quick-help/[section].tsx');
 const feedbackSource = read('app/feedback.tsx');
 const supportServiceSource = read('services/supportService.ts');
+const appConfig = JSON.parse(read('app.json'));
 const layoutSource = read('app/_layout.tsx');
 const homeSource = read('app/family-home.tsx');
 
@@ -25,7 +26,9 @@ test('Contact Support opens email support and feedback flows', () => {
   assert.match(helpSource, /createSupportEmailUrl\('Huddle Up Support'/);
   assert.match(helpSource, /router\.push\('\/feedback'\)/);
   assert.match(layoutSource, /Stack\.Screen name="feedback" options=\{\{ headerShown: false \}\}/);
-  assert.match(supportServiceSource, /EXPO_PUBLIC_SUPPORT_EMAIL/);
+  assert.equal(appConfig.expo.extra.supportEmail, 'lencrerotl0@gmail.com');
+  assert.match(supportServiceSource, /Constants\.expoConfig\?\.extra\?\.supportEmail/);
+  assert.match(supportServiceSource, /mailto:\$\{encodeURIComponent\(supportEmail\)\}/);
   assert.match(supportServiceSource, /session\.email/);
 });
 

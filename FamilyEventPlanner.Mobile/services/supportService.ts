@@ -1,6 +1,8 @@
+import Constants from 'expo-constants';
+
 import { loadSession } from '@/services/sessionService';
 
-const supportEmail = process.env.EXPO_PUBLIC_SUPPORT_EMAIL?.trim() ?? '';
+const supportEmail = String(Constants.expoConfig?.extra?.supportEmail ?? '').trim();
 export const FEEDBACK_MAX_LENGTH = 2000;
 export const FEEDBACK_CATEGORIES = ['Bug', 'Suggestion', 'General feedback'] as const;
 export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
