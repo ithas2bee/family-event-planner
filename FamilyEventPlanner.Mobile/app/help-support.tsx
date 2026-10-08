@@ -1,10 +1,11 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { createSupportEmailUrl, getSupportEmailBody } from '@/services/supportService';
 
 const sections = [
   {
@@ -26,6 +27,14 @@ const sections = [
 
 export default function HelpSupportScreen() {
   const insets = useSafeAreaInsets();
+
+  const openEmailSupport = async () => {
+    try {
+      await Linking.openURL(createSupportEmailUrl('Huddle Up Support', await getSupportEmailBody()));
+    } catch {
+      Alert.alert('Unable to open email', 'Please install or configure an email app and try again.');
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -53,7 +62,9 @@ export default function HelpSupportScreen() {
                   onPress={() =>
                     'section' in option && option.section
                       ? router.push({ pathname: '/quick-help/[section]', params: { section: option.section } })
-                      : router.push({ pathname: '/under-construction', params: { feature: option.title } })
+                      : option.title === 'Email Support'
+                        ? openEmailSupport()
+                        : router.push('/feedback')
                   }
                   style={[styles.option, index < section.options.length - 1 && styles.optionBorder]}
                 >

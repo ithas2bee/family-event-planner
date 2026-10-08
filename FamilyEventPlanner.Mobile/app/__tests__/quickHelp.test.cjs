@@ -6,6 +6,9 @@ const test = require('node:test');
 const read = (file) => fs.readFileSync(path.resolve(process.cwd(), file), 'utf8');
 const helpSource = read('app/help-support.tsx');
 const quickHelpSource = read('app/quick-help/[section].tsx');
+const feedbackSource = read('app/feedback.tsx');
+const supportServiceSource = read('services/supportService.ts');
+const appConfig = JSON.parse(read('app.json'));
 const layoutSource = read('app/_layout.tsx');
 const homeSource = read('app/family-home.tsx');
 
@@ -17,6 +20,28 @@ test('Help & Support opens each registered Quick Help section', () => {
   assert.match(layoutSource, /Stack\.Screen name="quick-help\/\[section\]" options=\{\{ headerShown: false \}\}/);
   assert.match(homeSource, /router\.push\('\/help-support'\)/);
   assert.match(quickHelpSource, /router\.back\(\)/);
+});
+
+test('Contact Support opens email support and feedback flows', () => {
+  assert.match(helpSource, /createSupportEmailUrl\('Huddle Up Support'/);
+  assert.match(helpSource, /router\.push\('\/feedback'\)/);
+  assert.match(layoutSource, /Stack\.Screen name="feedback" options=\{\{ headerShown: false \}\}/);
+  assert.equal(appConfig.expo.extra.supportEmail, 'lencrerotl0@gmail.com');
+  assert.match(supportServiceSource, /Constants\.expoConfig\?\.extra\?\.supportEmail/);
+  assert.match(supportServiceSource, /mailto:\$\{encodeURIComponent\(supportEmail\)\}/);
+  assert.match(supportServiceSource, /session\.email/);
+});
+
+test('Feedback form validates and communicates email draft submission states', () => {
+  assert.match(feedbackSource, /FEEDBACK_CATEGORIES\.map/);
+  assert.match(feedbackSource, /maxLength=\{FEEDBACK_MAX_LENGTH\}/);
+  assert.match(feedbackSource, /validateFeedbackMessage\(message\)/);
+  assert.match(feedbackSource, /Unable to open your email app/);
+  assert.match(feedbackSource, /Review it and tap Send to submit/);
+  assert.match(supportServiceSource, /FEEDBACK_MAX_LENGTH = 2000/);
+  assert.match(supportServiceSource, /if \(!trimmedMessage\)/);
+  assert.match(supportServiceSource, /trimmedMessage\.length > FEEDBACK_MAX_LENGTH/);
+  assert.match(supportServiceSource, /Category: \$\{category\}/);
 });
 
 test('FAQs are organized by topic and answers can be expanded and collapsed', () => {

@@ -50,6 +50,7 @@
       "reactCompiler": true
     },
     "extra": {
+      "supportEmail": "lencrerotl0@gmail.com",
       "router": {},
       "eas": {
         "projectId": "d8e24e2b-e350-42b4-859f-92469224d485"
