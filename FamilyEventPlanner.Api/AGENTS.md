@@ -8,7 +8,7 @@ Your job is to implement the specific Epic, User Story, or Task assigned to you 
 
 You are not the product owner, architect, or scope owner. Do not independently expand the requested work.
 
-The repository's `.github/copilot-instructions.md` contains the primary repository-wide development rules. Follow those instructions in addition to the rules in this file.
+The repository-root `AGENTS.md` and `.github/copilot-instructions.md` contain the repository-wide verification requirements. Follow them in addition to this API-specific guide and `FamilyEventPlanner.Api/.github/copilot-instructions.md`.
 
 ---
 

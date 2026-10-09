@@ -20,51 +20,54 @@ import { loadSession } from '@/services/sessionService';
 export default function AnnouncementDetailsScreen() {
   const insets = useSafeAreaInsets();
   const { announcementId } = useLocalSearchParams<{ announcementId?: string }>();
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const currentAnnouncementId = String(announcementId ?? '');
+  const [announcementResult, setAnnouncementResult] = useState<{
+    id: string;
+    announcement?: Announcement;
+    error?: string;
+  } | null>(null);
+  const [adminGroupId, setAdminGroupId] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const hasResultForCurrentAnnouncement = announcementResult?.id === currentAnnouncementId;
+  const announcement = hasResultForCurrentAnnouncement ? announcementResult.announcement ?? null : null;
+  const error = hasResultForCurrentAnnouncement ? announcementResult.error ?? null : null;
+  const loading = currentAnnouncementId.length > 0 && !hasResultForCurrentAnnouncement;
 
   useEffect(() => {
     let cancelled = false;
-    setAnnouncement(null);
-    setLoading(true);
-    setError(null);
-    if (!announcementId) {
-      setError('Announcement not found.');
-      setLoading(false);
-      return;
-    }
-    void getAnnouncementById(String(announcementId))
+    if (!currentAnnouncementId) return;
+    void getAnnouncementById(currentAnnouncementId)
       .then((result) => {
-        if (!cancelled) setAnnouncement(result);
+        if (!cancelled) setAnnouncementResult({ id: currentAnnouncementId, announcement: result });
       })
       .catch((loadError: unknown) => {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Unable to load this announcement.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setAnnouncementResult({
+            id: currentAnnouncementId,
+            error: loadError instanceof Error ? loadError.message : 'Unable to load this announcement.',
+          });
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [announcementId]);
+  }, [currentAnnouncementId]);
 
   const familyGroupId = announcement?.familyGroupId ?? '';
+  const isAdmin = Boolean(familyGroupId && adminGroupId === familyGroupId);
 
   useEffect(() => {
     let cancelled = false;
-    setIsAdmin(false);
     void (async () => {
       try {
         const session = await loadSession();
         if (!session?.memberId || !familyGroupId) return;
         const admin = await isGroupAdmin(familyGroupId, session.memberId);
-        if (!cancelled) setIsAdmin(admin);
+        if (!cancelled) setAdminGroupId(admin ? familyGroupId : '');
       } catch {
-        if (!cancelled) setIsAdmin(false);
+        if (!cancelled) setAdminGroupId('');
       }
     })();
     return () => {

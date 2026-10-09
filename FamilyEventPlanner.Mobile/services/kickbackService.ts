@@ -260,12 +260,12 @@ export async function respondToKickback(request: RespondToKickbackRequest): Prom
     }
   }
 
-  export async function deleteKickback(kickbackId: string): Promise<void> {
-    await deleteCommunityContent('kickbacks', kickbackId, await getKickbackHeaders());
-  }
-
   if (!response.ok) {
     const serverMessage = extractServerMessage(parsedBody);
     throw new Error(resolveErrorMessage(response.status, serverMessage));
   }
+}
+
+export async function deleteKickback(kickbackId: string): Promise<void> {
+  await deleteCommunityContent('kickbacks', kickbackId, await getKickbackHeaders());
 }

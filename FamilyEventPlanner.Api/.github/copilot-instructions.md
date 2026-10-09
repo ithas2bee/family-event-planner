@@ -1,5 +1,7 @@
 # Family Event Planner — GitHub Copilot Instructions
 
+Follow the repository-root `AGENTS.md` and `.github/copilot-instructions.md` for the mandatory baseline, post-change verification, honest reporting, and completion gate. These repository-wide instructions supplement the API-specific guidance below.
+
 ## 1. Project Purpose
 
 Family Event Planner is a family/group coordination application that allows users to organize groups, manage members, create and manage events, communicate with group members, and use supporting coordination features.

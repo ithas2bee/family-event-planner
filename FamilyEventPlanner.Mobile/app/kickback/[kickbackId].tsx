@@ -31,7 +31,6 @@ export default function KickbackDetailsScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    setIsAdmin(false);
 
     async function loadKickback() {
       try {

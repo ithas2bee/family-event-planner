@@ -47,7 +47,6 @@ export default function EventDetailsScreen() {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   useEffect(() => {
-    setIsAdmin(false);
     if (!eventId || typeof eventId !== 'string') {
       setError('Invalid event ID.');
       setLoading(false);
@@ -100,16 +99,6 @@ export default function EventDetailsScreen() {
 
     return () => {
       cancelled = true;
-    };
-
-    const handleDeleteEvent = () => {
-      if (!event || isDeleting) return;
-      confirmCommunityContentDeletion({
-        contentName: 'Event',
-        onDelete: () => deleteEvent(event.id),
-        onDeleted: () => router.back(),
-        onDeleting: setIsDeleting,
-      });
     };
   }, [eventId]);
 
@@ -172,6 +161,16 @@ export default function EventDetailsScreen() {
     } finally {
       setResponseLoading(false);
     }
+  };
+
+  const handleDeleteEvent = () => {
+    if (!event || isDeleting) return;
+    confirmCommunityContentDeletion({
+      contentName: 'Event',
+      onDelete: () => deleteEvent(event.id),
+      onDeleted: () => router.back(),
+      onDeleting: setIsDeleting,
+    });
   };
 
   const formatDate = (value: string) => {

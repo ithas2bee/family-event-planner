@@ -39,14 +39,9 @@ export default function PollDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!pollId) {
-      setError('Poll not found.');
-      setLoading(false);
-      return;
-    }
-
+    if (!pollId) return;
     let cancelled = false;
-    setIsAdmin(false);
+    let cancelled = false;
     void getPollById(String(pollId))
       .then(async (data) => {
         if (cancelled) return;
@@ -73,6 +68,14 @@ export default function PollDetailsScreen() {
     };
   }, [pollId]);
 
+  if (!pollId) {
+    return (
+      <ThemedView style={[styles.centered, { paddingTop: insets.top + 24 }]}>
+        <ThemedText style={styles.feedback}>Poll not found.</ThemedText>
+      </ThemedView>
+    );
+  }
+
   async function handleVote(optionId: string) {
     if (!poll || voting || poll.currentMemberSelectedOptionId || isPollClosed(poll)) return;
     try {
@@ -84,16 +87,16 @@ export default function PollDetailsScreen() {
     } finally {
       setVoting(false);
     }
+  }
 
-    function handleDeletePoll() {
-      if (!poll || isDeleting) return;
-      confirmCommunityContentDeletion({
-        contentName: 'Poll',
-        onDelete: () => deletePoll(poll.id),
-        onDeleted: () => router.back(),
-        onDeleting: setIsDeleting,
-      });
-    }
+  function handleDeletePoll() {
+    if (!poll || isDeleting) return;
+    confirmCommunityContentDeletion({
+      contentName: 'Poll',
+      onDelete: () => deletePoll(poll.id),
+      onDeleted: () => router.back(),
+      onDeleting: setIsDeleting,
+    });
   }
 
   if (loading) {
