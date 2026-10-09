@@ -63,7 +63,7 @@ test('announcement details are reloaded by ID so deleted announcements return no
 
   assert.match(service, /getAnnouncementById/);
   assert.match(service, /Announcement not found\./);
-  assert.match(screen, /getAnnouncementById\(String\(announcementId\)\)/);
+  assert.match(screen, /getAnnouncementById\(currentAnnouncementId\)/);
 });
 
 test('kickback, poll, and announcement lists reload when they regain focus', () => {

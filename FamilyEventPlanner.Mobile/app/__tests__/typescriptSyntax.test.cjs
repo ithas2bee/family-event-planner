@@ -33,3 +33,39 @@ test('all mobile TypeScript and TSX files parse without syntax errors', () => {
 
   assert.deepEqual(parseErrors, []);
 });
+
+test('community content deletion screens and services have no TypeScript diagnostics', () => {
+  const configPath = path.join(projectRoot, 'tsconfig.json');
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+  assert.equal(configFile.error, undefined, 'mobile TypeScript configuration should load');
+
+  const config = ts.parseJsonConfigFileContent(configFile.config, ts.sys, projectRoot);
+  const checkedFiles = [
+    'app/announcement/[announcementId].tsx',
+    'app/event/[eventId].tsx',
+    'app/kickback/[kickbackId].tsx',
+    'app/poll/[pollId].tsx',
+    'components/community-delete-button.tsx',
+    'services/announcementService.ts',
+    'services/communityContentDeletion.ts',
+    'services/communityContentService.ts',
+    'services/eventService.ts',
+    'services/groupMemberService.ts',
+    'services/kickbackService.ts',
+    'services/pollService.ts',
+  ].map((file) => path.join(projectRoot, file));
+  const checkedFileSet = new Set(checkedFiles);
+  const program = ts.createProgram({
+    rootNames: checkedFiles,
+    options: { ...config.options, noEmit: true },
+  });
+  const errors = ts.getPreEmitDiagnostics(program)
+    .filter((diagnostic) => diagnostic.file && checkedFileSet.has(diagnostic.file.fileName))
+    .map((diagnostic) => {
+      const location = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start ?? 0);
+      const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+      return `${path.relative(projectRoot, diagnostic.file.fileName)}:${location.line + 1}: ${message}`;
+    });
+
+  assert.deepEqual(errors, []);
+});

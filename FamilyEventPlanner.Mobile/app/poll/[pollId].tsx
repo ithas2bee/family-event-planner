@@ -41,7 +41,6 @@ export default function PollDetailsScreen() {
   useEffect(() => {
     if (!pollId) return;
     let cancelled = false;
-    let cancelled = false;
     void getPollById(String(pollId))
       .then(async (data) => {
         if (cancelled) return;

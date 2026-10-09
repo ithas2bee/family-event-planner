@@ -47,11 +47,7 @@ export default function EventDetailsScreen() {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   useEffect(() => {
-    if (!eventId || typeof eventId !== 'string') {
-      setError('Invalid event ID.');
-      setLoading(false);
-      return;
-    }
+    if (!eventId || typeof eventId !== 'string') return;
 
     let cancelled = false;
 
@@ -218,6 +214,17 @@ export default function EventDetailsScreen() {
       setEditError(err instanceof Error ? err.message : 'Failed to update event details.');
     }
   };
+
+  if (!eventId || typeof eventId !== 'string') {
+    return (
+      <ScreenContainer>
+        <View style={styles.centered}>
+          <ThemedText type="title" style={styles.errorTitle}>Event Not Found</ThemedText>
+          <ThemedText style={styles.errorText}>Invalid event ID.</ThemedText>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   if (loading) {
     return (
