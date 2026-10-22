@@ -49,10 +49,6 @@ export default function LoginScreen() {
     }
   }
 
-  function providerUnavailable(provider: string) {
-    setError(`${provider} sign-in is not configured yet.`);
-  }
-
   return (
     <AuthScreenLayout>
           <ThemedText style={styles.brand}>Huddle Up</ThemedText>
@@ -105,10 +101,6 @@ export default function LoginScreen() {
             {loading ? <ActivityIndicator color="#FFFFFF" /> : <ThemedText style={styles.primaryButtonText}>Sign In</ThemedText>}
           </Pressable>
 
-          <View style={styles.orRow}><View style={styles.rule} /><ThemedText style={styles.or}>OR</ThemedText><View style={styles.rule} /></View>
-          <Pressable style={styles.providerButton} onPress={() => providerUnavailable('Google')}><ThemedText style={styles.providerIcon}>G</ThemedText><ThemedText style={styles.providerText}>Continue with Google</ThemedText></Pressable>
-          <Pressable style={styles.providerButton} onPress={() => providerUnavailable('Facebook')}><ThemedText style={styles.facebookIcon}>f</ThemedText><ThemedText style={styles.providerText}>Continue with Facebook</ThemedText></Pressable>
-
           {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
           <View style={styles.footer}><ThemedText style={styles.footerText}>Don&apos;t have an account? </ThemedText><Pressable onPress={() => router.replace('/create-account')}><ThemedText style={styles.link}>Create Account</ThemedText></Pressable></View>
     </AuthScreenLayout>
@@ -129,13 +121,6 @@ const styles = StyleSheet.create({
   primaryButton: { minHeight: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 17, backgroundColor: '#1677E8', marginTop: 8 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
   disabled: { opacity: 0.55 },
-  orRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 12 },
-  rule: { flex: 1, height: 1, backgroundColor: '#D0DCEB' },
-  or: { color: '#536987', fontWeight: '700' },
-  providerButton: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, borderWidth: 1.5, borderColor: '#D0DCEB', borderRadius: 16, backgroundColor: '#FFFFFF' },
-  providerIcon: { color: '#4285F4', fontSize: 25, fontWeight: '800' },
-  facebookIcon: { color: '#1877F2', fontSize: 29, fontWeight: '800' },
-  providerText: { color: '#101B5A', fontSize: 16, fontWeight: '700' },
   error: { color: '#C0392B', textAlign: 'center', fontSize: 14 },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   footerText: { color: '#536987', fontSize: 16 },
