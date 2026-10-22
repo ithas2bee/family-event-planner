@@ -17,6 +17,21 @@ test('Sign In and Create Account use the shared authentication layout', () => {
   }
 });
 
+test('sign-in and sign-up keep email/password forms without social authentication UI', () => {
+  const loginSource = fs.readFileSync(path.join(appDirectory, 'login.tsx'), 'utf8');
+  const createAccountSource = fs.readFileSync(path.join(appDirectory, 'create-account.tsx'), 'utf8');
+
+  for (const source of [loginSource, createAccountSource]) {
+    assert.doesNotMatch(source, /Google|Facebook|providerUnavailable|providerButton|orRow/);
+    assert.match(source, /placeholder="email@example\.com"/);
+    assert.match(source, /secureTextEntry=\{!showPassword\}/);
+  }
+
+  assert.match(loginSource, /<ThemedText style=\{styles\.primaryButtonText\}>Sign In<\/ThemedText>/);
+  assert.match(createAccountSource, /<ThemedText style=\{styles\.primaryButtonText\}>Create Account<\/ThemedText>/);
+  assert.match(createAccountSource, /placeholder="Choose a username"/);
+});
+
 test('the shared authentication surface fills the screen and keeps form padding', () => {
   assert.match(layoutSource, /<SafeAreaView style=\{styles\.safeArea\}>/);
   assert.match(layoutSource, /content: \{ flexGrow: 1 \}/);

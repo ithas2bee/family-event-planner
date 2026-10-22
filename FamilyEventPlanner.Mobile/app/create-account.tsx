@@ -35,10 +35,6 @@ export default function CreateAccountScreen() {
     }
   }
 
-  function providerUnavailable(provider: string) {
-    setError(`${provider} sign-in is not configured yet.`);
-  }
-
   return (
     <AuthScreenLayout>
           <ThemedText style={styles.brand}>Huddle Up</ThemedText>
@@ -51,9 +47,6 @@ export default function CreateAccountScreen() {
           <View style={styles.fieldGroup}><ThemedText style={styles.label}>Password</ThemedText><View style={styles.inputWrap}><Ionicons name="lock-closed-outline" size={21} color="#5C6F8D" /><TextInput style={styles.input} value={password} onChangeText={setPassword} placeholder="Create a password" placeholderTextColor="#7183A0" secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} /><Pressable accessibilityLabel={showPassword ? 'Hide password' : 'Show password'} onPress={() => setShowPassword((visible) => !visible)}><Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={23} color="#5C6F8D" /></Pressable></View><ThemedText style={styles.help}>Use at least 8 characters with a mix of letters, numbers, and symbols.</ThemedText></View>
 
           <Pressable style={[styles.primaryButton, (!canSubmit || loading) && styles.disabled]} onPress={handleCreateAccount} disabled={!canSubmit || loading}>{loading ? <ActivityIndicator color="#FFFFFF" /> : <ThemedText style={styles.primaryButtonText}>Create Account</ThemedText>}</Pressable>
-          <View style={styles.orRow}><View style={styles.rule} /><ThemedText style={styles.or}>OR</ThemedText><View style={styles.rule} /></View>
-          <Pressable style={styles.providerButton} onPress={() => providerUnavailable('Google')}><ThemedText style={styles.providerIcon}>G</ThemedText><ThemedText style={styles.providerText}>Continue with Google</ThemedText></Pressable>
-          <Pressable style={styles.providerButton} onPress={() => providerUnavailable('Facebook')}><ThemedText style={styles.facebookIcon}>f</ThemedText><ThemedText style={styles.providerText}>Continue with Facebook</ThemedText></Pressable>
           {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
           <View style={styles.footer}><ThemedText style={styles.footerText}>Already have an account? </ThemedText><Pressable onPress={() => router.replace('/login')}><ThemedText style={styles.link}>Sign In</ThemedText></Pressable></View>
     </AuthScreenLayout>
@@ -73,13 +66,6 @@ const styles = StyleSheet.create({
   primaryButton: { minHeight: 58, alignItems: 'center', justifyContent: 'center', borderRadius: 17, backgroundColor: '#1677E8', marginTop: 8 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
   disabled: { opacity: 0.55 },
-  orRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginVertical: 8 },
-  rule: { flex: 1, height: 1, backgroundColor: '#D0DCEB' },
-  or: { color: '#536987', fontWeight: '700' },
-  providerButton: { minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, borderWidth: 1.5, borderColor: '#D0DCEB', borderRadius: 16, backgroundColor: '#FFFFFF' },
-  providerIcon: { color: '#4285F4', fontSize: 25, fontWeight: '800' },
-  facebookIcon: { color: '#1877F2', fontSize: 29, fontWeight: '800' },
-  providerText: { color: '#101B5A', fontSize: 16, fontWeight: '700' },
   error: { color: '#C0392B', textAlign: 'center', fontSize: 14 },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 18 },
   footerText: { color: '#536987', fontSize: 16 },
