@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Net.Mail;
@@ -41,7 +42,8 @@ public sealed class ResendEmailSender : IEmailSender
                 from = fromAddress,
                 to = recipient,
                 subject,
-                text = body
+                text = body,
+                html = BuildHtmlBody(body)
             })
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
@@ -71,5 +73,23 @@ public sealed class ResendEmailSender : IEmailSender
                 (int)response.StatusCode);
             throw new InvalidOperationException("Email delivery failed.");
         }
+    }
+
+    private static string BuildHtmlBody(string body)
+    {
+        var htmlLines = body.Split('\n')
+            .Select(line => line.TrimEnd('\r'))
+            .Select(line =>
+            {
+                if (Uri.TryCreate(line, UriKind.Absolute, out _))
+                {
+                    var encodedUrl = WebUtility.HtmlEncode(line);
+                    return $"<a href=\"{encodedUrl}\" style=\"display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;\">Reset Password</a>";
+                }
+
+                return WebUtility.HtmlEncode(line);
+            });
+
+        return $"<!doctype html><html><body>{string.Join("<br>\n", htmlLines)}</body></html>";
     }
 }
