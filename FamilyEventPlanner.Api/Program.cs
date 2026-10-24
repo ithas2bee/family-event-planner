@@ -1,9 +1,11 @@
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace FamilyEventPlanner.Api
 {
@@ -30,7 +32,22 @@ namespace FamilyEventPlanner.Api
 
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
+            builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
             builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.AddPolicy("password-recovery", context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 5,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0,
+                            AutoReplenishment = true
+                        }));
+            });
 
             // Add services to the container with JSON camelCase naming
             builder.Services.AddControllers()
@@ -150,7 +167,9 @@ namespace FamilyEventPlanner.Api
             // Re-enable for production with proper SSL certificates
             // app.UseHttpsRedirection();
 
+            app.UseRouting();
             app.UseCors("AllowExpo");
+            app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
 

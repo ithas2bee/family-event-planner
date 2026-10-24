@@ -7,6 +7,7 @@ using FamilyEventPlanner.Api.Models.Auth;
 using FamilyEventPlanner.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace FamilyEventPlanner.Api.Controllers
@@ -17,12 +18,21 @@ namespace FamilyEventPlanner.Api.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ITokenService _tokenService;
+        private readonly IEmailSender _emailSender;
+        private readonly string _passwordResetUrl;
         private readonly PasswordHasher<User> _passwordHasher = new();
 
-        public AuthController(AppDbContext context, ITokenService tokenService)
+        public AuthController(
+            AppDbContext context,
+            ITokenService tokenService,
+            IEmailSender emailSender,
+            IConfiguration configuration)
         {
             _context = context;
             _tokenService = tokenService;
+            _emailSender = emailSender;
+            _passwordResetUrl = configuration["PasswordReset:DeepLinkUrl"] ??
+                "familyeventplannermobile://reset-password";
         }
 
         [HttpPost("register")]
@@ -110,6 +120,149 @@ namespace FamilyEventPlanner.Api.Controllers
                 displayName = user.DisplayName,
                 authToken = token
             });
+        }
+
+        [HttpPost("forgot-password")]
+        [EnableRateLimiting("password-recovery")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            const string confirmation = "If an account exists for that email, a password reset link will be sent.";
+            if (!ModelState.IsValid)
+            {
+                return Ok(new { message = confirmation });
+            }
+
+            if (!_emailSender.IsConfigured || string.IsNullOrWhiteSpace(_passwordResetUrl))
+            {
+                return Ok(new { message = confirmation });
+            }
+
+            var email = request.Email.Trim().ToLowerInvariant();
+            var user = await _context.Users.FirstOrDefaultAsync(candidate => candidate.Email == email);
+            if (user == null || string.IsNullOrWhiteSpace(user.PasswordHash))
+            {
+                return Ok(new { message = confirmation });
+            }
+
+            var now = DateTime.UtcNow;
+            var previousTokens = await _context.PasswordResetTokens
+                .Where(token => token.UserId == user.Id && token.UsedAtUtc == null)
+                .ToListAsync();
+            foreach (var previousToken in previousTokens)
+            {
+                previousToken.UsedAtUtc = now;
+            }
+
+            if (previousTokens.Count > 0)
+            {
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return Ok(new { message = confirmation });
+                }
+            }
+
+            var resetToken = CreateResetToken();
+            var resetRecord = new PasswordResetToken
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TokenHash = HashResetToken(resetToken),
+                ExpiresAtUtc = now.AddMinutes(30)
+            };
+            _context.PasswordResetTokens.Add(resetRecord);
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Ok(new { message = confirmation });
+            }
+
+            var resetLink = $"{_passwordResetUrl}?token={Uri.EscapeDataString(resetToken)}";
+            try
+            {
+                await _emailSender.SendAsync(
+                    user.Email,
+                    "Reset your Huddle Up password",
+                    $"Use this link within 30 minutes to reset your Huddle Up password:\n\n{resetLink}\n\nIf you did not request a password reset, you can ignore this email.");
+            }
+            catch
+            {
+                resetRecord.UsedAtUtc = DateTime.UtcNow;
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                }
+            }
+
+            return Ok(new { message = confirmation });
+        }
+
+        [HttpPost("reset-password")]
+        [EnableRateLimiting("password-recovery")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Please check your password and try again." });
+            }
+
+            if (request.Password != request.ConfirmPassword)
+            {
+                return BadRequest(new { message = "Passwords do not match." });
+            }
+
+            var tokenHash = HashResetToken(request.Token);
+            var resetRecord = await _context.PasswordResetTokens.FirstOrDefaultAsync(token =>
+                token.TokenHash == tokenHash &&
+                token.UsedAtUtc == null &&
+                token.ExpiresAtUtc > DateTime.UtcNow);
+
+            if (resetRecord == null)
+            {
+                return BadRequest(new { message = "This reset link is invalid or expired. Please request a new link." });
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(candidate => candidate.Id == resetRecord.UserId);
+            if (user == null)
+            {
+                return BadRequest(new { message = "This reset link is invalid or expired. Please request a new link." });
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
+            resetRecord.UsedAtUtc = DateTime.UtcNow;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return BadRequest(new { message = "This reset link is invalid or expired. Please request a new link." });
+            }
+
+            return Ok(new { message = "Password reset. You can now sign in with your new password." });
+        }
+
+        private static string CreateResetToken()
+        {
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
+                .TrimEnd('=')
+                .Replace('+', '-')
+                .Replace('/', '_');
+        }
+
+        private static string HashResetToken(string token)
+        {
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
         }
 
         private static bool FixedTimeEquals(string left, string right)

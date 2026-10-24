@@ -32,6 +32,7 @@ namespace FamilyEventPlanner.Api.Data
         // Notifications and users
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
         // Activity feed
         public DbSet<ActivityFeed> ActivityFeed { get; set; }
@@ -43,6 +44,25 @@ namespace FamilyEventPlanner.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .Property(token => token.UsedAtUtc)
+                .IsConcurrencyToken();
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(token => token.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(token => token.TokenHash)
+                .IsUnique();
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(token => token.UserId)
+                .HasFilter("[UsedAtUtc] IS NULL")
+                .IsUnique();
 
             // Prevent multiple cascade delete paths involving GroupMembers by setting NoAction (SQL: NO ACTION)
             modelBuilder.Entity<EventAttendance>()

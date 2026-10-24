@@ -323,12 +323,12 @@ namespace FamilyEventPlanner.Api.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("Pending")
-                        .IsConcurrencyToken();
+                        .HasDefaultValue("Pending");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -446,6 +446,39 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasIndex("MemberId");
 
                     b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UsedAtUtc] IS NULL");
+
+                    b.ToTable("PasswordResetTokens");
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Photo", b =>
@@ -792,6 +825,15 @@ namespace FamilyEventPlanner.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.PasswordResetToken", b =>
+                {
+                    b.HasOne("FamilyEventPlanner.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Photo", b =>

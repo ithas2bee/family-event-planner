@@ -33,6 +33,9 @@ const unrestrictedRoutes = new Set([
   'edit-profile',
   'join-group',
   'create-group',
+  'forgot-password',
+  'forgot-username',
+  'reset-password',
 ]);
 
 function NavigationGate() {
@@ -62,6 +65,9 @@ function NavigationGate() {
       <Stack.Screen name="auth" options={{ headerShown: false }} />
       <Stack.Screen name="login" options={{ title: 'Sign In' }} />
       <Stack.Screen name="create-account" options={{ title: 'Create Account' }} />
+      <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+      <Stack.Screen name="forgot-username" options={{ headerShown: false }} />
+      <Stack.Screen name="reset-password" options={{ headerShown: false }} />
       <Stack.Screen name="group-required" options={{ headerShown: false }} />
       <Stack.Screen name="my-groups" options={{ headerShown: false }} />
       <Stack.Screen name="all-groups" options={{ headerShown: false }} />

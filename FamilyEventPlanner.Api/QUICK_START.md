@@ -14,7 +14,7 @@
 
 | File | Time | Priority | What to Know |
 |------|------|----------|--------------|
-| `IMPLEMENTATION_OVERVIEW.md` | 5 min | ??? | Start here — summary of all changes |
+| `IMPLEMENTATION_OVERVIEW.md` | 5 min | ??? | Start here ï¿½ summary of all changes |
 | `RECOMMENDED_FIXES_SUMMARY.md` | 10 min | ??? | Detailed explanation of each fix |
 | `SWAGGER_TESTING_EXAMPLES.md` | 15 min | ?? | Copy-paste examples for Swagger testing |
 | `TESTING_GUIDE.md` | 10 min | ?? | How to set up integration tests |
@@ -66,24 +66,24 @@ dotnet run
 
 | Controller | Method | Auth | Validation | New Behavior |
 |-----------|--------|------|-----------|--------------|
-| FamilyGroups | POST | — | Name required, unique invite code | Retry invite generation |
-| FamilyGroups | GET {id} | — | — | — |
-| FamilyGroups | GET (all) | — | — | ? REMOVED (security) |
-| GroupMembers | POST join | — | Email, name, invite code | 201 on success |
+| FamilyGroups | POST | ï¿½ | Name required, unique invite code | Retry invite generation |
+| FamilyGroups | GET {id} | ï¿½ | ï¿½ | ï¿½ |
+| FamilyGroups | GET (all) | ï¿½ | ï¿½ | ? REMOVED (security) |
+| GroupMembers | POST join | ï¿½ | Email, name, invite code | 201 on success |
 | GroupMembers | GET {id} | ? | Membership check | 403 if not member |
-| Events | POST | ? | Title, StartDate, group FK | — |
-| Events | GET {id} | ? | Membership check | — |
-| Events | GET /group/{id} | ? | Membership check | — |
+| Events | POST | ? | Title, StartDate, group FK | ï¿½ |
+| Events | GET {id} | ? | Membership check | ï¿½ |
+| Events | GET /group/{id} | ? | Membership check | ï¿½ |
 | Attendance | POST | ? | Event FK, membership | Upsert (deduplicate) |
-| Attendance | GET /event/{id} | ? | Membership check | — |
-| Assignments | POST | ? | Event FK, member validation | — |
-| Assignments | GET /event/{id} | ? | Membership check | — |
-| Announcements | POST | ? | Title, Body required | — |
-| Announcements | GET /group/{id} | ? | Membership check | — |
-| Polls | POST | ? | Question, options required | — |
+| Attendance | GET /event/{id} | ? | Membership check | ï¿½ |
+| Assignments | POST | ? | Event FK, member validation | ï¿½ |
+| Assignments | GET /event/{id} | ? | Membership check | ï¿½ |
+| Announcements | POST | ? | Title, Body required | ï¿½ |
+| Announcements | GET /group/{id} | ? | Membership check | ï¿½ |
+| Polls | POST | ? | Question, options required | ï¿½ |
 | Polls | POST /vote | ? | Option FK, one vote per member | 400 if duplicate vote |
-| Notifications | POST | ? | Member FK | — |
-| Notifications | GET | ? | Self-only | — |
+| Notifications | POST | ? | Member FK | ï¿½ |
+| Notifications | GET | ? | Self-only | ï¿½ |
 
 ---
 
@@ -123,12 +123,12 @@ None! All changes are backward compatible except:
 
 ## ?? What You Get
 
-? **Unique constraints** — prevents duplicates at DB level
-? **Better validation** — consistent 400/403/404 responses
-? **Security hardening** — group membership enforced everywhere
-? **Deduplication** — RSVP upsert logic
-? **Documentation** — 4 guides + examples
-? **Testing guide** — ready for integration tests
+? **Unique constraints** ï¿½ prevents duplicates at DB level
+? **Better validation** ï¿½ consistent 400/403/404 responses
+? **Security hardening** ï¿½ group membership enforced everywhere
+? **Deduplication** ï¿½ RSVP upsert logic
+? **Documentation** ï¿½ 4 guides + examples
+? **Testing guide** ï¿½ ready for integration tests
 
 ---
 
@@ -170,7 +170,7 @@ Models/
   ?? ... (existing DTOs, no changes)
 
 Data/
-  ?? AppDbContext.cs (modified — unique indices)
+  ?? AppDbContext.cs (modified ï¿½ unique indices)
 ```
 
 ---
@@ -185,3 +185,18 @@ Data/
 ---
 
 **Ready to go!** ??
+
+## Password recovery email setup
+
+Password reset emails use the API's built-in SMTP sender; no email package or paid provider is included. Configure an existing SMTP relay or an email provider with these environment variables before enabling recovery:
+
+```text
+Email__SmtpHost       Required SMTP server hostname
+Email__SmtpPort       Optional; defaults to 587
+Email__EnableSsl      Optional; defaults to true
+Email__FromAddress    Required verified sender address
+Email__SmtpUsername   Optional SMTP account name
+Email__SmtpPassword   Optional SMTP account password (keep in a secret store)
+```
+
+The API uses `PasswordReset__DeepLinkUrl` to build reset links; its default, `familyeventplannermobile://reset-password`, matches the Expo scheme in `FamilyEventPlanner.Mobile/app.json`. Reset links expire after 30 minutes. When SMTP is not configured or delivery fails, the API keeps the same generic recovery response and does not reveal an account or token. Provider availability and any sending costs depend on the SMTP service you choose; no paid infrastructure is required by this implementation.

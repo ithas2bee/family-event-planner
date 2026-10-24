@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AuthScreenLayout } from '@/components/auth-screen-layout';
 import { ThemedText } from '@/components/themed-text';
@@ -93,8 +93,12 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <Pressable style={styles.forgot} onPress={() => Alert.alert('Forgot Password?', 'Please contact support to securely reset your password.')}>
+          <Pressable style={styles.forgot} onPress={() => router.push({ pathname: '/forgot-password', params: { email: email.trim() } })}>
             <ThemedText style={styles.link}>Forgot Password?</ThemedText>
+          </Pressable>
+
+          <Pressable style={styles.forgot} onPress={() => router.push('/forgot-username')}>
+            <ThemedText style={styles.link}>Forgot Username?</ThemedText>
           </Pressable>
 
           <Pressable style={[styles.primaryButton, (!canSubmit || loading) && styles.disabled]} onPress={handleLogin} disabled={!canSubmit || loading}>
