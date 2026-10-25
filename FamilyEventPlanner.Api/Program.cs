@@ -32,7 +32,7 @@ namespace FamilyEventPlanner.Api
 
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
-            builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+            builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
             builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();
             builder.Services.AddRateLimiter(options =>
             {

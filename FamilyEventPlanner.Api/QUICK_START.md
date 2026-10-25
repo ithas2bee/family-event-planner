@@ -188,15 +188,13 @@ Data/
 
 ## Password recovery email setup
 
-Password reset emails use the API's built-in SMTP sender; no email package or paid provider is included. Configure an existing SMTP relay or an email provider with these environment variables before enabling recovery:
+Password reset emails are sent through Resend's email API. Set these environment variables locally (for example, with .NET user secrets) and in the production deployment's secret/configuration store:
 
 ```text
-Email__SmtpHost       Required SMTP server hostname
-Email__SmtpPort       Optional; defaults to 587
-Email__EnableSsl      Optional; defaults to true
-Email__FromAddress    Required verified sender address
-Email__SmtpUsername   Optional SMTP account name
-Email__SmtpPassword   Optional SMTP account password (keep in a secret store)
+RESEND_API_KEY        Required Resend API key (keep in a secret store)
+Email__FromAddress    Required sender address verified in Resend
 ```
 
-The API uses `PasswordReset__DeepLinkUrl` to build reset links; its default, `familyeventplannermobile://reset-password`, matches the Expo scheme in `FamilyEventPlanner.Mobile/app.json`. Reset links expire after 30 minutes. When SMTP is not configured or delivery fails, the API keeps the same generic recovery response and does not reveal an account or token. Provider availability and any sending costs depend on the SMTP service you choose; no paid infrastructure is required by this implementation.
+Use a sender address on the verified `send.huddleupmobileapp.com` domain, such as `no-reply@send.huddleupmobileapp.com`. The API reads the key from `RESEND_API_KEY` and the sender from `Email:FromAddress` (`Email__FromAddress` as an environment variable); there is no default sender. Do not commit the API key.
+
+The API uses `PasswordReset__DeepLinkUrl` to build reset links; its default, `familyeventplannermobile://reset-password`, matches the Expo scheme in `FamilyEventPlanner.Mobile/app.json`. Reset links expire after 30 minutes. When Resend is not configured or delivery fails, the API keeps the same generic recovery response and does not reveal an account or token. Delivery failures are logged without recipient, reset-link, or provider-response details.

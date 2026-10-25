@@ -114,6 +114,28 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public async Task ForgotPasswordDeliveryFailureKeepsGenericResponseAndInvalidatesToken()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "old-password");
+        var emailSender = new TestEmailSender
+        {
+            Failure = new InvalidOperationException("Email delivery failed.")
+        };
+        var controller = CreateController(context, emailSender);
+
+        var registeredResult = Assert.IsType<OkObjectResult>(
+            await controller.ForgotPassword(new ForgotPasswordRequest { Email = user.Email }));
+        var unregisteredResult = Assert.IsType<OkObjectResult>(
+            await controller.ForgotPassword(new ForgotPasswordRequest { Email = "missing@example.com" }));
+
+        Assert.Equal(GetMessage(registeredResult), GetMessage(unregisteredResult));
+        Assert.DoesNotContain("Email delivery failed", GetMessage(registeredResult));
+        Assert.DoesNotContain("token=", GetMessage(registeredResult));
+        Assert.NotNull(context.PasswordResetTokens.Single().UsedAtUtc);
+    }
+
+    [Fact]
     public async Task ResetPasswordRejectsInvalidAndExpiredTokens()
     {
         await using var context = CreateContext();
@@ -217,10 +239,17 @@ public class AuthControllerTests
     {
         public bool IsConfigured => true;
 
+        public Exception? Failure { get; init; }
+
         public List<(string Recipient, string Subject, string Body)> SentEmails { get; } = [];
 
         public Task SendAsync(string recipient, string subject, string body)
         {
+            if (Failure is not null)
+            {
+                throw Failure;
+            }
+
             SentEmails.Add((recipient, subject, body));
             return Task.CompletedTask;
         }
