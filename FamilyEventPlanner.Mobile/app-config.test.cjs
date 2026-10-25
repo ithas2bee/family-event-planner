@@ -14,5 +14,5 @@ test('configures Android preview builds to produce an installable APK', () => {
 
 test('clean Android release builds regenerate the native project before Gradle', () => {
   assert.match(packageConfig.scripts['android:release:clean'], /expo prebuild --platform android --clean/);
-  assert.match(packageConfig.scripts['android:release:clean'], /expo run:android --variant release/);
+  assert.match(packageConfig.scripts['android:release:clean'], /node \.\/scripts\/build-android-release\.js/);
 });

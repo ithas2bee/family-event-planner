@@ -52,9 +52,10 @@ Join our community of developers creating universal apps.
 ## Android build path cleanup
 
 Run `npm run android:release:clean` for a clean local Android release build. It
-deletes and regenerates the ignored `android/` project before running the release
-variant, so generated Gradle, autolinking, CMake, and Ninja files are rebuilt with
-the current checkout path.
+deletes and regenerates the ignored `android/` project before invoking the Gradle
+wrapper for `assembleRelease`, so generated Gradle, autolinking, CMake, and Ninja
+files are rebuilt with the current checkout path. This does not require a device
+or emulator.
 
 The Android native project is generated and ignored by Git. CMake caches store
 absolute source and build paths; when the checkout moves, clearing only the
