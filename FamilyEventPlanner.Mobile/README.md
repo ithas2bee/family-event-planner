@@ -48,3 +48,20 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Android EAS preview builds
+
+The `preview` profile explicitly requests an Android APK for device installation.
+
+The SDK 58 Gradle failure has not been diagnosed from the available evidence. Expo
+dependency validation reported the installed versions as current using its local
+SDK dependency map because network access was disabled. Android prebuild completed,
+but the local Gradle attempt stopped while resolving
+`org.gradle.toolchains.foojay-resolver-convention:1.0.0` from Gradle plugin
+repositories, before compiling the app. That sandbox networking failure does not
+identify the cause of the EAS builds' Gradle failure.
+
+The referenced EAS build details could not be retrieved because this environment
+has no authenticated Expo session and cannot reach the Expo build API. Retrieve a
+failed build's full Gradle logs with an authenticated `eas build:view <build-id>`
+before making further Gradle or dependency changes or starting another cloud build.
