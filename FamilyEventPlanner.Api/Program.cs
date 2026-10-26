@@ -14,21 +14,58 @@ namespace FamilyEventPlanner.Api
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be configured.");
+            }
+
+            if (builder.Environment.IsProduction() &&
+                (connectionString.Contains("(localdb)", StringComparison.OrdinalIgnoreCase) ||
+                 connectionString.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase) ||
+                 connectionString.Contains("Integrated Security", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("Production must use a server-side SQL Server connection string.");
+            }
+
+            var jwtSettings = builder.Configuration.GetSection("Jwt");
+            var secret = jwtSettings["Secret"];
+            var issuer = jwtSettings["Issuer"];
+            var audience = jwtSettings["Audience"];
+            if (string.IsNullOrWhiteSpace(secret) || Encoding.UTF8.GetByteCount(secret) < 32)
+            {
+                throw new InvalidOperationException("Jwt:Secret must contain at least 32 UTF-8 bytes.");
+            }
+
+            if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
+            {
+                throw new InvalidOperationException("Jwt:Issuer and Jwt:Audience must be configured.");
+            }
+
+            var key = Encoding.UTF8.GetBytes(secret);
+            var configuredCorsOrigins = builder.Configuration["Cors:AllowedOrigins"]?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
 
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowExpo",
                     policy =>
                     {
-                        policy
-                            .AllowAnyOrigin()
-                            .AllowAnyHeader()
-                            .AllowAnyMethod();
+                        if (builder.Environment.IsDevelopment())
+                        {
+                            policy.AllowAnyOrigin();
+                        }
+                        else if (configuredCorsOrigins.Length > 0)
+                        {
+                            policy.WithOrigins(configuredCorsOrigins);
+                        }
+
+                        policy.AllowAnyHeader().AllowAnyMethod();
                     });
             });
 
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(connectionString));
 
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
@@ -57,12 +94,6 @@ namespace FamilyEventPlanner.Api
                 });
 
             // Configure JWT
-            var jwtSettings = builder.Configuration.GetSection("Jwt");
-            var secret = jwtSettings["Secret"];
-            var issuer = jwtSettings["Issuer"];
-            var audience = jwtSettings["Audience"];
-            var key = Encoding.UTF8.GetBytes(secret);
-
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -172,6 +203,14 @@ namespace FamilyEventPlanner.Api
             app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnonymous();
+            app.MapGet("/health/ready", async (AppDbContext dbContext, CancellationToken cancellationToken) =>
+            {
+                var isReady = await dbContext.Database.CanConnectAsync(cancellationToken);
+                return Results.Json(new { status = isReady ? "ready" : "unavailable" },
+                    statusCode: isReady ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
+            }).AllowAnonymous();
 
             app.MapControllers();
 
