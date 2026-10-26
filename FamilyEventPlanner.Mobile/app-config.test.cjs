@@ -1,7 +1,18 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const appConfig = require('./app.json');
+const easConfig = require('./eas.json');
+const packageConfig = require('./package.json');
 
 test('forces the app to use the light user interface style', () => {
   assert.equal(appConfig.expo.userInterfaceStyle, 'light');
+});
+
+test('configures Android preview builds to produce an installable APK', () => {
+  assert.equal(easConfig.build.preview.android.buildType, 'apk');
+});
+
+test('clean Android release builds regenerate the native project before Gradle', () => {
+  assert.match(packageConfig.scripts['android:release:clean'], /expo prebuild --platform android --clean/);
+  assert.match(packageConfig.scripts['android:release:clean'], /node \.\/scripts\/build-android-release\.js/);
 });

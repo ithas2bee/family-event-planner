@@ -26,7 +26,7 @@ module.exports = {
       '@maplibre/maplibre-react-native',
       [
         './plugins/with-development-cleartext-traffic',
-        { enabled: process.env.EAS_BUILD_PROFILE === 'development' },
+        { enabled: process.env.EAS_BUILD_PROFILE !== 'production' },
       ],
     ],
   },
