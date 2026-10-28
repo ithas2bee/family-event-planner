@@ -22,3 +22,16 @@ test('Create hub keeps its existing content and card spacing', () => {
   assert.match(createHubSource, /minHeight: 148/);
   assert.match(createHubSource, /gap: 16/);
 });
+
+test('Create hub gives card titles enough room on compact screens', () => {
+  assert.match(createHubSource, /const \{ width \} = useWindowDimensions\(\);/);
+  assert.match(createHubSource, /const isCompact = width < 380;/);
+  assert.match(createHubSource, /isCompact && styles\.compactCard/);
+  assert.match(createHubSource, /isCompact && styles\.compactIconContainer/);
+  assert.match(createHubSource, /isCompact && styles\.compactCardTitle/);
+  assert.match(createHubSource, /isCompact && styles\.compactArrowContainer/);
+  assert.match(createHubSource, /compactCardTitle: \{\s*fontSize: 18,\s*lineHeight: 23,\s*\}/);
+  assert.match(createHubSource, /compactCard: \{\s*padding: 14,\s*gap: 10,\s*\}/);
+  assert.match(createHubSource, /compactIconContainer: \{\s*width: 64,\s*height: 64,/);
+  assert.match(createHubSource, /compactArrowContainer: \{\s*width: 36,\s*height: 36,/);
+});
