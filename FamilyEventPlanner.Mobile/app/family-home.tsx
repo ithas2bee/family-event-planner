@@ -387,7 +387,7 @@ export default function CommunityHomeScreen() {
               accessibilityLabel="Open notifications"
               accessibilityRole="button"
               hitSlop={10}
-              onPress={() => router.push('/(tabs)/(main)/activity')}
+              onPress={() => router.navigate('/(tabs)/(main)/activity')}
               style={styles.iconButton}
             >
               <MaterialIcons name="notifications-none" size={26} color="#174B5C" />
@@ -408,7 +408,7 @@ export default function CommunityHomeScreen() {
           members={membersPreview}
           currentMemberId={memberId}
           loading={loadingPreviews}
-          onViewAll={() => router.push('/(tabs)/(main)/members')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/members')}
           onInvite={() => setInviteModalVisible(true)}
         />
 
@@ -417,11 +417,11 @@ export default function CommunityHomeScreen() {
           items={myGroupsPreview}
           loading={loadingPreviews}
           emptyText="No groups to preview yet."
-          onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/my-groups')}
           onCardPress={(item) =>
             router.push({
-              pathname: '/(tabs)/family-home',
-              params: { groupId: item.id, groupName: item.title },
+              pathname: '/group/[groupId]',
+              params: { groupId: item.id },
             })
           }
           renderCard={(item) => (
@@ -429,8 +429,8 @@ export default function CommunityHomeScreen() {
               item={item}
               onPress={() =>
                 router.push({
-                  pathname: '/(tabs)/family-home',
-                  params: { groupId: item.id, groupName: item.title },
+                  pathname: '/group/[groupId]',
+                  params: { groupId: item.id },
                 })
               }
             />
@@ -452,12 +452,12 @@ export default function CommunityHomeScreen() {
               onCreate={() => router.push('/create-announcement')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/announcements')}
-          onCardPress={() => router.push('/(tabs)/(main)/announcements')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/announcements')}
+          onCardPress={() => router.navigate('/(tabs)/(main)/announcements')}
           renderCard={(item) => (
             <AnnouncementCard
               item={item}
-              onPress={() => router.push('/(tabs)/(main)/announcements')}
+              onPress={() => router.navigate('/(tabs)/(main)/announcements')}
             />
           )}
         />
@@ -477,13 +477,13 @@ export default function CommunityHomeScreen() {
               onCreate={() => router.push('/create-poll')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/polls')}
-          onCardPress={() => router.push('/(tabs)/(main)/polls')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/polls')}
+          onCardPress={() => router.navigate('/(tabs)/(main)/polls')}
           renderCard={(item, index) => (
             <ActivePollCard
               item={item}
               index={index}
-              onPress={() => router.push('/(tabs)/(main)/polls')}
+              onPress={() => router.navigate('/(tabs)/(main)/polls')}
             />
           )}
         />
@@ -503,13 +503,13 @@ export default function CommunityHomeScreen() {
               onCreate={() => router.push('/create-kickback')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/kickbacks')}
-          onCardPress={() => router.push('/(tabs)/(main)/kickbacks')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/kickbacks')}
+          onCardPress={() => router.navigate('/(tabs)/(main)/kickbacks')}
           renderCard={(item, index) => (
             <KickbackCard
               item={item}
               index={index}
-              onPress={() => router.push('/(tabs)/(main)/kickbacks')}
+              onPress={() => router.navigate('/(tabs)/(main)/kickbacks')}
             />
           )}
         />
@@ -529,7 +529,7 @@ export default function CommunityHomeScreen() {
               onCreate={() => router.push('/create-event')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/events')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/events')}
           onCardPress={(item) => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
           renderCard={(item, index) => (
             <UpcomingEventCard
@@ -589,7 +589,7 @@ export default function CommunityHomeScreen() {
               accessibilityRole="button"
               onPress={() => {
                 closeMenu();
-                router.push('/(tabs)/(main)/activity');
+                router.navigate('/(tabs)/(main)/activity');
               }}
               style={styles.menuItem}
             >
