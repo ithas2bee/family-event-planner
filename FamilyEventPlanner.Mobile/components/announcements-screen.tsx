@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import {
   formatAnnouncementDate,
@@ -155,7 +156,7 @@ export default function AnnouncementsScreen() {
               item={item}
               onPress={() =>
                 router.push({
-                  pathname: '/(tabs)/(main)/announcement/[announcementId]',
+                  pathname: COMMUNITY_HOME_ROUTES.announcementDetails,
                   params: {
                     announcementId: item.id,
                     title: item.title,

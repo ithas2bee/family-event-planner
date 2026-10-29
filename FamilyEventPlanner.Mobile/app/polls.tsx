@@ -150,7 +150,7 @@ export default function PollsScreen() {
               style={({ pressed }) => [styles.pollCard, pressed && styles.cardPressed]}
               onPress={() =>
                 router.push({
-                  pathname: '/(tabs)/(main)/poll/[pollId]',
+                  pathname: COMMUNITY_HOME_ROUTES.pollDetails,
                   params: { pollId: item.id },
                 })
               }

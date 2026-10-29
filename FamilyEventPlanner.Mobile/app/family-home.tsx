@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '@/config/api';
 import { AnnouncementCard, type AnnouncementCardItem } from '@/components/announcement-card';
 import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { DashboardSection } from '@/components/dashboard-section';
 import { CommunityMembersSection } from '@/components/community-members-section';
 import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
@@ -408,7 +409,7 @@ export default function CommunityHomeScreen() {
           members={membersPreview}
           currentMemberId={memberId}
           loading={loadingPreviews}
-          onViewAll={() => router.navigate('/(tabs)/(main)/members')}
+          onViewAll={() => router.push(COMMUNITY_HOME_ROUTES.members)}
           onInvite={() => setInviteModalVisible(true)}
         />
 
@@ -452,12 +453,12 @@ export default function CommunityHomeScreen() {
               onCreate={() => router.push('/create-announcement')}
             />
           }
-          onViewAll={() => router.navigate('/(tabs)/(main)/announcements')}
-          onCardPress={() => router.navigate('/(tabs)/(main)/announcements')}
+          onViewAll={() => router.push(COMMUNITY_HOME_ROUTES.announcements)}
+          onCardPress={() => router.push(COMMUNITY_HOME_ROUTES.announcements)}
           renderCard={(item) => (
             <AnnouncementCard
               item={item}
-              onPress={() => router.navigate('/(tabs)/(main)/announcements')}
+              onPress={() => router.push(COMMUNITY_HOME_ROUTES.announcements)}
             />
           )}
         />
@@ -477,13 +478,13 @@ export default function CommunityHomeScreen() {
               onCreate={() => router.push('/create-poll')}
             />
           }
-          onViewAll={() => router.navigate('/(tabs)/(main)/polls')}
-          onCardPress={() => router.navigate('/(tabs)/(main)/polls')}
+          onViewAll={() => router.push(COMMUNITY_HOME_ROUTES.polls)}
+          onCardPress={() => router.push(COMMUNITY_HOME_ROUTES.polls)}
           renderCard={(item, index) => (
             <ActivePollCard
               item={item}
               index={index}
-              onPress={() => router.navigate('/(tabs)/(main)/polls')}
+              onPress={() => router.push(COMMUNITY_HOME_ROUTES.polls)}
             />
           )}
         />
