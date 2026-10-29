@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const creationOptions = [
@@ -53,6 +53,8 @@ const creationOptions = [
 
 export function CreateHub() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
 
   return (
     <SafeAreaView style={styles.screen} edges={['top']}>
@@ -80,20 +82,27 @@ export function CreateHub() {
               accessibilityLabel={option.title}
               style={({ pressed }) => [
                 styles.card,
+                isCompact && styles.compactCard,
                 { backgroundColor: option.backgroundColor },
                 pressed && styles.cardPressed,
               ]}
               onPress={() => router.push(option.route)}
             >
-              <View style={[styles.iconContainer, { backgroundColor: option.iconBackgroundColor }]}>
-                <MaterialIcons name={option.icon} size={34} color={option.iconColor} />
+              <View
+                style={[
+                  styles.iconContainer,
+                  isCompact && styles.compactIconContainer,
+                  { backgroundColor: option.iconBackgroundColor },
+                ]}
+              >
+                <MaterialIcons name={option.icon} size={isCompact ? 30 : 34} color={option.iconColor} />
               </View>
               <View style={styles.cardCopy}>
-                <Text style={styles.cardTitle}>{option.title}</Text>
+                <Text style={[styles.cardTitle, isCompact && styles.compactCardTitle]}>{option.title}</Text>
                 <Text style={styles.cardDescription}>{option.description}</Text>
               </View>
-              <View style={styles.arrowContainer}>
-                <MaterialIcons name="chevron-right" size={30} color="#17345D" />
+              <View style={[styles.arrowContainer, isCompact && styles.compactArrowContainer]}>
+                <MaterialIcons name="chevron-right" size={isCompact ? 26 : 30} color="#17345D" />
               </View>
             </Pressable>
           ))}
@@ -150,6 +159,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
   },
+  compactCard: {
+    padding: 14,
+    gap: 10,
+  },
   cardPressed: {
     opacity: 0.8,
     transform: [{ scale: 0.99 }],
@@ -161,6 +174,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  compactIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
   cardCopy: {
     flex: 1,
     gap: 6,
@@ -168,7 +186,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: '#10264C',
     fontSize: 22,
+    lineHeight: 27,
     fontWeight: '700',
+  },
+  compactCardTitle: {
+    fontSize: 18,
+    lineHeight: 23,
   },
   cardDescription: {
     color: '#586B89',
@@ -182,5 +205,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.42)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  compactArrowContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
 });
