@@ -32,6 +32,17 @@ test('sign-in and sign-up keep email/password forms without social authenticatio
   assert.match(createAccountSource, /placeholder="Choose a username"/);
 });
 
+test('sign-in heading and account creation link fit alongside forgot password', () => {
+  const loginSource = fs.readFileSync(path.join(appDirectory, 'login.tsx'), 'utf8');
+
+  assert.match(loginSource, /title: \{[^}]*fontSize: 32, lineHeight: 40/);
+  assert.match(
+    loginSource,
+    /<View style=\{styles\.accountLinks\}>[\s\S]*Forgot Password\?[\s\S]*router\.replace\('\/create-account'\)[\s\S]*Create Account[\s\S]*<\/View>/,
+  );
+  assert.doesNotMatch(loginSource, /styles\.footer/);
+});
+
 test('the shared authentication surface fills the screen and keeps form padding', () => {
   assert.match(layoutSource, /<SafeAreaView style=\{styles\.safeArea\}>/);
   assert.match(layoutSource, /content: \{ flexGrow: 1 \}/);
