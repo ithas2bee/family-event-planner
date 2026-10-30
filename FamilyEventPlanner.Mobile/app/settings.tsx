@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { ThemedView } from '@/components/themed-view';
 
 type SettingOption = {
@@ -12,7 +13,7 @@ type SettingOption = {
   route?:
     | '/profile'
     | '/(tabs)/(main)/my-groups'
-    | '/(tabs)/(main)/members'
+    | typeof COMMUNITY_HOME_ROUTES.members
     | '/app-information'
     | '/notification-preferences'
     | '/privacy';
@@ -35,7 +36,7 @@ const sections: { title: string; options: SettingOption[] }[] = [
     title: 'Communities & Groups',
     options: [
       { title: 'Communities', icon: 'groups', route: '/(tabs)/(main)/my-groups' },
-      { title: 'Manage Members', icon: 'group', route: '/(tabs)/(main)/members' },
+      { title: 'Manage Members', icon: 'group', route: COMMUNITY_HOME_ROUTES.members },
     ],
   },
   {
