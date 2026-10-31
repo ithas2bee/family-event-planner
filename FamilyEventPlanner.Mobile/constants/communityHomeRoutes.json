@@ -1,0 +1,7 @@
+{
+  "members": "/members",
+  "announcements": "/announcements",
+  "polls": "/polls",
+  "announcementDetails": "/announcement/[announcementId]",
+  "pollDetails": "/poll/[pollId]"
+}

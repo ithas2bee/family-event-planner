@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createAnnouncement } from '@/services/announcementService';
 
@@ -62,7 +63,7 @@ export default function CreateAnnouncementScreen() {
       });
 
       router.replace({
-        pathname: '/(tabs)/(main)/announcements',
+        pathname: COMMUNITY_HOME_ROUTES.announcements,
         params: {
           groupId: groupIdValue,
           refreshToken: Date.now().toString(),

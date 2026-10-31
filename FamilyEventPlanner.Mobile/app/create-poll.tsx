@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createPoll } from '@/services/pollService';
 
@@ -89,7 +90,7 @@ export default function CreatePollScreen() {
       });
 
       router.replace({
-        pathname: '/(tabs)/(main)/polls',
+        pathname: COMMUNITY_HOME_ROUTES.polls,
         params: {
           groupId: groupIdValue,
           memberId: memberIdValue,
