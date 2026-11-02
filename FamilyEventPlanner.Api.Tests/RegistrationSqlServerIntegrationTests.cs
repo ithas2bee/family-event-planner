@@ -1,13 +1,18 @@
+using System.Net;
+using System.Net.Http.Json;
 using FamilyEventPlanner.Api.Constants;
 using FamilyEventPlanner.Api.Controllers;
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
-using FamilyEventPlanner.Api.Models.Auth;
 using FamilyEventPlanner.Api.Services;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FamilyEventPlanner.Api.Tests;
 
@@ -35,6 +40,8 @@ public class RegistrationSqlServerIntegrationTests
             await using (var seedContext = CreateContext(testConnectionString))
             {
                 await seedContext.Database.MigrateAsync();
+                Assert.True(await seedContext.Users.AnyAsync(user =>
+                    user.Id == SystemConstants.UnknownGuestUserId));
                 seedContext.Users.AddRange(
                     Enumerable.Range(0, 99).Select(index => new User
                     {
@@ -43,36 +50,40 @@ public class RegistrationSqlServerIntegrationTests
                         DisplayName = $"Seed User {index}",
                         CreatedAt = DateTime.UtcNow
                     }));
-                seedContext.Users.Add(new User
-                {
-                    Id = SystemConstants.UnknownGuestUserId,
-                    Email = SystemConstants.UnknownGuestEmail,
-                    DisplayName = SystemConstants.UnknownGuestDisplayName,
-                    CreatedAt = DateTime.UtcNow
-                });
                 await seedContext.SaveChangesAsync();
+                Assert.Equal(
+                    99,
+                    await seedContext.Users.CountAsync(user => user.Id != SystemConstants.UnknownGuestUserId));
+                Assert.Equal(100, await seedContext.Users.CountAsync());
             }
 
-            var requests = Enumerable.Range(0, 10).Select(async index =>
+            await using (var application = CreateApiApplication(testConnectionString))
             {
-                await using var requestContext = CreateContext(testConnectionString);
-                var controller = CreateController(requestContext);
-                return await controller.Register(new RegisterRequest
+                await application.StartAsync();
+                var server = application.Services.GetRequiredService<IServer>();
+                var address = server.Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+                using var client = new HttpClient { BaseAddress = new Uri(address) };
+                var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(index =>
+                    client.PostAsJsonAsync("/api/auth/register", new
+                    {
+                        email = $"registration-attempt-{index}@example.com",
+                        displayName = $"New User {index}",
+                        password = "Password1!"
+                    })));
+
+                Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
+                Assert.Equal(
+                    9,
+                    responses.Count(response => response.StatusCode == HttpStatusCode.Conflict));
+                Assert.All(responses, response =>
+                    Assert.Contains(
+                        response.StatusCode,
+                        new[] { HttpStatusCode.Created, HttpStatusCode.Conflict }));
+                foreach (var response in responses)
                 {
-                    Email = $"registration-attempt-{index}@example.com",
-                    DisplayName = $"New User {index}",
-                    Password = "Password1!"
-                });
-            });
-
-            var results = await Task.WhenAll(requests);
-
-            var createdResults = results.OfType<CreatedAtActionResult>().ToArray();
-            var conflictResults = results.OfType<ConflictObjectResult>().ToArray();
-            Assert.Single(createdResults);
-            Assert.Equal(201, createdResults[0].StatusCode);
-            Assert.Equal(9, conflictResults.Length);
-            Assert.All(conflictResults, result => Assert.Equal(409, result.StatusCode));
+                    response.Dispose();
+                }
+            }
 
             await using var verificationContext = CreateContext(testConnectionString);
             Assert.Equal(
@@ -95,15 +106,26 @@ public class RegistrationSqlServerIntegrationTests
         return new AppDbContext(options);
     }
 
-    private static AuthController CreateController(AppDbContext context)
+    private static WebApplication CreateApiApplication(string connectionString)
     {
-        var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Registration:MaxAccounts"] = "100"
-            })
-            .Build();
-        return new AuthController(context, new TestTokenService(), new TestEmailSender(), configuration);
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            EnvironmentName = "Development"
+        });
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Registration:MaxAccounts"] = "100"
+        });
+        builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+        builder.Services.AddSingleton<ITokenService, TestTokenService>();
+        builder.Services.AddSingleton<IEmailSender, TestEmailSender>();
+        builder.Services
+            .AddControllers()
+            .AddApplicationPart(typeof(AuthController).Assembly);
+        var application = builder.Build();
+        application.MapControllers();
+        return application;
     }
 
     private static async Task CreateDatabaseAsync(string connectionString, string databaseName)
