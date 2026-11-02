@@ -28,7 +28,7 @@ function mapAuthError(status: number, fallback: string): string {
   }
 
   if (status === 409) {
-    return 'An account with this email already exists.';
+    return fallback || 'An account with this email already exists.';
   }
 
   if (status >= 500) {
