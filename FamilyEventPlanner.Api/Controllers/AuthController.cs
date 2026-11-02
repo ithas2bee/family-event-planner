@@ -1,6 +1,8 @@
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using FamilyEventPlanner.Api.Constants;
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Models;
 using FamilyEventPlanner.Api.Models.Auth;
@@ -20,6 +22,7 @@ namespace FamilyEventPlanner.Api.Controllers
         private readonly ITokenService _tokenService;
         private readonly IEmailSender _emailSender;
         private readonly string _passwordResetUrl;
+        private readonly int _maxRegisteredAccounts;
         private readonly PasswordHasher<User> _passwordHasher = new();
 
         public AuthController(
@@ -33,6 +36,11 @@ namespace FamilyEventPlanner.Api.Controllers
             _emailSender = emailSender;
             _passwordResetUrl = configuration["PasswordReset:DeepLinkUrl"] ??
                 "familyeventplannermobile://reset-password";
+            _maxRegisteredAccounts = configuration.GetValue<int?>("Registration:MaxAccounts") ?? 100;
+            if (_maxRegisteredAccounts < 1)
+            {
+                throw new InvalidOperationException("Registration:MaxAccounts must be greater than zero.");
+            }
         }
 
         [HttpPost("register")]
@@ -45,11 +53,27 @@ namespace FamilyEventPlanner.Api.Controllers
                     return BadRequest(ModelState);
                 }
 
+                await using var transaction = _context.Database.IsSqlServer()
+                    ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+                    : null;
+
+                var registeredAccountCount = _context.Database.IsSqlServer()
+                    ? await _context.Database.SqlQueryRaw<int>(
+                        "SELECT COUNT(*) AS [Value] FROM [Users] WITH (UPDLOCK, HOLDLOCK) WHERE [Id] <> {0}",
+                        SystemConstants.UnknownGuestUserId).SingleAsync()
+                    : await _context.Users.CountAsync(user =>
+                        user.Id != SystemConstants.UnknownGuestUserId);
+
                 var email = request.Email.Trim().ToLowerInvariant();
                 var exists = await _context.Users.AnyAsync(u => u.Email == email);
                 if (exists)
                 {
                     return Conflict(new { message = "An account with this email already exists." });
+                }
+
+                if (registeredAccountCount >= _maxRegisteredAccounts)
+                {
+                    return Conflict(new { message = "Huddle Up is currently in limited early access. Registration is full." });
                 }
 
                 var user = new User
@@ -62,6 +86,10 @@ namespace FamilyEventPlanner.Api.Controllers
                 user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync();
+                }
 
                 var token = _tokenService.GenerateToken(user.Id, user.Email, user.DisplayName);
 
