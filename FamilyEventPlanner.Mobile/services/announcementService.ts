@@ -17,6 +17,7 @@ export type CreateAnnouncementRequest = {
   familyGroupId: string;
   title: string;
   body: string;
+  durationHours?: number;
   expiresAt?: string;
 };
 
@@ -48,7 +49,7 @@ async function getAnnouncementHeaders(): Promise<Record<string, string>> {
 
 function resolveErrorMessage(status: number, serverMessage: string): string {
   if (status === 404) {
-    return 'Family group not found.';
+    return 'Community not found.';
   }
 
   if (status >= 500) {

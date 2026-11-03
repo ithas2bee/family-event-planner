@@ -26,6 +26,12 @@ export type CreateKickbackRequest = {
   expiresAtUtc: string;
 };
 
+export type UpdateKickbackRequest = {
+  vibe: string;
+  note?: string;
+  expiresAtUtc: string;
+};
+
 export type RespondToKickbackRequest = {
   kickbackId: string;
   responseType: KickbackResponseType;
@@ -44,7 +50,7 @@ async function getKickbackHeaders(): Promise<Record<string, string>> {
 
 function resolveErrorMessage(status: number, serverMessage: string): string {
   if (status === 404) {
-    return 'Family group not found.';
+    return 'Community not found.';
   }
 
   if (status >= 500) {
@@ -161,6 +167,43 @@ export async function createKickback(request: CreateKickbackRequest): Promise<Ki
   try {
     response = await fetch(`${API_BASE_URL}/api/kickbacks`, {
       method: 'POST',
+      headers,
+      body: JSON.stringify(request),
+    });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  const rawBody = await response.text();
+
+  let parsedBody: unknown = null;
+  if (rawBody.length > 0) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      parsedBody = rawBody;
+    }
+  }
+
+  if (!response.ok) {
+    const serverMessage = extractServerMessage(parsedBody);
+    throw new Error(resolveErrorMessage(response.status, serverMessage));
+  }
+
+  if (!parsedBody || typeof parsedBody !== 'object') {
+    throw new Error('The server returned an unexpected response.');
+  }
+
+  return mapKickback(parsedBody);
+}
+
+export async function updateKickback(kickbackId: string, request: UpdateKickbackRequest): Promise<Kickback> {
+  let response: Response;
+  const headers = await getKickbackHeaders();
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/kickbacks/${kickbackId}`, {
+      method: 'PUT',
       headers,
       body: JSON.stringify(request),
     });

@@ -1,6 +1,10 @@
 import { ThemedText } from '@/components/themed-text';
 import { EventDateModal } from '@/components/events/EventDateModal';
+import { EventImageSelector } from '@/components/events/EventImageSelector';
+import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
+import { EVENT_PRESET_IMAGE_ASPECT_RATIO } from '@/constants/eventImagePresets';
 import { Colors, Spacing, Typography } from '@/components/ui/design-system';
 import { FormInput } from '@/components/ui/form-input';
 import { ImmersiveButton } from '@/components/ui/immersive-button';
@@ -8,16 +12,19 @@ import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { getEventAttendance, saveEventAttendance, AttendanceResponse } from '@/services/eventAttendanceService';
 import { Event, getEventById, updateEvent } from '@/services/eventService';
+import { EventLocation } from '@/services/locationService';
 import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
 import { loadSession } from '@/services/sessionService';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ActivityIndicator, Image, Linking, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EventDetailsScreen() {
   const { eventId } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<Event | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -33,6 +40,7 @@ export default function EventDetailsScreen() {
   const [activeAssignmentIndex, setActiveAssignmentIndex] = useState<number | null>(null);
   const [dateModalVisible, setDateModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   useEffect(() => {
     if (!eventId || typeof eventId !== 'string') {
@@ -119,13 +127,14 @@ export default function EventDetailsScreen() {
   };
 
   const isCreator = Boolean(event?.createdByMemberId && currentMemberId && event.createdByMemberId === currentMemberId);
+  const eventImagePresetSource = event ? getEventImagePresetSource(event.eventImagePresetKey) : undefined;
   const memberNames = new Map(
-    groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Family member']),
+    groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Member']),
   );
   const attendees = attendance
     .map((item) => ({
       ...item,
-      name: memberNames.get(item.memberId) || 'Family member',
+      name: memberNames.get(item.memberId) || 'Member',
       response: item.rsvp === 1 ? 'Going' : item.rsvp === 3 ? 'Maybe' : "Can't Go",
     }));
   const maybeCount = attendance.filter((item) => item.rsvp === 3).length;
@@ -265,9 +274,13 @@ export default function EventDetailsScreen() {
 
   return (
     <ScreenContainer withScroll padding={0}>
-      <View style={styles.contentContainer}>
-        <View style={styles.hero}>
-          {event.imageUrl ? <Image source={{ uri: event.imageUrl }} style={styles.heroImage} /> : null}
+      <View style={[styles.contentContainer, { paddingTop: Math.max(insets.top, Spacing.lg) }]}>
+        <View style={[styles.hero, eventImagePresetSource ? styles.presetHero : null]}>
+          {eventImagePresetSource ? (
+            <Image source={eventImagePresetSource} style={styles.heroImage} resizeMode="contain" />
+          ) : event.imageUrl ? (
+            <Image source={{ uri: event.imageUrl }} style={styles.heroImage} />
+          ) : null}
           <View style={styles.heroOverlay} />
           <Pressable
             accessibilityLabel="Go back"
@@ -277,17 +290,29 @@ export default function EventDetailsScreen() {
           >
             <MaterialIcons name="arrow-back" size={22} color="#203B5A" />
           </Pressable>
-          {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
-          <ThemedText style={styles.heroLabel}>FAMILY EVENT</ThemedText>
+          {eventImagePresetSource ? (
+            <View style={styles.presetHeroCaption}>
+              <ThemedText type="title" style={styles.presetHeroTitle} numberOfLines={2}>
+                {event.title || 'Untitled Event'}
+              </ThemedText>
+            </View>
+          ) : (
+            <>
+              {!event.imageUrl ? <MaterialIcons name="celebration" size={48} color="#FFFFFF" /> : null}
+              <ThemedText style={styles.heroLabel}>COMMUNITY EVENT</ThemedText>
+            </>
+          )}
         </View>
 
         <View style={styles.detailsCard}>
-          <View style={styles.titleRow}>
-            <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
-            <View style={styles.nextUpBadge}>
-              <ThemedText style={styles.nextUpText}>Next Up</ThemedText>
+          {!eventImagePresetSource ? (
+            <View style={styles.titleRow}>
+              <ThemedText type="title" style={styles.title}>{event.title || 'Untitled Event'}</ThemedText>
+              <View style={styles.nextUpBadge}>
+                <ThemedText style={styles.nextUpText}>Next Up</ThemedText>
+              </View>
             </View>
-          </View>
+          ) : null}
           <View style={styles.infoRow}>
             <View style={styles.iconCircle}><MaterialIcons name="event" size={19} color="#087AC5" /></View>
             <View style={styles.infoCopy}>
@@ -416,7 +441,7 @@ export default function EventDetailsScreen() {
               <View style={styles.additionalDetailsHeading}>
                 <ThemedText type="title" style={styles.additionalDetailsTitle}>Additional Details</ThemedText>
                 <ThemedText style={styles.additionalDetailsDescription}>
-                  Extra details to help your family know what to expect.
+                  Extra details to help your community know what to expect.
                 </ThemedText>
               </View>
               {isCreator ? (
@@ -475,14 +500,14 @@ export default function EventDetailsScreen() {
                 </View>
                 <View>
                   <ThemedText style={styles.editSectionTitle}>Event Details</ThemedText>
-                  <ThemedText style={styles.editSectionHint}>Tell your family about this event</ThemedText>
+                  <ThemedText style={styles.editSectionHint}>Tell your community about this event</ThemedText>
                 </View>
               </View>
             <FormInput
               label="Event Title"
               value={event.title}
               onChangeText={(text) => setEvent({ ...event, title: text })}
-              placeholder="Family Game Night"
+              placeholder="Community Game Night"
               autoCapitalize="words"
               maxLength={60}
               style={styles.lightInput}
@@ -496,6 +521,11 @@ export default function EventDetailsScreen() {
               maxLength={200}
               style={[styles.lightInput, styles.descriptionInput]}
             />
+            <ThemedText style={styles.editSectionTitle}>Event Image</ThemedText>
+            <EventImageSelector
+              value={event.eventImagePresetKey}
+              onChange={(eventImagePresetKey) => setEvent({ ...event, eventImagePresetKey })}
+            />
             </View>
 
             <View style={styles.editSection}>
@@ -505,13 +535,13 @@ export default function EventDetailsScreen() {
                 </View>
                 <ThemedText style={styles.editSectionTitle}>Location</ThemedText>
               </View>
-            <FormInput
-              label="Where is it happening?"
-              value={event.location || ''}
-              onChangeText={(text) => setEvent({ ...event, location: text })}
-              placeholder="Add a location"
-              style={styles.lightInput}
-            />
+            <Pressable style={styles.dateTimeField} onPress={() => setLocationModalVisible(true)} accessibilityRole="button" accessibilityLabel="Edit event location">
+              <View style={styles.dateTimeCopy}>
+                <ThemedText style={styles.dateTimeValue}>{event.locationName || event.locationAddress || event.location || 'Add a location'}</ThemedText>
+                <ThemedText style={styles.dateTimeHint}>Tap to search or clear the location</ThemedText>
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color="#56708E" />
+            </Pressable>
             </View>
 
             <View style={styles.editSection}>
@@ -547,7 +577,7 @@ export default function EventDetailsScreen() {
                 </View>
                 <View style={styles.assignmentHeaderCopy}>
                   <ThemedText style={styles.editSectionTitle}>Assignments</ThemedText>
-                  <ThemedText style={styles.editSectionHint}>Assign tasks to family members</ThemedText>
+                  <ThemedText style={styles.editSectionHint}>Assign tasks to community members</ThemedText>
                 </View>
                 <View style={styles.assignmentCount}>
                   <ThemedText style={styles.assignmentCountText}>{event.assignments?.length ?? 0}</ThemedText>
@@ -565,7 +595,7 @@ export default function EventDetailsScreen() {
                     <View key={idx} style={styles.assignmentEditCard}>
                       <View style={styles.assignmentCardHeader}>
                         <View style={styles.assignmentAvatar}>
-                          <ThemedText style={styles.assignmentAvatarText}>{getInitials(assignment.memberName || 'Family member')}</ThemedText>
+                          <ThemedText style={styles.assignmentAvatarText}>{getInitials(assignment.memberName || 'Member')}</ThemedText>
                         </View>
                         <ThemedText style={styles.assignmentNumber}>Assignment {idx + 1}</ThemedText>
                         <Pressable
@@ -582,7 +612,7 @@ export default function EventDetailsScreen() {
                         </Pressable>
                       </View>
                       <FormInput
-                        label="Family member"
+                        label="Community member"
                         value={assignment.memberName}
                         onFocus={() => setActiveAssignmentIndex(idx)}
                         onChangeText={text => {
@@ -591,7 +621,7 @@ export default function EventDetailsScreen() {
                           setEvent({ ...event, assignments: updated });
                           setActiveAssignmentIndex(idx);
                         }}
-                        placeholder="Select a family member"
+                        placeholder="Select a community member"
                         style={styles.lightInput}
                         maxLength={32}
                       />
@@ -690,6 +720,23 @@ export default function EventDetailsScreen() {
         onChange={handleSettingsChange}
         onClose={() => setSettingsModalVisible(false)}
       />
+      <EventLocationModal
+        visible={locationModalVisible}
+        location={event.structuredLocation}
+        onChange={(location: EventLocation | null) => {
+          setEvent({
+            ...event,
+            location: location?.address,
+            locationName: location?.name,
+            locationAddress: location?.address,
+            latitude: location?.latitude,
+            longitude: location?.longitude,
+            placeId: location?.placeId,
+            structuredLocation: location,
+          });
+        }}
+        onClose={() => setLocationModalVisible(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -724,12 +771,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Spacing.xl,
   },
+  presetHero: {
+    minHeight: 0,
+    aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO,
+    alignItems: 'stretch',
+    justifyContent: 'flex-end',
+    padding: 0,
+  },
+  presetHeroCaption: {
+    padding: Spacing.md,
+    margin: Spacing.md,
+    borderRadius: 14,
+    backgroundColor: 'rgba(12, 18, 29, 0.5)',
+  },
+  presetHeroTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 30,
+  },
   heroImage: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
     opacity: 1,
   },
   heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     backgroundColor: 'rgba(11, 32, 55, 0.16)',
   },
   backButton: {

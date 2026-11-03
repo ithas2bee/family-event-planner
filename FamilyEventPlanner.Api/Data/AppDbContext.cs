@@ -13,6 +13,7 @@ namespace FamilyEventPlanner.Api.Data
 
         public DbSet<FamilyGroup> FamilyGroups { get; set; }
         public DbSet<GroupMember> GroupMembers { get; set; }
+        public DbSet<GroupMembershipRequest> GroupMembershipRequests { get; set; }
 
         // Event planning entities
         public DbSet<FamilyEvent> FamilyEvents { get; set; }
@@ -31,6 +32,7 @@ namespace FamilyEventPlanner.Api.Data
         // Notifications and users
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
         // Activity feed
         public DbSet<ActivityFeed> ActivityFeed { get; set; }
@@ -42,6 +44,25 @@ namespace FamilyEventPlanner.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .Property(token => token.UsedAtUtc)
+                .IsConcurrencyToken();
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(token => token.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(token => token.TokenHash)
+                .IsUnique();
+
+            modelBuilder.Entity<PasswordResetToken>()
+                .HasIndex(token => token.UserId)
+                .HasFilter("[UsedAtUtc] IS NULL")
+                .IsUnique();
 
             // Prevent multiple cascade delete paths involving GroupMembers by setting NoAction (SQL: NO ACTION)
             modelBuilder.Entity<EventAttendance>()
@@ -104,6 +125,29 @@ namespace FamilyEventPlanner.Api.Data
                 .HasIndex(g => g.InviteCode)
                 .IsUnique();
 
+            modelBuilder.Entity<GroupMembershipRequest>()
+                .HasIndex(r => new { r.UserId, r.FamilyGroupId })
+                .HasFilter("[Status] = 'Pending'")
+                .IsUnique();
+
+            modelBuilder.Entity<GroupMembershipRequest>()
+                .Property(r => r.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending")
+                .IsConcurrencyToken();
+
+            modelBuilder.Entity<FamilyGroup>()
+                .Property(g => g.GroupType)
+                .HasDefaultValue("Other");
+
+            modelBuilder.Entity<FamilyGroup>()
+                .Property(g => g.IsInviteOnly)
+                .HasDefaultValue(true);
+
+            modelBuilder.Entity<FamilyGroup>()
+                .Property(g => g.IsSearchable)
+                .HasDefaultValue(false);
+
             // GroupMember.UserId is now required (not nullable)
             modelBuilder.Entity<GroupMember>()
                 .HasOne(gm => gm.User)
@@ -114,4 +158,3 @@ namespace FamilyEventPlanner.Api.Data
         }
     }
 }
-

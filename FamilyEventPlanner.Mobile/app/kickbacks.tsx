@@ -24,19 +24,11 @@ const VIBE_TONES = [
 ];
 const STATUS_COLORS = ['#57C987', '#8942E9', '#42BBD8'];
 
-function startOfDay(date: Date): number {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-}
-
 export function getKickbackStatus(expiresAtUtc: string, now = new Date()): string {
   const expiry = new Date(expiresAtUtc);
   if (Number.isNaN(expiry.getTime())) return 'Time pending';
-  if (expiry.getTime() < now.getTime()) return 'Past';
-
-  const dayDifference = Math.round((startOfDay(expiry) - startOfDay(now)) / 86400000);
-  if (dayDifference === 0) return 'Happening Now';
-  if (dayDifference === 1) return 'Tomorrow';
-  return `In ${dayDifference} Days`;
+  if (expiry.getTime() <= now.getTime()) return 'Past';
+  return 'Happening Now';
 }
 
 function formatKickbackDate(value: string): string {
@@ -70,11 +62,13 @@ function KickbackCard({
   index,
   responseLoadingKickbackId,
   onResponse,
+  onPress,
 }: {
   kickback: Kickback;
   index: number;
   responseLoadingKickbackId: string | null;
   onResponse: (responseType: KickbackResponseType) => void;
+  onPress: () => void;
 }) {
   const tone = VIBE_TONES[index % VIBE_TONES.length];
   const status = getKickbackStatus(kickback.expiresAtUtc);
@@ -84,7 +78,11 @@ function KickbackCard({
   const participantCount = kickback.pullingUpCount + kickback.maybeCount;
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={styles.card}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${kickback.vibe || 'Kickback'}. ${status}. Open kickback details.`}>
       <View style={[styles.cardImage, { backgroundColor: tone.background }]}>
         <View style={[styles.imageGlow, { backgroundColor: `${tone.foreground}22` }]} />
         <MaterialIcons name={tone.icon} size={34} color={tone.foreground} />
@@ -137,7 +135,10 @@ function KickbackCard({
               <Pressable
                 key={responseType}
                 style={[styles.responseButton, response === responseType && styles.responseButtonSelected]}
-                onPress={() => onResponse(responseType)}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  onResponse(responseType);
+                }}
                 disabled={isBusy}
                 accessibilityRole="button">
                 <ThemedText
@@ -149,7 +150,7 @@ function KickbackCard({
           </View>
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -270,6 +271,10 @@ export default function KickbacksScreen() {
                 index={index}
                 responseLoadingKickbackId={responseLoadingKickbackId}
                 onResponse={(responseType) => void handleResponse(item.id, responseType)}
+                onPress={() => router.push({
+                  pathname: '/kickback/[kickbackId]',
+                  params: { kickbackId: item.id, groupId: groupIdValue, memberId: memberIdValue },
+                })}
               />
             )}
             contentContainerStyle={styles.list}

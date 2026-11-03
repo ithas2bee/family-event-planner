@@ -2,8 +2,9 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
+import { InviteCommunityMembersModal } from '@/components/invite-community-members-modal';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
@@ -54,6 +55,7 @@ async function getInviteCode(groupId: string, userId: string): Promise<string | 
 }
 
 export default function MembersScreen() {
+  const insets = useSafeAreaInsets();
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
   const {
     groupId: contextGroupId,
@@ -115,7 +117,7 @@ export default function MembersScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: Math.max(insets.top, 28) }]} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Pressable
             accessibilityLabel="Go back"
@@ -127,13 +129,13 @@ export default function MembersScreen() {
             <MaterialIcons name="arrow-back-ios" size={24} color="#405675" />
           </Pressable>
           <View style={styles.heading}>
-            <ThemedText type="title" style={styles.title}>Family Members</ThemedText>
+            <ThemedText type="title" style={styles.title}>Community Members</ThemedText>
             <ThemedText style={styles.subtitle}>
-              The people who make our family special 💙
+              The people who make our community special 💙
             </ThemedText>
           </View>
           <Pressable
-            accessibilityLabel="Invite family members"
+            accessibilityLabel="Invite community members"
             accessibilityRole="button"
             onPress={() => setInviteVisible(true)}
             style={styles.inviteButton}
@@ -192,7 +194,7 @@ export default function MembersScreen() {
                   Stronger Together
                 </ThemedText>
                 <ThemedText style={styles.strongerText}>
-                  Family is better with everyone here.{'\n'}Invite more family members to join!
+                  Communities are better with everyone here.{'\n'}Invite more community members to join!
                 </ThemedText>
               </View>
             </View>
@@ -200,7 +202,7 @@ export default function MembersScreen() {
         )}
       </ScrollView>
 
-      <InviteFamilyMembersModal
+      <InviteCommunityMembersModal
         visible={inviteVisible}
         inviteCode={inviteCode}
         onClose={() => setInviteVisible(false)}
@@ -211,7 +213,7 @@ export default function MembersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F8FC' },
-  content: { padding: 20, paddingTop: 28, paddingBottom: 36 },
+  content: { padding: 20, paddingBottom: 36 },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   backButton: { paddingTop: 8, paddingRight: 2 },
   heading: { flex: 1 },
@@ -245,7 +247,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   avatar: { width: 74, height: 74, borderRadius: 37, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 28, fontWeight: '700' },
+  avatarText: { fontSize: 28, lineHeight: 34, fontWeight: '700' },
   memberCopy: { flex: 1, gap: 5 },
   memberName: { color: '#102A65', fontSize: 24, lineHeight: 29 },
   memberRole: { color: '#687A96', fontSize: 18, lineHeight: 24 },

@@ -3,3 +3,7 @@ bin/
 obj/
 *.user
 *.suo
+# Environment-specific settings and secrets
+.env
+.env.*
+!.env.example

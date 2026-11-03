@@ -1,23 +1,24 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, SafeAreaView, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
 export default function AuthScreen() {
   return (
-    <ThemedView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Family Event Planner
+        Huddle Up
       </ThemedText>
 
       <ThemedText style={styles.subtitle}>
-        Sign in or create an account to continue.
+        Plan together. Make more memories.
       </ThemedText>
 
       <Pressable style={styles.primaryButton} onPress={() => router.push('/login')}>
         <ThemedText type="defaultSemiBold" style={styles.primaryButtonText}>
-          Login
+          Sign In
         </ThemedText>
       </Pressable>
 
@@ -26,11 +27,16 @@ export default function AuthScreen() {
           Create Account
         </ThemedText>
       </Pressable>
-    </ThemedView>
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F7FAFF',
+  },
   container: {
     flex: 1,
     justifyContent: 'center',
@@ -50,7 +56,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: '#0A7EA4',
+    backgroundColor: '#1677E8',
   },
   primaryButtonText: {
     color: '#FFFFFF',
@@ -61,10 +67,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#0A7EA4',
+    borderColor: '#1677E8',
   },
   secondaryButtonText: {
-    color: '#0A7EA4',
+    color: '#1677E8',
     fontSize: 16,
   },
 });

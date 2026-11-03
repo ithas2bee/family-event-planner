@@ -1,5 +1,5 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { MaterialIcons } from '@expo/vector-icons';
 import {
   Pressable,
@@ -7,10 +7,19 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
+import {
+  getNotificationPreferenceCategory,
+  loadNotificationPreferences,
+} from '@/services/notificationPreferencesService';
+import type {
+  NotificationPreferenceCategory,
+  NotificationPreferences,
+} from '@/services/notificationPreferencesService';
 import {
   getActivityByGroup,
   markAllNotificationsRead,
@@ -25,7 +34,7 @@ type ActivityMetadata = {
   location?: string;
 };
 
-type NotificationCategory = 'All' | 'Events' | 'Kickbacks' | 'Groups' | 'Polls' | 'Announcements';
+type NotificationCategory = 'All' | NotificationPreferenceCategory;
 
 const categories: NotificationCategory[] = [
   'All',
@@ -50,12 +59,7 @@ function parseMetadata(metadataJson?: string): ActivityMetadata {
 }
 
 function getCategory(item: ActivityFeedItem): NotificationCategory {
-  if (item.activityType.startsWith('Event')) return 'Events';
-  if (item.activityType.startsWith('Kickback')) return 'Kickbacks';
-  if (item.activityType === 'MemberJoined' || item.activityType === 'GroupCreated') return 'Groups';
-  if (item.activityType.startsWith('Poll')) return 'Polls';
-  if (item.activityType.startsWith('Announcement')) return 'Announcements';
-  return 'All';
+  return getNotificationPreferenceCategory(item.activityType) ?? 'All';
 }
 
 function toSentence(item: ActivityFeedItem): string {
@@ -152,6 +156,7 @@ function getTimeGroup(createdAtUtc: string): 'Today' | 'Yesterday' | 'This Week'
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { groupId, memberId } = useLocalSearchParams<{ groupId: string; memberId: string }>();
   const {
     groupId: contextGroupId,
@@ -168,6 +173,7 @@ export default function ActivityScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<NotificationCategory>('All');
   const [markingRead, setMarkingRead] = useState(false);
+  const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
 
   useEffect(() => {
     const update: { groupId?: string; memberId?: string } = {};
@@ -226,9 +232,34 @@ export default function ActivityScreen() {
     };
   }, [groupIdValue, memberIdValue, isReady, isResolvingMember]);
 
-  const filteredActivities = activities.filter(
-    (item) => selectedCategory === 'All' || getCategory(item) === selectedCategory,
-  );
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+
+    loadNotificationPreferences()
+      .then((loadedPreferences) => {
+        if (!cancelled) {
+          setPreferences(loadedPreferences);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPreferences(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []));
+
+  const filteredActivities = activities.filter((item) => {
+    const category = getCategory(item);
+    if (category !== 'All' && preferences?.[category] === false) {
+      return false;
+    }
+
+    return selectedCategory === 'All' || category === selectedCategory;
+  });
   const groupedActivities = ['Today', 'Yesterday', 'This Week', 'Earlier'].map((label) => ({
     label,
     items: filteredActivities.filter((item) => getTimeGroup(item.createdAtUtc) === label),
@@ -266,25 +297,25 @@ export default function ActivityScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: 24 + insets.top }]}
         showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
             <ThemedText type="title" style={styles.title}>
               Notifications
             </ThemedText>
-            <ThemedText style={styles.subtitle}>Stay up to date with your family. 💙</ThemedText>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Mark all read"
+              accessibilityState={{ busy: markingRead }}
+              disabled={markingRead}
+              onPress={() => void markAllRead()}
+              style={styles.markReadButton}>
+              <MaterialIcons name="done-all" size={19} color="#1677E8" />
+              <ThemedText style={styles.markReadText}>Mark all read</ThemedText>
+            </Pressable>
+            <ThemedText style={styles.subtitle}>Stay up to date with your community. 💙</ThemedText>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Mark all read"
-            accessibilityState={{ busy: markingRead }}
-            disabled={markingRead}
-            onPress={() => void markAllRead()}
-            style={styles.markReadButton}>
-            <MaterialIcons name="done-all" size={19} color="#1677E8" />
-            <ThemedText style={styles.markReadText}>Mark all read</ThemedText>
-          </Pressable>
         </View>
 
         <ScrollView
@@ -369,10 +400,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   header: {
-    flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
   },
   title: {
     color: '#10284A',
@@ -386,10 +414,12 @@ const styles = StyleSheet.create({
   },
   markReadButton: {
     alignItems: 'center',
+    alignSelf: 'flex-start',
     backgroundColor: '#E5F1FF',
     borderRadius: 24,
     flexDirection: 'row',
     gap: 6,
+    marginTop: 10,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },

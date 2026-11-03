@@ -17,6 +17,8 @@ interface ModalSheetProps extends Omit<ModalProps, 'transparent'> {
   children: React.ReactNode;
   actions?: React.ReactNode;
   onClose: () => void;
+  centerTitle?: boolean;
+  showHandle?: boolean;
 }
 
 /**
@@ -28,6 +30,8 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
   children,
   actions,
   onClose,
+  centerTitle = false,
+  showHandle = false,
   ...props
 }) => {
   return (
@@ -40,11 +44,12 @@ export const ModalSheet: React.FC<ModalSheetProps> = ({
           keyboardVerticalOffset={8}
         >
           <View style={styles.modal}>
+            {showHandle && <View style={styles.handle} />}
             <View style={styles.header}>
-              <ThemedText type="title" style={styles.title}>
+              <ThemedText type="title" style={[styles.title, centerTitle && styles.centeredTitle]}>
                 {title}
               </ThemedText>
-              <Pressable onPress={onClose} hitSlop={8}>
+              <Pressable onPress={onClose} hitSlop={8} style={centerTitle && styles.centeredClose}>
                 <ThemedText style={styles.close}>✕</ThemedText>
               </Pressable>
             </View>
@@ -90,6 +95,14 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
   },
+  handle: {
+    alignSelf: 'center',
+    width: 52,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#AAB7C7',
+    marginTop: 10,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -104,6 +117,8 @@ const styles = StyleSheet.create({
     color: '#111A30',
     flex: 1,
   },
+  centeredTitle: { textAlign: 'center' },
+  centeredClose: { position: 'absolute', right: Spacing.xl },
   close: {
     fontSize: Typography.sizes.lg,
     color: '#687A96',

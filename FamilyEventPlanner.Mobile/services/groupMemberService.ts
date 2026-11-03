@@ -41,17 +41,17 @@ function resolveErrorMessage(status: number, serverMessage: string): string {
       return 'Invalid invite code. Please check and try again.';
     }
     if (serverMessage.toLowerCase().includes('member')) {
-      return 'You are already a member of this family group.';
+      return 'You are already a member of this community.';
     }
     return serverMessage || 'The request was invalid. Please check your details.';
   }
 
   if (status === 404) {
-    return 'Family group not found. Double-check your invite code.';
+    return 'Community not found. Double-check your invite code.';
   }
 
   if (status === 409) {
-    return 'You are already a member of this family group.';
+    return 'You are already a member of this community.';
   }
 
   if (status >= 500) {
@@ -67,7 +67,7 @@ function resolveErrorMessage(status: number, serverMessage: string): string {
 
 // Calls POST /api/groupmembers/join and returns the parsed response.
 // Throws a plain Error with a user-friendly message if anything goes wrong.
-export async function joinFamilyGroup(request: JoinGroupRequest): Promise<JoinGroupResponse> {
+export async function joinCommunityGroup(request: JoinGroupRequest): Promise<JoinGroupResponse> {
   let response: Response;
 
   try {

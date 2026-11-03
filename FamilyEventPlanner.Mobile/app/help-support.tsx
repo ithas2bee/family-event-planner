@@ -1,18 +1,19 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { createSupportEmailUrl, getSupportEmailBody } from '@/services/supportService';
 
 const sections = [
   {
     title: 'Quick Help',
     options: [
-      { title: 'FAQs', icon: 'quiz' as const },
-      { title: 'How-To Guides', icon: 'menu-book' as const },
-      { title: 'Tips & Best Practices', icon: 'lightbulb-outline' as const },
+      { title: 'FAQs', icon: 'quiz' as const, section: 'faqs' },
+      { title: 'How-To Guides', icon: 'menu-book' as const, section: 'how-to-guides' },
+      { title: 'Tips & Best Practices', icon: 'lightbulb-outline' as const, section: 'tips-best-practices' },
     ],
   },
   {
@@ -26,6 +27,14 @@ const sections = [
 
 export default function HelpSupportScreen() {
   const insets = useSafeAreaInsets();
+
+  const openEmailSupport = async () => {
+    try {
+      await Linking.openURL(createSupportEmailUrl('Huddle Up Support', await getSupportEmailBody()));
+    } catch {
+      Alert.alert('Unable to open email', 'Please install or configure an email app and try again.');
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -50,7 +59,13 @@ export default function HelpSupportScreen() {
                   key={option.title}
                   accessibilityLabel={option.title}
                   accessibilityRole="button"
-                  onPress={() => router.push({ pathname: '/under-construction', params: { feature: option.title } })}
+                  onPress={() =>
+                    'section' in option && option.section
+                      ? router.push({ pathname: '/quick-help/[section]', params: { section: option.section } })
+                      : option.title === 'Email Support'
+                        ? openEmailSupport()
+                        : router.push('/feedback')
+                  }
                   style={[styles.option, index < section.options.length - 1 && styles.optionBorder]}
                 >
                   <View style={styles.iconCircle}>

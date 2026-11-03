@@ -51,7 +51,7 @@ export const EventSettingsModal: React.FC<EventSettingsModalProps> = ({
               <View style={styles.headerCopy}>
                 <ThemedText type="title" style={styles.title}>Additional Details</ThemedText>
                 <ThemedText style={styles.subtitle}>
-                  Add optional details to help your family know what to expect.
+                  Add optional details to help your community know what to expect.
                 </ThemedText>
               </View>
               <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Close">
@@ -71,7 +71,7 @@ export const EventSettingsModal: React.FC<EventSettingsModalProps> = ({
                 </View>
                 <View style={styles.fieldCopy}>
                   <ThemedText style={styles.label}>Dress Code (Optional)</ThemedText>
-                  <ThemedText style={styles.hint}>Let your family know if there&apos;s a dress code.</ThemedText>
+                  <ThemedText style={styles.hint}>Let your community know if there&apos;s a dress code.</ThemedText>
                 </View>
               </View>
               <TextInput
