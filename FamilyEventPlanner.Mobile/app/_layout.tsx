@@ -1,40 +1,98 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
-import { Stack } from 'expo-router';
+import { DefaultTheme, ThemeProvider } from 'expo-router/react-navigation';
+import { Stack, router, useSegments } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { ActiveGroupProvider } from '@/contexts/active-group-context';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { ActiveGroupProvider, useActiveGroupContext } from '@/contexts/active-group-context';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <ThemeProvider value={DefaultTheme}>
+      <ActiveGroupProvider>
+        <NavigationGate />
+      </ActiveGroupProvider>
+      <StatusBar style="dark" />
+    </ThemeProvider>
+  );
+}
+
+const unrestrictedRoutes = new Set([
+  'index',
+  'auth',
+  'login',
+  'create-account',
+  'group-required',
+  'my-groups',
+  'all-groups',
+  'profile',
+  'edit-profile',
+  'join-group',
+  'create-group',
+  'forgot-password',
+  'forgot-username',
+  'reset-password',
+]);
+
+function NavigationGate() {
+  const segments = useSegments();
+  const { isReady, isAuthenticated, isResolvingGroups, hasGroups } = useActiveGroupContext();
+
+  useEffect(() => {
+    const currentRoute = segments[segments.length - 1];
+    if (
+      !isReady ||
+      !isAuthenticated ||
+      isResolvingGroups ||
+      hasGroups ||
+      (currentRoute !== undefined && unrestrictedRoutes.has(currentRoute))
+    ) {
+      return;
+    }
+
+    router.replace('/group-required');
+  }, [hasGroups, isAuthenticated, isReady, isResolvingGroups, segments]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <ActiveGroupProvider>
-        <Stack>
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-          <Stack.Screen name="auth" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ title: 'Login' }} />
-          <Stack.Screen name="create-account" options={{ title: 'Create Account' }} />
-          <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
-          <Stack.Screen name="create-group" options={{ title: 'Create a Group' }} />
-          <Stack.Screen name="create-event" options={{ title: 'Create Event' }} />
-          <Stack.Screen name="create-announcement" options={{ title: 'Create Announcement' }} />
-          <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
-          <Stack.Screen name="create-poll" options={{ title: 'Create Poll' }} />
-          <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
-          <Stack.Screen name="create-kickback" options={{ title: 'Create Kickback' }} />
-          <Stack.Screen name="event/[eventId]" options={{ title: '' }} />
-        </Stack>
-      </ActiveGroupProvider>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <Stack>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ title: 'Sign In' }} />
+      <Stack.Screen name="create-account" options={{ title: 'Create Account' }} />
+      <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+      <Stack.Screen name="forgot-username" options={{ headerShown: false }} />
+      <Stack.Screen name="reset-password" options={{ headerShown: false }} />
+      <Stack.Screen name="group-required" options={{ headerShown: false }} />
+      <Stack.Screen name="my-groups" options={{ headerShown: false }} />
+      <Stack.Screen name="all-groups" options={{ headerShown: false }} />
+      <Stack.Screen name="group/[groupId]" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
+      <Stack.Screen name="join-group" options={{ title: 'Join a Group' }} />
+      <Stack.Screen name="create-group" options={{ headerShown: false }} />
+      <Stack.Screen name="create-event" options={{ headerShown: false }} />
+      <Stack.Screen name="create-announcement" options={{ headerShown: false }} />
+      <Stack.Screen name="announcement/[announcementId]" options={{ headerShown: false }} />
+      <Stack.Screen name="create-poll" options={{ headerShown: false }} />
+      <Stack.Screen name="poll/[pollId]" options={{ headerShown: false }} />
+      <Stack.Screen name="create-kickback" options={{ headerShown: false }} />
+      <Stack.Screen name="kickback/[kickbackId]" options={{ headerShown: false }} />
+      <Stack.Screen name="event/[eventId]" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="notification-preferences" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy" options={{ headerShown: false }} />
+      <Stack.Screen name="app-information" options={{ headerShown: false }} />
+      <Stack.Screen name="app-information/[section]" options={{ headerShown: false }} />
+      <Stack.Screen name="help-support" options={{ headerShown: false }} />
+      <Stack.Screen name="feedback" options={{ headerShown: false }} />
+      <Stack.Screen name="quick-help/[section]" options={{ headerShown: false }} />
+      <Stack.Screen name="under-construction" options={{ headerShown: false }} />
+    </Stack>
   );
 }

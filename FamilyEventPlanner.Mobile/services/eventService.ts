@@ -1,6 +1,7 @@
 import { API_BASE_URL } from '@/config/api';
 import { getAuthHeaders } from '@/services/authHeaderService';
 import { loadSession } from '@/services/sessionService';
+import { EventLocation } from '@/services/locationService';
 
 export type EventAssignment = {
   memberId?: string;
@@ -13,10 +14,17 @@ export type Event = {
   familyGroupId: string;
   title: string;
   imageUrl?: string;
+  eventImagePresetKey?: string | null;
   description?: string;
   startDate: string;
   endDate?: string;
   location?: string;
+  locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+  structuredLocation?: EventLocation | null;
   dressCode?: string;
   notes?: string;
   createdByMemberId?: string;
@@ -28,10 +36,16 @@ export type Event = {
 export type CreateEventRequest = {
   familyGroupId: string;
   title: string;
+  eventImagePresetKey?: string | null;
   description?: string;
   startDate: string;
   endDate?: string;
   location?: string;
+  locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
   dressCode?: string;
   notes?: string;
   assignments?: EventAssignment[]; // Added assignments
@@ -40,10 +54,16 @@ export type CreateEventRequest = {
 export type UpdateEventRequest = {
   title?: string;
   imageUrl?: string;
+  eventImagePresetKey?: string | null;
   description?: string;
   startDate?: string;
   endDate?: string;
   location?: string;
+  locationName?: string;
+  locationAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
   dressCode?: string;
   notes?: string;
   assignments?: EventAssignment[]; // Added assignments
@@ -62,7 +82,7 @@ async function getEventHeaders(): Promise<Record<string, string>> {
 
 function resolveErrorMessage(status: number, serverMessage: string): string {
   if (status === 404) {
-    return 'Family group not found.';
+    return 'Community not found.';
   }
 
   if (status >= 500) {
@@ -106,10 +126,16 @@ function mapEvent(payload: unknown): Event {
     familyGroupId?: string;
     title?: string;
     imageUrl?: string;
+    eventImagePresetKey?: string | null;
     description?: string;
     startDate?: string;
     endDate?: string;
     location?: string;
+    locationName?: string;
+    locationAddress?: string;
+    latitude?: number;
+    longitude?: number;
+    placeId?: string;
     dressCode?: string;
     notes?: string;
     createdByMemberId?: string;
@@ -139,10 +165,19 @@ function mapEvent(payload: unknown): Event {
     familyGroupId: String(event.familyGroupId ?? ''),
     title: String(event.title ?? ''),
     imageUrl: typeof event.imageUrl === 'string' ? event.imageUrl : undefined,
+    eventImagePresetKey: typeof event.eventImagePresetKey === 'string' ? event.eventImagePresetKey : null,
     description: event.description,
     startDate: String(event.startDate ?? ''),
     endDate: event.endDate,
     location: event.location,
+    locationName: event.locationName,
+    locationAddress: event.locationAddress,
+    latitude: event.latitude,
+    longitude: event.longitude,
+    placeId: event.placeId,
+    structuredLocation: event.locationName && event.locationAddress && event.latitude != null && event.longitude != null
+      ? { name: event.locationName, address: event.locationAddress, latitude: event.latitude, longitude: event.longitude, placeId: event.placeId ?? '' }
+      : null,
     dressCode: event.dressCode,
     notes: event.notes,
     createdByMemberId: event.createdByMemberId,

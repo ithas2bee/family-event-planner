@@ -4,28 +4,39 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { ThemedView } from '@/components/themed-view';
 
 type SettingOption = {
   title: string;
   icon: keyof typeof MaterialIcons.glyphMap;
-  route?: '/(tabs)/(main)/my-groups' | '/(tabs)/(main)/members';
+  route?:
+    | '/profile'
+    | '/(tabs)/(main)/my-groups'
+    | typeof COMMUNITY_HOME_ROUTES.members
+    | '/app-information'
+    | '/notification-preferences'
+    | '/privacy';
 };
 
 const sections: { title: string; options: SettingOption[] }[] = [
   {
     title: 'Account',
     options: [
-      { title: 'Profile', icon: 'person-outline' },
-      { title: 'Privacy', icon: 'lock-outline' },
-      { title: 'Notification Preferences', icon: 'notifications-none' },
+      { title: 'Profile', icon: 'person-outline', route: '/profile' },
+      { title: 'Privacy', icon: 'lock-outline', route: '/privacy' },
+      {
+        title: 'Notification Preferences',
+        icon: 'notifications-none',
+        route: '/notification-preferences',
+      },
     ],
   },
   {
-    title: 'Family & Groups',
+    title: 'Communities & Groups',
     options: [
-      { title: 'Family Group', icon: 'groups', route: '/(tabs)/(main)/my-groups' },
-      { title: 'Manage Members', icon: 'group', route: '/(tabs)/(main)/members' },
+      { title: 'Communities', icon: 'groups', route: '/(tabs)/(main)/my-groups' },
+      { title: 'Manage Members', icon: 'group', route: COMMUNITY_HOME_ROUTES.members },
     ],
   },
   {
@@ -37,7 +48,7 @@ const sections: { title: string; options: SettingOption[] }[] = [
   },
   {
     title: 'About',
-    options: [{ title: 'App Information', icon: 'info-outline' }],
+    options: [{ title: 'App Information', icon: 'info-outline', route: '/app-information' }],
   },
 ];
 

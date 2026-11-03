@@ -2,9 +2,11 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import {
   formatAnnouncementDate,
@@ -65,6 +67,7 @@ export default function AnnouncementsScreen() {
     refreshToken?: string;
   }>();
   const { groupId: contextGroupId, setActiveGroup, isReady } = useActiveGroupContext();
+  const insets = useSafeAreaInsets();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
   const refreshTokenValue = String(refreshToken ?? '');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -102,14 +105,26 @@ export default function AnnouncementsScreen() {
   }, [groupIdValue, refreshTokenValue, isReady]);
 
   return (
-    <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={styles.container}>
+    <ThemedView
+      lightColor="#F5F9FF"
+      darkColor="#F5F9FF"
+      style={[styles.container, { paddingTop: Math.max(insets.top, 16) }]}
+    >
       <View style={styles.header}>
-        <View>
+        <Pressable
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#102653" />
+        </Pressable>
+        <View style={styles.headerCopy}>
           <ThemedText type="title" style={styles.title}>
             Announcements
           </ThemedText>
           <ThemedText style={styles.subtitle}>
-            Stay up to date with what&apos;s happening in your family group.
+            Stay up to date with what&apos;s happening in your community.
           </ThemedText>
         </View>
         <View style={styles.headerIcon}>
@@ -141,7 +156,7 @@ export default function AnnouncementsScreen() {
               item={item}
               onPress={() =>
                 router.push({
-                  pathname: '/(tabs)/(main)/announcement/[announcementId]',
+                  pathname: COMMUNITY_HOME_ROUTES.announcementDetails,
                   params: {
                     announcementId: item.id,
                     title: item.title,
@@ -164,6 +179,8 @@ export default function AnnouncementsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 20, paddingTop: 22 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
+  backButton: { marginRight: 12, paddingTop: 8 },
+  headerCopy: { flex: 1 },
   title: { color: '#102653', fontSize: 30, lineHeight: 36 },
   subtitle: { maxWidth: 285, marginTop: 7, color: '#5D7396', fontSize: 16, lineHeight: 23 },
   headerIcon: {

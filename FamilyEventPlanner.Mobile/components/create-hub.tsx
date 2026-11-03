@@ -1,11 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const creationOptions = [
   {
     title: 'Create Group',
-    description: 'Start a new family group to keep everyone connected.',
+    description: 'Start a new community to keep everyone connected.',
     icon: 'groups',
     iconColor: '#1687D9',
     backgroundColor: '#EAF5FF',
@@ -32,7 +33,7 @@ const creationOptions = [
   },
   {
     title: 'Create Poll',
-    description: 'Get quick opinions from your family.',
+    description: 'Get quick opinions from your community.',
     icon: 'poll',
     iconColor: '#6841D8',
     backgroundColor: '#F5EEFF',
@@ -41,7 +42,7 @@ const creationOptions = [
   },
   {
     title: 'Create Announcement',
-    description: 'Share important news with your family.',
+    description: 'Share important news with your community.',
     icon: 'campaign',
     iconColor: '#D9364D',
     backgroundColor: '#FFF0F2',
@@ -52,9 +53,11 @@ const creationOptions = [
 
 export function CreateHub() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 380;
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -64,7 +67,7 @@ export function CreateHub() {
             <View>
               <Text style={styles.heading}>Create</Text>
               <Text style={styles.subtitle}>
-                Bring your family closer. Create{'\n'}something special. ✨
+                Bring your community closer. Create{'\n'}something special. ✨
               </Text>
             </View>
             <MaterialIcons name="celebration" size={52} color="#F5B82E" />
@@ -79,26 +82,33 @@ export function CreateHub() {
               accessibilityLabel={option.title}
               style={({ pressed }) => [
                 styles.card,
+                isCompact && styles.compactCard,
                 { backgroundColor: option.backgroundColor },
                 pressed && styles.cardPressed,
               ]}
               onPress={() => router.push(option.route)}
             >
-              <View style={[styles.iconContainer, { backgroundColor: option.iconBackgroundColor }]}>
-                <MaterialIcons name={option.icon} size={34} color={option.iconColor} />
+              <View
+                style={[
+                  styles.iconContainer,
+                  isCompact && styles.compactIconContainer,
+                  { backgroundColor: option.iconBackgroundColor },
+                ]}
+              >
+                <MaterialIcons name={option.icon} size={isCompact ? 30 : 34} color={option.iconColor} />
               </View>
               <View style={styles.cardCopy}>
-                <Text style={styles.cardTitle}>{option.title}</Text>
+                <Text style={[styles.cardTitle, isCompact && styles.compactCardTitle]}>{option.title}</Text>
                 <Text style={styles.cardDescription}>{option.description}</Text>
               </View>
-              <View style={styles.arrowContainer}>
-                <MaterialIcons name="chevron-right" size={30} color="#17345D" />
+              <View style={[styles.arrowContainer, isCompact && styles.compactArrowContainer]}>
+                <MaterialIcons name="chevron-right" size={isCompact ? 26 : 30} color="#17345D" />
               </View>
             </Pressable>
           ))}
         </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -149,6 +159,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
   },
+  compactCard: {
+    padding: 14,
+    gap: 10,
+  },
   cardPressed: {
     opacity: 0.8,
     transform: [{ scale: 0.99 }],
@@ -160,6 +174,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  compactIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+  },
   cardCopy: {
     flex: 1,
     gap: 6,
@@ -167,7 +186,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     color: '#10264C',
     fontSize: 22,
+    lineHeight: 27,
     fontWeight: '700',
+  },
+  compactCardTitle: {
+    fontSize: 18,
+    lineHeight: 23,
   },
   cardDescription: {
     color: '#586B89',
@@ -181,5 +205,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.42)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  compactArrowContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
 });

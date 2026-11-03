@@ -1,35 +1,90 @@
 using FamilyEventPlanner.Api.Data;
 using FamilyEventPlanner.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace FamilyEventPlanner.Api
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                throw new InvalidOperationException("ConnectionStrings:DefaultConnection must be configured.");
+            }
+
+            if (builder.Environment.IsProduction() &&
+                (connectionString.Contains("(localdb)", StringComparison.OrdinalIgnoreCase) ||
+                 connectionString.Contains("Trusted_Connection", StringComparison.OrdinalIgnoreCase) ||
+                 connectionString.Contains("Integrated Security", StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new InvalidOperationException("Production must use a server-side SQL Server connection string.");
+            }
+
+            var jwtSettings = builder.Configuration.GetSection("Jwt");
+            var secret = jwtSettings["Secret"];
+            var issuer = jwtSettings["Issuer"];
+            var audience = jwtSettings["Audience"];
+            if (string.IsNullOrWhiteSpace(secret) || Encoding.UTF8.GetByteCount(secret) < 32)
+            {
+                throw new InvalidOperationException("Jwt:Secret must contain at least 32 UTF-8 bytes.");
+            }
+
+            if (string.IsNullOrWhiteSpace(issuer) || string.IsNullOrWhiteSpace(audience))
+            {
+                throw new InvalidOperationException("Jwt:Issuer and Jwt:Audience must be configured.");
+            }
+
+            var key = Encoding.UTF8.GetBytes(secret);
+            var configuredCorsOrigins = builder.Configuration["Cors:AllowedOrigins"]?
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
 
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowExpo",
                     policy =>
                     {
-                        policy
-                            .AllowAnyOrigin()
-                            .AllowAnyHeader()
-                            .AllowAnyMethod();
+                        if (builder.Environment.IsDevelopment())
+                        {
+                            policy.AllowAnyOrigin();
+                        }
+                        else if (configuredCorsOrigins.Length > 0)
+                        {
+                            policy.WithOrigins(configuredCorsOrigins);
+                        }
+
+                        policy.AllowAnyHeader().AllowAnyMethod();
                     });
             });
 
             builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(connectionString));
 
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
+            builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
+            builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();
+            builder.Services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.AddPolicy("password-recovery", context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = 5,
+                            Window = TimeSpan.FromMinutes(1),
+                            QueueLimit = 0,
+                            AutoReplenishment = true
+                        }));
+            });
 
             // Add services to the container with JSON camelCase naming
             builder.Services.AddControllers()
@@ -39,12 +94,6 @@ namespace FamilyEventPlanner.Api
                 });
 
             // Configure JWT
-            var jwtSettings = builder.Configuration.GetSection("Jwt");
-            var secret = jwtSettings["Secret"];
-            var issuer = jwtSettings["Issuer"];
-            var audience = jwtSettings["Audience"];
-            var key = Encoding.UTF8.GetBytes(secret);
-
             builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -131,6 +180,12 @@ namespace FamilyEventPlanner.Api
 
             var app = builder.Build();
 
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                await dbContext.Database.MigrateAsync();
+            }
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -143,13 +198,23 @@ namespace FamilyEventPlanner.Api
             // Re-enable for production with proper SSL certificates
             // app.UseHttpsRedirection();
 
+            app.UseRouting();
             app.UseCors("AllowExpo");
+            app.UseRateLimiter();
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnonymous();
+            app.MapGet("/health/ready", async (AppDbContext dbContext, CancellationToken cancellationToken) =>
+            {
+                var isReady = await dbContext.Database.CanConnectAsync(cancellationToken);
+                return Results.Json(new { status = isReady ? "ready" : "unavailable" },
+                    statusCode: isReady ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
+            }).AllowAnonymous();
+
             app.MapControllers();
 
-            app.Run();
+            await app.RunAsync();
         }
     }
 }

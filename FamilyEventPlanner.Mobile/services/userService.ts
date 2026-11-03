@@ -28,7 +28,7 @@ function mapAuthError(status: number, fallback: string): string {
   }
 
   if (status === 409) {
-    return 'An account with this email already exists.';
+    return fallback || 'An account with this email already exists.';
   }
 
   if (status >= 500) {
@@ -71,8 +71,6 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
   const url = `${API_BASE_URL}${endpoint}`;
   const requestBody = JSON.stringify(payload);
 
-  console.log('[Auth] Request', { endpoint, url, body: requestBody });
-
   try {
     response = await fetch(url, {
       method: 'POST',
@@ -86,10 +84,7 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
     throw new Error('Could not reach the server. Check your network connection.');
   }
 
-  console.log('[Auth] Response status', { endpoint, status: response.status, ok: response.ok });
-
   const rawBody = await response.text();
-  console.log('[Auth] Response text', { endpoint, body: rawBody });
 
   let parsedBody: unknown = null;
   if (rawBody.length > 0) {
@@ -99,8 +94,6 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
       parsedBody = rawBody;
     }
   }
-
-  console.log('[Auth] Parsed response', { endpoint, parsedBody });
 
   if (!response.ok) {
     const serverMessage = extractServerMessage(parsedBody);
@@ -127,10 +120,52 @@ async function postAuth<TRequest>(endpoint: string, payload: TRequest): Promise<
   };
 }
 
+async function postRecovery<TRequest>(endpoint: string, payload: TRequest): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  const rawBody = await response.text();
+  let parsedBody: unknown = null;
+  if (rawBody) {
+    try {
+      parsedBody = JSON.parse(rawBody);
+    } catch {
+      parsedBody = rawBody;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(mapAuthError(response.status, extractServerMessage(parsedBody)));
+  }
+}
+
 export async function registerUser(request: RegisterRequest): Promise<AuthUserResponse> {
   return postAuth('/api/auth/register', request);
 }
 
 export async function loginUser(request: LoginRequest): Promise<AuthUserResponse> {
   return postAuth('/api/auth/login', request);
+}
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  return postRecovery('/api/auth/forgot-password', { email });
+}
+
+export async function resetPassword(request: {
+  token: string;
+  password: string;
+  confirmPassword: string;
+}): Promise<void> {
+  return postRecovery('/api/auth/reset-password', request);
 }

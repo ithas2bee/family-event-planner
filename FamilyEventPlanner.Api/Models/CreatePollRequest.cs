@@ -18,5 +18,9 @@ namespace FamilyEventPlanner.Api.Models
         public List<string> Options { get; set; } = new();
 
         public Guid? CreatedByMemberId { get; set; }
+
+        public int? DurationHours { get; set; }
+
+        public bool NotifyFamily { get; set; }
     }
 }

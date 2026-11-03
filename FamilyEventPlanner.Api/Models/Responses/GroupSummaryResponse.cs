@@ -8,5 +8,7 @@ namespace FamilyEventPlanner.Api.Models.Responses
         public string groupName { get; set; }
         public string inviteCode { get; set; }
         public bool isAdmin { get; set; }
+        public Guid memberId { get; set; }
+        public DateTime joinedAt { get; set; }
     }
 }

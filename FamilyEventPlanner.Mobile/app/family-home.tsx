@@ -8,11 +8,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '@/config/api';
 import { AnnouncementCard, type AnnouncementCardItem } from '@/components/announcement-card';
 import { ActivePollCard, type ActivePollCardItem } from '@/components/active-poll-card';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { DashboardSection } from '@/components/dashboard-section';
-import { FamilyMembersSection } from '@/components/family-members-section';
+import { CommunityMembersSection } from '@/components/community-members-section';
 import { GroupSummaryCard, type GroupSummaryCardItem } from '@/components/group-summary-card';
 import { HomeEmptyStateCard } from '@/components/home-empty-state-card';
-import { InviteFamilyMembersModal } from '@/components/invite-family-members-modal';
+import { HomeLoadingSkeleton } from '@/components/home-loading-skeleton';
+import { InviteCommunityMembersModal } from '@/components/invite-community-members-modal';
 import { KickbackCard, type KickbackCardItem } from '@/components/kickback-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -20,6 +22,7 @@ import { UpcomingEventCard, type UpcomingEventCardItem } from '@/components/upco
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getAnnouncementsByGroup } from '@/services/announcementService';
 import { getEventsByGroup, type Event } from '@/services/eventService';
+import { filterUpcomingEvents } from '@/services/upcomingEventUtils';
 import { getGroupMemberByUser, getGroupMembers, type GroupMember } from '@/services/groupMemberService';
 import { getKickbacksByGroup } from '@/services/kickbackService';
 import { getPollsByGroup } from '@/services/pollService';
@@ -71,10 +74,11 @@ function toBodyPreview(text: string, maxLength = 96): string {
 }
 
 function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
-  const previewEvents = events.slice(0, PREVIEW_LIMIT);
+  const now = new Date();
+  const previewEvents = filterUpcomingEvents(events, now).slice(0, PREVIEW_LIMIT);
   const nextUpEventId = previewEvents.reduce<string | null>((closestEventId, event) => {
     const parsedDate = new Date(event.startDate);
-    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getTime() < Date.now()) {
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getTime() <= now.getTime()) {
       return closestEventId;
     }
 
@@ -96,6 +100,7 @@ function mapUpcomingEvents(events: Event[]): UpcomingEventCardItem[] {
     id: event.id,
     title: event.title || 'Untitled Event',
     startDate: event.startDate,
+    eventImagePresetKey: event.eventImagePresetKey,
     location: event.location?.trim() || undefined,
     host: event.creatorDisplayName?.trim() || undefined,
     participantCount: event.assignments?.length,
@@ -116,7 +121,7 @@ function getInitials(name: string): string {
   return initials || '?';
 }
 
-export default function FamilyHomeScreen() {
+export default function CommunityHomeScreen() {
   const insets = useSafeAreaInsets();
   const {
     groupId: contextGroupId,
@@ -141,7 +146,7 @@ export default function FamilyHomeScreen() {
   const [pollsPreview, setPollsPreview] = useState<ActivePollCardItem[]>([]);
   const [kickbacksPreview, setKickbacksPreview] = useState<KickbackCardItem[]>([]);
   const [eventsPreview, setEventsPreview] = useState<UpcomingEventCardItem[]>([]);
-  const [loadingPreviews, setLoadingPreviews] = useState(false);
+  const [loadingPreviews, setLoadingPreviews] = useState(Boolean(groupId));
   const [menuVisible, setMenuVisible] = useState(false);
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
@@ -346,6 +351,14 @@ export default function FamilyHomeScreen() {
 
   const closeMenu = () => setMenuVisible(false);
 
+  if (loadingPreviews) {
+    return (
+      <ThemedView style={styles.container}>
+        <HomeLoadingSkeleton topInset={Math.max(insets.top, 8)} />
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -362,12 +375,12 @@ export default function FamilyHomeScreen() {
 
           <View style={styles.headerCopy}>
             <ThemedText type="title" style={styles.title}>
-              Family Home
+              Community Home
             </ThemedText>
             <ThemedText type="subtitle" style={styles.greeting}>
               Good morning, {memberName || 'there'}!
             </ThemedText>
-            <ThemedText style={styles.supportingMessage}>Great families make great memories 💙</ThemedText>
+            <ThemedText style={styles.supportingMessage}>Great communities make great memories 💙</ThemedText>
           </View>
 
           <View style={styles.headerActions}>
@@ -375,7 +388,7 @@ export default function FamilyHomeScreen() {
               accessibilityLabel="Open notifications"
               accessibilityRole="button"
               hitSlop={10}
-              onPress={() => router.push('/(tabs)/(main)/activity')}
+              onPress={() => router.navigate('/(tabs)/(main)/activity')}
               style={styles.iconButton}
             >
               <MaterialIcons name="notifications-none" size={26} color="#174B5C" />
@@ -384,7 +397,7 @@ export default function FamilyHomeScreen() {
               accessibilityLabel="Open profile"
               accessibilityRole="button"
               hitSlop={6}
-              onPress={() => router.push('/(tabs)/(main)/my-groups')}
+              onPress={() => router.push('/profile')}
               style={styles.profileButton}
             >
               <ThemedText style={styles.profileInitials}>{getInitials(memberName)}</ThemedText>
@@ -392,11 +405,11 @@ export default function FamilyHomeScreen() {
           </View>
         </View>
 
-        <FamilyMembersSection
+        <CommunityMembersSection
           members={membersPreview}
           currentMemberId={memberId}
           loading={loadingPreviews}
-          onViewAll={() => router.push('/(tabs)/(main)/members')}
+          onViewAll={() => router.push(COMMUNITY_HOME_ROUTES.members)}
           onInvite={() => setInviteModalVisible(true)}
         />
 
@@ -405,11 +418,11 @@ export default function FamilyHomeScreen() {
           items={myGroupsPreview}
           loading={loadingPreviews}
           emptyText="No groups to preview yet."
-          onViewAll={() => router.push('/(tabs)/(main)/my-groups')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/my-groups')}
           onCardPress={(item) =>
             router.push({
-              pathname: '/(tabs)/family-home',
-              params: { groupId: item.id, groupName: item.title },
+              pathname: '/group/[groupId]',
+              params: { groupId: item.id },
             })
           }
           renderCard={(item) => (
@@ -417,8 +430,8 @@ export default function FamilyHomeScreen() {
               item={item}
               onPress={() =>
                 router.push({
-                  pathname: '/(tabs)/family-home',
-                  params: { groupId: item.id, groupName: item.title },
+                  pathname: '/group/[groupId]',
+                  params: { groupId: item.id },
                 })
               }
             />
@@ -433,19 +446,19 @@ export default function FamilyHomeScreen() {
             <HomeEmptyStateCard
               title="Announcements"
               message="No announcements yet."
-              supportingText="Be the first to share an update with your family!"
+              supportingText="Be the first to share an update with your community!"
               actionLabel="Create Announcement"
               icon="campaign"
               colors={{ background: '#F7F0FF', iconBackground: '#E7D9FF', icon: '#7040D8', action: '#5D32D6' }}
               onCreate={() => router.push('/create-announcement')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/announcements')}
-          onCardPress={() => router.push('/(tabs)/(main)/announcements')}
+          onViewAll={() => router.push(COMMUNITY_HOME_ROUTES.announcements)}
+          onCardPress={() => router.push(COMMUNITY_HOME_ROUTES.announcements)}
           renderCard={(item) => (
             <AnnouncementCard
               item={item}
-              onPress={() => router.push('/(tabs)/(main)/announcements')}
+              onPress={() => router.push(COMMUNITY_HOME_ROUTES.announcements)}
             />
           )}
         />
@@ -458,20 +471,20 @@ export default function FamilyHomeScreen() {
             <HomeEmptyStateCard
               title="Polls"
               message="No polls to preview yet."
-              supportingText="Create a poll to get your family's opinions!"
+              supportingText="Create a poll to get your community's opinions!"
               actionLabel="Create Poll"
               icon="poll"
               colors={{ background: '#EEF7FF', iconBackground: '#D8EBFF', icon: '#1678E8', action: '#1678E8' }}
               onCreate={() => router.push('/create-poll')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/polls')}
-          onCardPress={() => router.push('/(tabs)/(main)/polls')}
+          onViewAll={() => router.push(COMMUNITY_HOME_ROUTES.polls)}
+          onCardPress={() => router.push(COMMUNITY_HOME_ROUTES.polls)}
           renderCard={(item, index) => (
             <ActivePollCard
               item={item}
               index={index}
-              onPress={() => router.push('/(tabs)/(main)/polls')}
+              onPress={() => router.push(COMMUNITY_HOME_ROUTES.polls)}
             />
           )}
         />
@@ -484,20 +497,20 @@ export default function FamilyHomeScreen() {
             <HomeEmptyStateCard
               title="Recent Kickbacks"
               message="No kickbacks to preview yet."
-              supportingText="Plan a casual get-together with your family!"
+              supportingText="Plan a casual get-together with your community!"
               actionLabel="Create Kickback"
               icon="groups"
               colors={{ background: '#EEFBF6', iconBackground: '#D5F5E7', icon: '#0D9F7A', action: '#0D9F7A' }}
               onCreate={() => router.push('/create-kickback')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/kickbacks')}
-          onCardPress={() => router.push('/(tabs)/(main)/kickbacks')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/kickbacks')}
+          onCardPress={() => router.navigate('/(tabs)/(main)/kickbacks')}
           renderCard={(item, index) => (
             <KickbackCard
               item={item}
               index={index}
-              onPress={() => router.push('/(tabs)/(main)/kickbacks')}
+              onPress={() => router.navigate('/(tabs)/(main)/kickbacks')}
             />
           )}
         />
@@ -517,7 +530,7 @@ export default function FamilyHomeScreen() {
               onCreate={() => router.push('/create-event')}
             />
           }
-          onViewAll={() => router.push('/(tabs)/(main)/events')}
+          onViewAll={() => router.navigate('/(tabs)/(main)/events')}
           onCardPress={(item) => router.push({ pathname: '/event/[eventId]', params: { eventId: String(item.id) } })}
           renderCard={(item, index) => (
             <UpcomingEventCard
@@ -567,7 +580,7 @@ export default function FamilyHomeScreen() {
               </View>
               <View style={styles.menuItemCopy}>
                 <ThemedText type="defaultSemiBold" style={styles.menuItemTitle}>Join a Group</ThemedText>
-                <ThemedText style={styles.menuItemDescription}>Connect with another family</ThemedText>
+                <ThemedText style={styles.menuItemDescription}>Connect with another community</ThemedText>
               </View>
               <MaterialIcons name="chevron-right" size={28} color="#7B8CA5" />
             </Pressable>
@@ -577,7 +590,7 @@ export default function FamilyHomeScreen() {
               accessibilityRole="button"
               onPress={() => {
                 closeMenu();
-                router.push('/(tabs)/(main)/activity');
+                router.navigate('/(tabs)/(main)/activity');
               }}
               style={styles.menuItem}
             >
@@ -646,7 +659,7 @@ export default function FamilyHomeScreen() {
           </View>
         </View>
       </Modal>
-      <InviteFamilyMembersModal
+      <InviteCommunityMembersModal
         visible={inviteModalVisible}
         inviteCode={inviteCode}
         onClose={() => setInviteModalVisible(false)}

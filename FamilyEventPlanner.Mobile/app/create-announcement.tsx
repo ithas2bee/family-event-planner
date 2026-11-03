@@ -4,29 +4,45 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createAnnouncement } from '@/services/announcementService';
 
 export default function CreateAnnouncementScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 440;
   const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { groupId: contextGroupId } = useActiveGroupContext();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [expiresAt, setExpiresAt] = useState('');
+  const [durationHours, setDurationHours] = useState<number | null>(null);
+  const [durationPickerVisible, setDurationPickerVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const durationOptions = [
+    { hours: 1, label: '1 hour' },
+    { hours: 6, label: '6 hours' },
+    { hours: 24, label: '1 day' },
+    { hours: 72, label: '3 days' },
+    { hours: 168, label: '7 days' },
+  ];
+  const selectedDurationLabel =
+    durationOptions.find((option) => option.hours === durationHours)?.label ?? 'No end date';
 
   const canSubmit = title.trim().length > 0 && body.trim().length > 0 && groupIdValue.length > 0;
 
@@ -43,11 +59,11 @@ export default function CreateAnnouncementScreen() {
         familyGroupId: groupIdValue,
         title: title.trim(),
         body: body.trim(),
-        expiresAt: expiresAt.trim() || undefined,
+        durationHours: durationHours ?? undefined,
       });
 
       router.replace({
-        pathname: '/(tabs)/(main)/announcements',
+        pathname: COMMUNITY_HOME_ROUTES.announcements,
         params: {
           groupId: groupIdValue,
           refreshToken: Date.now().toString(),
@@ -76,12 +92,16 @@ export default function CreateAnnouncementScreen() {
             <View style={styles.topBarSpacer} />
           </View>
 
-          <View style={styles.hero}>
-            <View style={styles.heroCopy}>
+          <View style={[styles.hero, isCompact && styles.compactHero]}>
+            <View style={[styles.heroCopy, isCompact && styles.compactHeroCopy]}>
               <ThemedText style={styles.title}>Create an Announcement</ThemedText>
-              <ThemedText style={styles.subtitle}>Share important news with your family. ❤️</ThemedText>
+              <ThemedText style={styles.subtitle}>Share important news with your community. ❤️</ThemedText>
             </View>
-            <View style={styles.heroIcon} accessible accessibilityLabel="Announcement">
+            <View
+              style={[styles.heroIcon, isCompact && styles.compactHeroIcon]}
+              accessible
+              accessibilityLabel="Announcement"
+            >
               <MaterialIcons name="campaign" size={48} color="#E52D50" />
             </View>
           </View>
@@ -144,24 +164,57 @@ export default function CreateAnnouncementScreen() {
               <View style={styles.fieldContent}>
                 <ThemedText style={styles.sectionTitle}>Expires At (Optional)</ThemedText>
                 <ThemedText style={styles.fieldHint}>
-                  Set an expiration date if this announcement is time-sensitive.
+                  Set when this announcement should no longer be shown.
                 </ThemedText>
-                <View style={styles.expirationInput}>
-                  <TextInput
-                    style={styles.expirationText}
-                    value={expiresAt}
-                    onChangeText={setExpiresAt}
-                    placeholder="Select date and time..."
-                    placeholderTextColor="#8392AA"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    accessibilityLabel="Expires At"
-                  />
-                  <MaterialIcons name="calendar-today" size={24} color="#687B98" />
-                </View>
+                <Pressable
+                  style={styles.expirationInput}
+                  onPress={() => setDurationPickerVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Expires At"
+                >
+                  <ThemedText style={styles.expirationText}>{selectedDurationLabel}</ThemedText>
+                  <MaterialIcons name="expand-more" size={23} color="#162B45" />
+                </Pressable>
               </View>
             </View>
           </View>
+
+          <Modal
+            visible={durationPickerVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setDurationPickerVisible(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setDurationPickerVisible(false)}>
+              <Pressable style={styles.durationPicker} onPress={(event) => event.stopPropagation()}>
+                <ThemedText style={styles.durationPickerTitle}>Expires At</ThemedText>
+                <ThemedText style={styles.durationPickerHint}>Choose when this announcement expires.</ThemedText>
+                <Pressable
+                  style={[styles.durationOption, durationHours === null && styles.selectedDurationOption]}
+                  onPress={() => {
+                    setDurationHours(null);
+                    setDurationPickerVisible(false);
+                  }}
+                >
+                  <ThemedText style={styles.durationOptionText}>No expiration</ThemedText>
+                  {durationHours === null && <MaterialIcons name="check" size={22} color="#D7284C" />}
+                </Pressable>
+                {durationOptions.map((option) => (
+                  <Pressable
+                    key={option.hours}
+                    style={[styles.durationOption, durationHours === option.hours && styles.selectedDurationOption]}
+                    onPress={() => {
+                      setDurationHours(option.hours);
+                      setDurationPickerVisible(false);
+                    }}
+                  >
+                    <ThemedText style={styles.durationOptionText}>{option.label}</ThemedText>
+                    {durationHours === option.hours && <MaterialIcons name="check" size={22} color="#D7284C" />}
+                  </Pressable>
+                ))}
+              </Pressable>
+            </Pressable>
+          </Modal>
 
           {error !== null && <ThemedText style={styles.errorMessage}>{error}</ThemedText>}
 
@@ -195,7 +248,9 @@ const styles = StyleSheet.create({
   topBarTitle: { color: '#111A30', fontSize: 16, fontWeight: '700' },
   topBarSpacer: { width: 28 },
   hero: { minHeight: 145, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
+  compactHero: { flexDirection: 'column', alignItems: 'stretch' },
   heroCopy: { flex: 1, paddingRight: 8 },
+  compactHeroCopy: { flex: 0 },
   title: { color: '#111A30', fontSize: 36, lineHeight: 43, fontWeight: '800' },
   subtitle: { color: '#687B98', fontSize: 16, lineHeight: 23, marginTop: 5 },
   heroIcon: {
@@ -207,6 +262,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     transform: [{ rotate: '-8deg' }],
   },
+  compactHeroIcon: { alignSelf: 'flex-end' },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
@@ -252,6 +308,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   expirationText: { flex: 1, color: '#16213A', fontSize: 16, paddingVertical: 0 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(17, 26, 48, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  durationPicker: { width: '100%', maxWidth: 420, borderRadius: 20, padding: 20, backgroundColor: '#FFFFFF' },
+  durationPickerTitle: { color: '#111A30', fontSize: 21, fontWeight: '700' },
+  durationPickerHint: { color: '#687B98', fontSize: 14, marginTop: 5, marginBottom: 10 },
+  durationOption: {
+    minHeight: 48,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  selectedDurationOption: { backgroundColor: '#FDE8EE' },
+  durationOptionText: { color: '#16213A', fontSize: 16 },
   divider: { height: 1, backgroundColor: '#E8EDF4' },
   errorMessage: { color: '#B42318', fontSize: 14, textAlign: 'center', marginTop: -7 },
   primaryButton: {

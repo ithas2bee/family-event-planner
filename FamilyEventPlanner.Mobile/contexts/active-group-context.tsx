@@ -1,5 +1,6 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { API_BASE_URL } from '@/config/api';
 import { getGroupMemberByUser } from '@/services/groupMemberService';
 import { loadSession, saveSession } from '@/services/sessionService';
 
@@ -12,13 +13,25 @@ type ActiveGroupState = {
 
 type ActiveGroupUpdate = Partial<ActiveGroupState>;
 
+type MembershipRecord = {
+  groupId?: string;
+  familyGroupId?: string;
+  id?: string;
+  groupName?: string;
+  name?: string;
+};
+
 type ActiveGroupContextValue = ActiveGroupState & {
   isReady: boolean;
+  isAuthenticated: boolean;
   isResolvingMember: boolean;
+  isResolvingGroups: boolean;
+  hasGroups: boolean;
   hasActiveGroup: boolean;
   hasActiveMember: boolean;
   setActiveGroup: (update: ActiveGroupUpdate) => Promise<void>;
   clearActiveGroup: () => Promise<void>;
+  refreshMembership: () => Promise<boolean>;
 };
 
 const DEFAULT_STATE: ActiveGroupState = {
@@ -41,7 +54,79 @@ function didGroupChange(update: ActiveGroupUpdate, previousGroupId: string): boo
 export function ActiveGroupProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<ActiveGroupState>(DEFAULT_STATE);
   const [isReady, setIsReady] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isResolvingMember, setIsResolvingMember] = useState(false);
+  const [isResolvingGroups, setIsResolvingGroups] = useState(false);
+  const [hasGroups, setHasGroups] = useState(false);
+  const membershipRequest = useRef(0);
+
+  const refreshMembership = useCallback(async (): Promise<boolean> => {
+    const requestId = membershipRequest.current + 1;
+    membershipRequest.current = requestId;
+    const session = await loadSession();
+    if (!session) {
+      if (membershipRequest.current === requestId) {
+        setIsAuthenticated(false);
+        setHasGroups(false);
+      }
+      return false;
+    }
+
+    setIsAuthenticated(true);
+    setIsResolvingGroups(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/familygroups/my/${session.userId}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to load groups (error ${response.status}).`);
+      }
+
+      const groups = await response.json();
+      const memberships = Array.isArray(groups) ? (groups as MembershipRecord[]) : [];
+      const firstMembership = memberships[0];
+      const firstGroupId = String(
+        firstMembership?.groupId ?? firstMembership?.familyGroupId ?? firstMembership?.id ?? ''
+      ).trim();
+      const firstGroupName = String(firstMembership?.groupName ?? firstMembership?.name ?? '').trim();
+      const hasMembership = firstGroupId.length > 0;
+      if (membershipRequest.current === requestId) {
+        setHasGroups(hasMembership);
+        if (hasMembership) {
+          const membershipIds = new Set(
+            memberships
+              .map((membership) =>
+                String(membership.groupId ?? membership.familyGroupId ?? membership.id ?? '').trim()
+              )
+              .filter(Boolean)
+          );
+          setState((current) => {
+            if (current.groupId && membershipIds.has(current.groupId)) {
+              return current;
+            }
+
+            return {
+              ...current,
+              groupId: firstGroupId,
+              groupName: firstGroupName,
+              memberId: '',
+              memberName: '',
+            };
+          });
+        }
+      }
+      return hasMembership;
+    } catch {
+      if (membershipRequest.current === requestId) {
+        setHasGroups(false);
+      }
+      return false;
+    } finally {
+      if (membershipRequest.current === requestId) {
+        setIsResolvingGroups(false);
+      }
+    }
+  }, []);
 
   const setActiveGroup = useCallback(async (update: ActiveGroupUpdate) => {
     if (Object.keys(update).length === 0) {
@@ -62,7 +147,12 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
         : update.memberName ?? session?.memberName ?? state.memberName,
     };
 
+    membershipRequest.current += 1;
+    setIsResolvingGroups(false);
     setState(nextState);
+    if (nextState.groupId) {
+      setHasGroups(true);
+    }
     if (!session) {
       return;
     }
@@ -80,6 +170,8 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
 
   const clearActiveGroup = useCallback(async () => {
     setState(DEFAULT_STATE);
+    setIsAuthenticated(false);
+    setHasGroups(false);
 
     const session = await loadSession();
     if (!session) {
@@ -105,23 +197,27 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
       }
 
       if (session) {
+        setIsAuthenticated(true);
         setState({
           groupId: session.groupId ?? '',
           groupName: session.groupName ?? '',
           memberId: session.memberId ?? '',
           memberName: session.memberName ?? '',
         });
+        await refreshMembership();
       }
 
-      setIsReady(true);
+      if (!cancelled) {
+        setIsReady(true);
+      }
     }
 
-    hydrateFromSession();
+    void hydrateFromSession();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshMembership]);
 
   useEffect(() => {
     let cancelled = false;
@@ -171,13 +267,27 @@ export function ActiveGroupProvider({ children }: { children: React.ReactNode })
     () => ({
       ...state,
       isReady,
+      isAuthenticated,
       isResolvingMember,
+      isResolvingGroups,
+      hasGroups,
       hasActiveGroup: state.groupId.length > 0,
       hasActiveMember: state.memberId.length > 0,
       setActiveGroup,
       clearActiveGroup,
+      refreshMembership,
     }),
-    [state, isReady, isResolvingMember, setActiveGroup, clearActiveGroup]
+    [
+      state,
+      isReady,
+      isAuthenticated,
+      isResolvingMember,
+      isResolvingGroups,
+      hasGroups,
+      setActiveGroup,
+      clearActiveGroup,
+      refreshMembership,
+    ]
   );
 
   return <ActiveGroupContext.Provider value={value}>{children}</ActiveGroupContext.Provider>;

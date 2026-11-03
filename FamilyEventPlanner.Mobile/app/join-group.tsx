@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ActivityIndicator,
@@ -12,15 +12,52 @@ import {
 } from 'react-native';
 
 import { useActiveGroupContext } from '@/contexts/active-group-context';
-import { joinFamilyGroup } from '@/services/groupMemberService';
+import {
+  requestGroupMembership,
+  searchGroups,
+  type GroupSearchResult,
+} from '@/services/groupSearchService';
+import { joinCommunityGroup } from '@/services/groupMemberService';
 import { loadSession, saveSession, type AppSession } from '@/services/sessionService';
 
 export default function JoinGroupScreen() {
   const { setActiveGroup } = useActiveGroupContext();
   const [session, setSession] = useState<AppSession | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [groups, setGroups] = useState<GroupSearchResult[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [requestLoadingGroupId, setRequestLoadingGroupId] = useState<string | null>(null);
+  const [requestFeedback, setRequestFeedback] = useState<{
+    groupId: string;
+    message: string;
+    isError: boolean;
+  } | null>(null);
+
+  const runSearch = useCallback(async (query: string, currentSession: AppSession | null) => {
+    if (!currentSession?.authToken && !currentSession?.memberId) {
+      setSearchError('Please sign in again to search for groups.');
+      return;
+    }
+
+    setSearchLoading(true);
+    setSearchError(null);
+    setHasSearched(true);
+    setSelectedGroupId(null);
+    try {
+      setGroups(await searchGroups(query, currentSession.authToken, currentSession.memberId));
+    } catch (err: unknown) {
+      setGroups([]);
+      setSearchError(err instanceof Error ? err.message : 'Could not search groups. Please try again.');
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     async function restoreSession() {
@@ -33,20 +70,20 @@ export default function JoinGroupScreen() {
     }
 
     restoreSession();
-  }, []);
+  }, [runSearch]);
 
   const canJoin = inviteCode.trim().length > 0 && session !== null;
 
   async function handleJoin() {
     if (!session) {
-      setError('Please log in before joining a group.');
+      setJoinError('Please log in before joining a group.');
       return;
     }
 
-    setError(null);
-    setLoading(true);
+    setJoinError(null);
+    setJoinLoading(true);
     try {
-      const result = await joinFamilyGroup({
+      const result = await joinCommunityGroup({
         inviteCode: inviteCode.trim(),
         userId: session.userId,
       });
@@ -78,9 +115,48 @@ export default function JoinGroupScreen() {
         params: { groupId, memberId, groupName, memberName },
       });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setJoinError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
-      setLoading(false);
+      setJoinLoading(false);
+    }
+  }
+
+  async function handleRequestToJoin(group: GroupSearchResult) {
+    if (!session) {
+      setRequestFeedback({
+        groupId: group.groupId,
+        message: 'Please sign in again to request membership.',
+        isError: true,
+      });
+      return;
+    }
+
+    setRequestLoadingGroupId(group.groupId);
+    setRequestFeedback(null);
+    try {
+      const result = await requestGroupMembership(
+        group.groupId,
+        session.authToken,
+        session.memberId,
+      );
+      setGroups((current) =>
+        current.map((entry) =>
+          entry.groupId === group.groupId ? { ...entry, requestStatus: result.requestStatus } : entry,
+        ),
+      );
+      setRequestFeedback({
+        groupId: group.groupId,
+        message: 'Request sent. A Group Admin must approve your membership.',
+        isError: false,
+      });
+    } catch (err: unknown) {
+      setRequestFeedback({
+        groupId: group.groupId,
+        message: err instanceof Error ? err.message : 'Could not request to join this group.',
+        isError: true,
+      });
+    } finally {
+      setRequestLoadingGroupId(null);
     }
   }
 
@@ -90,88 +166,159 @@ export default function JoinGroupScreen() {
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.topRow}>
-        <View style={styles.houseIcon}>
-          <Ionicons name="home" size={28} color="#1976D2" />
-          <Ionicons name="heart" size={13} color="#FFFFFF" style={styles.houseHeart} />
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Need help">
-          <Text style={styles.helpText}>? Need Help?</Text>
-        </Pressable>
-      </View>
-
       <View style={styles.introduction}>
-        <Text style={styles.title}>Family Together{'\n'}Starts Here</Text>
+        <Text style={styles.title}>Find your community</Text>
         <Text style={styles.subtitle}>
-          Join your family group to start sharing events, updates, and making great memories
-          together.
+          Search groups that are open to discovery. You can view group information here without
+          joining.
         </Text>
-        <View style={styles.familyIllustration} accessibilityLabel="Family illustration">
-          <View style={[styles.person, styles.personBlue]}>
-            <Text style={styles.personFace}>👨🏻</Text>
-          </View>
-          <View style={[styles.person, styles.personPink]}>
-            <Text style={styles.personFace}>👩🏻</Text>
-          </View>
-          <View style={[styles.person, styles.personPurple]}>
-            <Text style={styles.personFace}>👵🏻</Text>
-          </View>
-          <View style={[styles.person, styles.personYellow]}>
-            <Text style={styles.personFace}>🧒🏻</Text>
-          </View>
-        </View>
       </View>
 
       <View style={styles.joinCard}>
-        <View style={styles.cardHeading}>
-          <View style={styles.keyIcon}>
-            <Ionicons name="key" size={28} color="#1976D2" />
-          </View>
-          <View style={styles.cardHeadingCopy}>
-            <Text style={styles.cardTitle}>Enter Invite Code</Text>
-            <Text style={styles.cardDescription}>
-              Enter the code you received from a family member to join their group.
-            </Text>
-          </View>
+        <Text style={styles.cardTitle}>Search groups</Text>
+        <TextInput
+          style={styles.input}
+          value={searchTerm}
+          onChangeText={setSearchTerm}
+          onSubmitEditing={() => void runSearch(searchTerm, session)}
+          placeholder="Search by group name"
+          placeholderTextColor="#8291A8"
+          returnKeyType="search"
+          accessibilityLabel="Search groups by name"
+        />
+        <Pressable
+          style={[styles.joinButton, searchLoading && styles.joinButtonDisabled]}
+          onPress={() => void runSearch(searchTerm, session)}
+          disabled={searchLoading}
+          accessibilityRole="button"
+        >
+          {searchLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.joinButtonText}>Search</Text>
+          )}
+        </Pressable>
+        {searchError !== null && <Text accessibilityRole="alert" style={styles.feedbackError}>{searchError}</Text>}
+      </View>
+
+      {searchLoading && groups.length === 0 ? (
+        <View style={styles.feedbackRow}>
+          <ActivityIndicator color="#2588EA" />
+          <Text style={styles.feedbackCopy}>Searching groups…</Text>
         </View>
+      ) : null}
+
+      {!searchLoading && !searchError && groups.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="search-outline" size={30} color="#5B7FEA" />
+          <Text style={styles.emptyTitle}>{hasSearched ? 'No groups found' : 'Search for a group'}</Text>
+          <Text style={styles.emptyCopy}>
+            {hasSearched
+              ? 'Try another group name or check your spelling.'
+              : 'Enter a group name above to find searchable groups.'}
+          </Text>
+        </View>
+      ) : null}
+
+      {groups.map((group) => {
+        const requiresInvitation = group.accessMode === 'InviteOnlySearchable';
+        const accessLabel = requiresInvitation ? 'Invite Only • Invitation Required' : 'Community • Request to Join';
+        const isSelected = selectedGroupId === group.groupId;
+        return (
+          <View
+            key={group.groupId}
+            style={styles.resultCard}
+          >
+            <Pressable
+              onPress={() => setSelectedGroupId(isSelected ? null : group.groupId)}
+              accessibilityRole="button"
+              accessibilityLabel={`View ${group.groupName}`}
+              accessibilityState={{ expanded: isSelected }}
+            >
+              <View style={styles.resultHeading}>
+                <View style={styles.resultIcon}>
+                  <Ionicons name="people" size={21} color="#2588EA" />
+                </View>
+                <View style={styles.resultCopy}>
+                  <Text style={styles.resultName}>{group.groupName}</Text>
+                  <Text style={styles.resultType}>Community type · {group.groupType}</Text>
+                </View>
+                <Ionicons name={isSelected ? 'chevron-up' : 'chevron-down'} size={20} color="#687994" />
+              </View>
+            </Pressable>
+            <Text style={[styles.accessLabel, requiresInvitation ? styles.inviteLabel : styles.communityLabel]}>
+              {accessLabel}
+            </Text>
+            {isSelected ? (
+              <View style={styles.selectedInfo}>
+                <Text style={styles.selectedInfoLabel}>Community type</Text>
+                <Text style={styles.selectedInfoValue}>{group.groupType}</Text>
+                <Text style={styles.selectedInfoLabel}>Access</Text>
+                <Text style={styles.selectedInfoValue}>{accessLabel}</Text>
+                {!requiresInvitation ? (
+                  group.requestStatus === 'Pending' ? (
+                    <Text accessibilityRole="text" style={styles.requestPending}>
+                      Request Pending
+                    </Text>
+                  ) : (
+                    <Pressable
+                      style={[
+                        styles.requestButton,
+                        requestLoadingGroupId === group.groupId && styles.joinButtonDisabled,
+                      ]}
+                      onPress={handleRequestToJoin.bind(null, group)}
+                      disabled={requestLoadingGroupId !== null}
+                      accessibilityRole="button"
+                    >
+                      {requestLoadingGroupId === group.groupId ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.joinButtonText}>Request to Join</Text>
+                      )}
+                    </Pressable>
+                  )
+                ) : null}
+                {requestFeedback?.groupId === group.groupId ? (
+                  <Text
+                    accessibilityRole={requestFeedback.isError ? 'alert' : 'text'}
+                    style={requestFeedback.isError ? styles.feedbackError : styles.requestSuccess}
+                  >
+                    {requestFeedback.message}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
+
+      <View style={styles.joinCard}>
+        <Text style={styles.cardTitle}>Have an invitation code?</Text>
+        <Text style={styles.cardDescription}>Use a code shared with you to join a group.</Text>
         <TextInput
           style={styles.input}
           value={inviteCode}
           onChangeText={setInviteCode}
-          placeholder="e.g. ABC123"
-          placeholderTextColor="#9AAAC2"
+          placeholder="Enter invite code"
+          placeholderTextColor="#8291A8"
           autoCapitalize="characters"
           autoCorrect={false}
           accessibilityLabel="Invite code"
         />
         <Pressable
-          style={[styles.joinButton, (!canJoin || loading) && styles.joinButtonDisabled]}
+          style={[styles.joinButton, (!canJoin || joinLoading) && styles.joinButtonDisabled]}
           onPress={handleJoin}
-          disabled={!canJoin || loading}
+          disabled={!canJoin || joinLoading}
           accessibilityRole="button"
         >
-          {loading ? (
+          {joinLoading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (
-            <Text style={styles.joinButtonText}>Join Family Group</Text>
+            <Text style={styles.joinButtonText}>Join with Code</Text>
           )}
         </Pressable>
-        {error !== null && <Text style={styles.feedbackError}>{error}</Text>}
+        {joinError !== null && <Text accessibilityRole="alert" style={styles.feedbackError}>{joinError}</Text>}
       </View>
-
-      <View style={styles.noInviteCard}>
-        <View style={styles.noInviteIcon}>
-          <Ionicons name="mail-open" size={30} color="#5B7FEA" />
-        </View>
-        <View style={styles.noInviteCopy}>
-          <Text style={styles.noInviteTitle}>New to Family Circle?</Text>
-          <Text style={styles.noInviteText}>
-            An invite code is the easiest way to join your family&apos;s group. If you don&apos;t
-            have a code, ask a family member to send you one.
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.footerText}>Your family&apos;s events, updates, and moments—all together.</Text>
     </ScrollView>
   );
 }
@@ -186,29 +333,6 @@ const styles = StyleSheet.create({
     paddingTop: 28,
     paddingBottom: 36,
     gap: 20,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  houseIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#DDEEFF',
-    position: 'relative',
-  },
-  houseHeart: {
-    position: 'absolute',
-    top: 20,
-  },
-  helpText: {
-    color: '#176CC3',
-    fontSize: 15,
-    fontWeight: '700',
   },
   introduction: {
     alignItems: 'center',
@@ -228,44 +352,6 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     textAlign: 'center',
   },
-  familyIllustration: {
-    height: 130,
-    width: '100%',
-    maxWidth: 340,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingTop: 14,
-  },
-  person: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    marginHorizontal: -5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 5,
-    borderColor: '#F6FAFF',
-  },
-  personFace: {
-    fontSize: 42,
-  },
-  personBlue: {
-    backgroundColor: '#B9D9FF',
-    transform: [{ translateY: 18 }],
-  },
-  personPink: {
-    backgroundColor: '#F8C6D8',
-    zIndex: 1,
-  },
-  personPurple: {
-    backgroundColor: '#D8CCFA',
-    transform: [{ translateY: 18 }],
-  },
-  personYellow: {
-    backgroundColor: '#FFE0A6',
-    transform: [{ translateY: 34 }],
-  },
   joinCard: {
     padding: 20,
     borderRadius: 24,
@@ -276,23 +362,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
     gap: 14,
-  },
-  cardHeading: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 14,
-  },
-  keyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#E2F0FF',
-  },
-  cardHeadingCopy: {
-    flex: 1,
-    gap: 4,
   },
   cardTitle: {
     color: '#101C4C',
@@ -335,40 +404,124 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  noInviteCard: {
+  feedbackRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
-    padding: 18,
+    justifyContent: 'center',
+    gap: 10,
+  },
+  feedbackCopy: {
+    color: '#5E6D89',
+    fontSize: 15,
+  },
+  emptyState: {
+    alignItems: 'center',
+    gap: 8,
+    padding: 24,
     borderRadius: 20,
     backgroundColor: '#EAF3FF',
   },
-  noInviteIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+  emptyTitle: {
+    color: '#101C4C',
+    fontSize: 19,
+    fontWeight: '800',
+  },
+  emptyCopy: {
+    color: '#687994',
+    fontSize: 15,
+    lineHeight: 21,
+    textAlign: 'center',
+  },
+  resultCard: {
+    padding: 18,
+    gap: 12,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DCE8F7',
+    shadowColor: '#5B7FEA',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2,
+  },
+  resultHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  resultIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#D6E7FF',
+    backgroundColor: '#E2F0FF',
   },
-  noInviteCopy: {
+  resultCopy: {
     flex: 1,
-    gap: 5,
+    gap: 3,
   },
-  noInviteTitle: {
+  resultName: {
     color: '#101C4C',
     fontSize: 18,
     fontWeight: '800',
   },
-  noInviteText: {
+  resultType: {
+    color: '#5E6D89',
+    fontSize: 15,
+  },
+  accessLabel: {
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 14,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  inviteLabel: {
+    color: '#7B4D00',
+    backgroundColor: '#FFF0C2',
+  },
+  communityLabel: {
+    color: '#17613D',
+    backgroundColor: '#DDF5E8',
+  },
+  selectedInfo: {
+    gap: 3,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E3EBF6',
+  },
+  selectedInfoLabel: {
+    marginTop: 6,
     color: '#687994',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  selectedInfoValue: {
+    color: '#101C4C',
+    fontSize: 15,
+  },
+  requestButton: {
+    minHeight: 48,
+    marginTop: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2588EA',
+  },
+  requestPending: {
+    marginTop: 12,
+    color: '#17613D',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  requestSuccess: {
+    marginTop: 10,
+    color: '#17613D',
     fontSize: 14,
     lineHeight: 20,
-  },
-  footerText: {
-    color: '#176CC3',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
   },
 });

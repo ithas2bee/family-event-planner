@@ -192,13 +192,32 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("EventImagePresetKey")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
                     b.Property<Guid>("FamilyGroupId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("float");
 
                     b.Property<string>("Location")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("LocationAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LocationName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("float");
+
                     b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PlaceId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("StartDate")
@@ -227,8 +246,29 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("GroupType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasDefaultValue("Other");
+
                     b.Property<string>("InviteCode")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsInviteOnly")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsSearchable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -268,6 +308,43 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("GroupMembers");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.GroupMembershipRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FamilyGroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyGroupId");
+
+                    b.HasIndex("UserId", "FamilyGroupId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Pending'");
+
+                    b.ToTable("GroupMembershipRequests");
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Kickback", b =>
@@ -371,6 +448,39 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.PasswordResetToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UsedAtUtc] IS NULL");
+
+                    b.ToTable("PasswordResetTokens");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Photo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -419,6 +529,9 @@ namespace FamilyEventPlanner.Api.Migrations
 
                     b.Property<Guid?>("CreatedByMemberId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("FamilyEventId")
                         .HasColumnType("uniqueidentifier");
@@ -493,6 +606,13 @@ namespace FamilyEventPlanner.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("Age")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -512,7 +632,18 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Location")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
                     b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProfilePictureUrl")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("RolesJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -629,6 +760,25 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.GroupMembershipRequest", b =>
+                {
+                    b.HasOne("FamilyEventPlanner.Api.Models.FamilyGroup", "FamilyGroup")
+                        .WithMany()
+                        .HasForeignKey("FamilyGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("FamilyEventPlanner.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FamilyGroup");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Kickback", b =>
                 {
                     b.HasOne("FamilyEventPlanner.Api.Models.GroupMember", "CreatedByMember")
@@ -675,6 +825,15 @@ namespace FamilyEventPlanner.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.PasswordResetToken", b =>
+                {
+                    b.HasOne("FamilyEventPlanner.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Photo", b =>

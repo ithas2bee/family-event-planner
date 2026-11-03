@@ -1,10 +1,12 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { getEventImagePresetSource } from '@/constants/eventImagePresetAssets';
+import { EVENT_PRESET_IMAGE_ASPECT_RATIO } from '@/constants/eventImagePresets';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getEventsByGroup, type Event } from '@/services/eventService';
 
@@ -78,6 +80,7 @@ function getInitials(name: string): string {
 
 function EventCard({ event, index, onPress }: { event: Event; index: number; onPress: () => void }) {
   const tone = IMAGE_TONES[index % IMAGE_TONES.length];
+  const imageSource = getEventImagePresetSource(event.eventImagePresetKey);
   const date = formatEventDate(event.startDate);
   const assignments = event.assignments ?? [];
   const attendees = assignments.filter((assignment) => assignment.memberName.trim().length > 0);
@@ -86,65 +89,122 @@ function EventCard({ event, index, onPress }: { event: Event; index: number; onP
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [imageSource ? styles.imageCard : styles.card, pressed && styles.cardPressed]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${event.title || 'Untitled Event'}. ${date.date} at ${date.time}.`}
       android_ripple={{ color: '#E7EDF5' }}>
-      <View style={[styles.eventImage, { backgroundColor: tone.background }]}>
-        <View style={[styles.imageCircle, { backgroundColor: `${tone.foreground}22` }]} />
-        <MaterialIcons name={tone.icon} size={34} color={tone.foreground} />
-      </View>
-
-      <View style={styles.cardContent}>
-        <View style={styles.titleRow}>
-          <ThemedText type="defaultSemiBold" style={styles.eventTitle} numberOfLines={2}>
-            {event.title || 'Untitled Event'}
-          </ThemedText>
-          <View style={[styles.statusBadge, isPast ? styles.pastBadge : styles.upcomingBadge]}>
-            <ThemedText style={styles.statusText}>{status}</ThemedText>
-          </View>
-        </View>
-
-        <View style={styles.detailRow}>
-          <MaterialIcons name="event" size={15} color="#56708E" />
-          <ThemedText style={styles.detailText} numberOfLines={1}>
-            {date.date} · {date.time}
-          </ThemedText>
-        </View>
-        <View style={styles.detailRow}>
-          <MaterialIcons name="place" size={15} color="#56708E" />
-          <ThemedText style={styles.detailText} numberOfLines={1}>
-            {event.location?.trim() || 'Location to be announced'}
-          </ThemedText>
-        </View>
-
-        <View style={styles.bottomRow}>
-          <View style={styles.attendees}>
-            {attendees.slice(0, 3).map((attendee, attendeeIndex) => (
-              <View
-                key={`${attendee.memberName}-${attendeeIndex}`}
-                style={[styles.avatar, { backgroundColor: IMAGE_TONES[attendeeIndex % IMAGE_TONES.length].background }]}>
-                <ThemedText style={styles.avatarText}>{getInitials(attendee.memberName)}</ThemedText>
+      {imageSource ? (
+        <>
+          <Image source={imageSource} style={styles.eventImageBackground} resizeMode="contain" />
+          <View style={styles.imageOverlay} />
+          <View style={styles.imageCardContent}>
+            <View style={styles.imageCardTopRow}>
+              <View style={[styles.statusBadge, isPast ? styles.pastBadge : styles.upcomingBadge]}>
+                <ThemedText style={styles.statusText}>{status}</ThemedText>
               </View>
-            ))}
-            {attendees.length > 3 ? (
-              <View style={styles.moreAvatar}>
-                <ThemedText style={styles.moreAvatarText}>+{attendees.length - 3}</ThemedText>
+              <View style={styles.imageDateBadge}>
+                <ThemedText style={styles.imageDateText}>{date.date}</ThemedText>
               </View>
-            ) : null}
+            </View>
+            <View style={styles.imageCardFooter}>
+              <ThemedText type="defaultSemiBold" style={styles.imageCardTitle} numberOfLines={2}>
+                {event.title || 'Untitled Event'}
+              </ThemedText>
+              <View style={styles.imageCardDetails}>
+                <View style={styles.imageDetailRow}>
+                  <MaterialIcons name="event" size={15} color="#FFFFFF" />
+                  <ThemedText style={styles.imageDetailText} numberOfLines={1}>
+                    {date.date} · {date.time}
+                  </ThemedText>
+                </View>
+                <View style={styles.imageDetailRow}>
+                  <MaterialIcons name="place" size={15} color="#FFFFFF" />
+                  <ThemedText style={styles.imageDetailText} numberOfLines={1}>
+                    {event.location?.trim() || 'Location to be announced'}
+                  </ThemedText>
+                </View>
+              </View>
+              <View style={styles.imageCardBottomRow}>
+                <View style={styles.attendees}>
+                  {attendees.slice(0, 3).map((attendee, attendeeIndex) => (
+                    <View
+                      key={`${attendee.memberName}-${attendeeIndex}`}
+                      style={[styles.avatar, styles.imageAvatar, { backgroundColor: IMAGE_TONES[attendeeIndex % IMAGE_TONES.length].background }]}>
+                      <ThemedText style={styles.avatarText}>{getInitials(attendee.memberName)}</ThemedText>
+                    </View>
+                  ))}
+                  {attendees.length > 3 ? (
+                    <View style={styles.moreAvatar}>
+                      <ThemedText style={styles.moreAvatarText}>+{attendees.length - 3}</ThemedText>
+                    </View>
+                  ) : null}
+                </View>
+                <View style={styles.imageArrowCircle}>
+                  <MaterialIcons name="chevron-right" size={21} color="#FFFFFF" />
+                </View>
+              </View>
+            </View>
           </View>
-          <View style={styles.arrowCircle}>
-            <MaterialIcons name="chevron-right" size={21} color="#36516F" />
+        </>
+      ) : (
+        <>
+          <View style={[styles.eventImage, { backgroundColor: tone.background }]}>
+            <View style={[styles.imageCircle, { backgroundColor: `${tone.foreground}22` }]} />
+            <MaterialIcons name={tone.icon} size={34} color={tone.foreground} />
           </View>
-        </View>
-      </View>
+
+          <View style={styles.cardContent}>
+            <View style={styles.titleRow}>
+              <ThemedText type="defaultSemiBold" style={styles.eventTitle} numberOfLines={2}>
+                {event.title || 'Untitled Event'}
+              </ThemedText>
+              <View style={[styles.statusBadge, isPast ? styles.pastBadge : styles.upcomingBadge]}>
+                <ThemedText style={styles.statusText}>{status}</ThemedText>
+              </View>
+            </View>
+
+            <View style={styles.detailRow}>
+              <MaterialIcons name="event" size={15} color="#56708E" />
+              <ThemedText style={styles.detailText} numberOfLines={1}>
+                {date.date} · {date.time}
+              </ThemedText>
+            </View>
+            <View style={styles.detailRow}>
+              <MaterialIcons name="place" size={15} color="#56708E" />
+              <ThemedText style={styles.detailText} numberOfLines={1}>
+                {event.location?.trim() || 'Location to be announced'}
+              </ThemedText>
+            </View>
+
+            <View style={styles.bottomRow}>
+              <View style={styles.attendees}>
+                {attendees.slice(0, 3).map((attendee, attendeeIndex) => (
+                  <View
+                    key={`${attendee.memberName}-${attendeeIndex}`}
+                    style={[styles.avatar, { backgroundColor: IMAGE_TONES[attendeeIndex % IMAGE_TONES.length].background }]}>
+                    <ThemedText style={styles.avatarText}>{getInitials(attendee.memberName)}</ThemedText>
+                  </View>
+                ))}
+                {attendees.length > 3 ? (
+                  <View style={styles.moreAvatar}>
+                    <ThemedText style={styles.moreAvatarText}>+{attendees.length - 3}</ThemedText>
+                  </View>
+                ) : null}
+              </View>
+              <View style={styles.arrowCircle}>
+                <MaterialIcons name="chevron-right" size={21} color="#36516F" />
+              </View>
+            </View>
+          </View>
+        </>
+      )}
     </Pressable>
   );
 }
 
 export default function EventsScreen() {
-  const { groupId, refreshToken } = useLocalSearchParams<{ groupId: string; refreshToken?: string }>();
+  const { groupId } = useLocalSearchParams<{ groupId: string }>();
   const { groupId: contextGroupId, memberId, setActiveGroup, isReady } = useActiveGroupContext();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
   const [events, setEvents] = useState<Event[]>([]);
@@ -156,7 +216,7 @@ export default function EventsScreen() {
     if (groupId) void setActiveGroup({ groupId: String(groupId) });
   }, [groupId, setActiveGroup]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
     async function loadEvents() {
       setLoading(true);
@@ -181,7 +241,7 @@ export default function EventsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, refreshToken, isReady]);
+  }, [groupIdValue, isReady]));
 
   const filteredEvents = useMemo(() => {
     if (selectedFilter === 'Past') return events.filter((event) => !isUpcoming(event));
@@ -194,7 +254,7 @@ export default function EventsScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <View style={styles.heading}>
-            <ThemedText type="title" style={styles.title}>Family Events</ThemedText>
+            <ThemedText type="title" style={styles.title}>Community Events</ThemedText>
             <ThemedText style={styles.subtitle}>Make time for what matters 📅</ThemedText>
           </View>
           <Pressable
@@ -259,8 +319,23 @@ const styles = StyleSheet.create({
   selectedFilterText: { color: '#FFFFFF' },
   list: { paddingBottom: 24, gap: 12 },
   card: { flexDirection: 'row', minHeight: 142, overflow: 'hidden', borderRadius: 18, backgroundColor: '#FFFFFF', shadowColor: '#203B5A', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  imageCard: { width: '100%', aspectRatio: EVENT_PRESET_IMAGE_ASPECT_RATIO, overflow: 'hidden', borderRadius: 18, backgroundColor: '#172033', shadowColor: '#203B5A', shadowOpacity: 0.12, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   cardPressed: { opacity: 0.9 },
   eventImage: { width: 94, margin: 8, borderRadius: 13, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  eventImageBackground: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
+  imageOverlay: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: 'rgba(10, 18, 31, 0.18)' },
+  imageCardContent: { flex: 1, justifyContent: 'space-between', padding: 14 },
+  imageCardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 },
+  imageDateBadge: { maxWidth: '55%', borderRadius: 13, backgroundColor: '#FFFFFF', paddingHorizontal: 11, paddingVertical: 8 },
+  imageDateText: { color: '#172A45', fontSize: 12, lineHeight: 16, fontWeight: '700', textAlign: 'center' },
+  imageCardFooter: { gap: 7, padding: 11, marginHorizontal: -4, marginBottom: -4, borderRadius: 14, backgroundColor: 'rgba(12, 18, 29, 0.52)' },
+  imageCardTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 25 },
+  imageCardDetails: { gap: 4 },
+  imageDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  imageDetailText: { flex: 1, color: '#FFFFFF', fontSize: 12, lineHeight: 16 },
+  imageCardBottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  imageAvatar: { borderColor: '#FFFFFF' },
+  imageArrowCircle: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.24)' },
   imageCircle: { position: 'absolute', width: 120, height: 120, borderRadius: 60, right: -35, bottom: -28 },
   cardContent: { flex: 1, minWidth: 0, paddingTop: 14, paddingRight: 10, paddingBottom: 10, gap: 6 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },

@@ -5,6 +5,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import COMMUNITY_HOME_ROUTES from '@/constants/communityHomeRoutes.json';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { getPollsByGroup, type Poll } from '@/services/pollService';
 
@@ -115,9 +116,9 @@ export default function PollsScreen() {
         ListHeaderComponent={
           <>
             <View style={styles.headerRow}>
-              <View>
+              <View style={styles.headerCopy}>
                 <ThemedText type="title" style={styles.title}>Polls</ThemedText>
-                <ThemedText style={styles.subtitle}>Help your family make decisions together.</ThemedText>
+                <ThemedText style={styles.subtitle}>Help your community make decisions together.</ThemedText>
               </View>
               <View style={styles.headerIcon}>
                 <MaterialIcons name="poll" size={28} color="#087CF2" />
@@ -150,7 +151,7 @@ export default function PollsScreen() {
               style={({ pressed }) => [styles.pollCard, pressed && styles.cardPressed]}
               onPress={() =>
                 router.push({
-                  pathname: '/(tabs)/(main)/poll/[pollId]',
+                  pathname: COMMUNITY_HOME_ROUTES.pollDetails,
                   params: { pollId: item.id },
                 })
               }
@@ -164,7 +165,7 @@ export default function PollsScreen() {
                     <ThemedText style={[styles.statusText, closed ? styles.closedText : styles.activeText]}>{closed ? 'Closed' : 'Active'}</ThemedText>
                   </View>
                 </View>
-                <ThemedText style={styles.preview} numberOfLines={1}>{item.question || 'Family decision poll'}</ThemedText>
+                <ThemedText style={styles.preview} numberOfLines={1}>{item.question || 'Community decision poll'}</ThemedText>
                 <ThemedText style={styles.metadata}>{item.options.length} options  •  {voteCount} votes  •  by {item.creatorDisplayName || 'Unknown Member'}</ThemedText>
                 <View style={styles.dateRow}>
                   <ThemedText style={styles.date}>{formatPollDate(item.createdAt)}</ThemedText>
@@ -196,6 +197,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerCopy: {
+    flex: 1,
   },
   title: {
     color: '#10255B',

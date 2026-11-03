@@ -1,9 +1,11 @@
 import { EventDateModal } from '@/components/events/EventDateModal';
+import { EventImageSelector } from '@/components/events/EventImageSelector';
 import { EventLocationModal } from '@/components/events/EventLocationModal';
 import { EventSettingsModal } from '@/components/events/EventSettingsModal';
 import { ThemedText } from '@/components/themed-text';
 import { useActiveGroupContext } from '@/contexts/active-group-context';
 import { createEvent } from '@/services/eventService';
+import { EventLocation } from '@/services/locationService';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -27,9 +29,10 @@ export default function CreateEventScreen() {
   const [startDate, setStartDate] = useState('');
   const [description, setDescription] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState<EventLocation | null>(null);
   const [dressCode, setDressCode] = useState('');
   const [notes, setNotes] = useState('');
+  const [eventImagePresetKey, setEventImagePresetKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +53,7 @@ export default function CreateEventScreen() {
     setEndDate(newEndDate ? newEndDate.toISOString() : '');
   }
 
-  function handleLocationChange(newLocation: string) {
+  function handleLocationChange(newLocation: EventLocation | null) {
     setLocation(newLocation);
   }
 
@@ -75,10 +78,16 @@ export default function CreateEventScreen() {
       await createEvent({
         familyGroupId: groupIdValue,
         title: title.trim(),
+        eventImagePresetKey,
         startDate: startDate.trim(),
         description: description.trim() || undefined,
         endDate: endDate.trim() || undefined,
-        location: location.trim() || undefined,
+        location: location?.address,
+        locationName: location?.name,
+        locationAddress: location?.address,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        placeId: location?.placeId,
         dressCode: dressCode.trim() || undefined,
         notes: notes.trim() || undefined,
       });
@@ -131,7 +140,7 @@ export default function CreateEventScreen() {
           </View>
 
           <ThemedText style={styles.pageTitle}>Event Details</ThemedText>
-          <ThemedText style={styles.subtitle}>Tell your family about the event</ThemedText>
+          <ThemedText style={styles.subtitle}>Tell your community about the event</ThemedText>
 
           <View style={styles.formCard}>
             <ThemedText style={styles.label}>Event Title <ThemedText style={styles.required}>*</ThemedText></ThemedText>
@@ -139,7 +148,7 @@ export default function CreateEventScreen() {
               style={styles.input}
               value={title}
               onChangeText={setTitle}
-              placeholder="e.g. Family Game Night"
+              placeholder="e.g. Community Game Night"
               placeholderTextColor="#8CA0B8"
               autoCapitalize="words"
               autoCorrect={false}
@@ -175,16 +184,12 @@ export default function CreateEventScreen() {
             <ThemedText style={styles.label}>Location</ThemedText>
             <Pressable style={styles.locationInput} onPress={() => setLocationModalVisible(true)} accessibilityRole="button" accessibilityLabel="Add a location">
               <MaterialIcons name="place" size={21} color="#56708E" />
-              <ThemedText style={[styles.detailValue, !location && styles.placeholder]}>{location || 'Add a location'}</ThemedText>
+              <ThemedText style={[styles.detailValue, !location && styles.placeholder]}>{location?.name || location?.address || 'Add a location'}</ThemedText>
               <MaterialIcons name="chevron-right" size={22} color="#56708E" />
             </Pressable>
 
             <ThemedText style={styles.label}>Event Image</ThemedText>
-            <View style={styles.imagePlaceholder}>
-              <MaterialIcons name="image" size={27} color="#56708E" />
-              <ThemedText style={styles.imageTitle}>Add a photo (optional)</ThemedText>
-              <ThemedText style={styles.imageHint}>Make your event more fun with a photo!</ThemedText>
-            </View>
+            <EventImageSelector value={eventImagePresetKey} onChange={setEventImagePresetKey} />
 
             <Pressable style={styles.additionalDetails} onPress={() => setSettingsModalVisible(true)} accessibilityRole="button" accessibilityLabel="Additional event details">
               <MaterialIcons name="tune" size={20} color="#56708E" />
@@ -238,9 +243,6 @@ const styles = StyleSheet.create({
   detailValue: { flex: 1, color: '#56708E', fontSize: 12 },
   locationInput: { minHeight: 44, borderWidth: 1, borderColor: '#DCE5EF', borderRadius: 9, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10 },
   placeholder: { flex: 1, color: '#8CA0B8' },
-  imagePlaceholder: { minHeight: 77, borderWidth: 1, borderStyle: 'dashed', borderColor: '#B7C9DC', borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  imageTitle: { color: '#45617F', fontSize: 12, fontWeight: '600', marginTop: 3 },
-  imageHint: { color: '#8CA0B8', fontSize: 10, marginTop: 2 },
   additionalDetails: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 42, paddingHorizontal: 4 },
   additionalText: { flex: 1, color: '#45617F', fontSize: 12, fontWeight: '600' },
   primaryButton: { minHeight: 46, borderRadius: 11, backgroundColor: '#087AC5', alignItems: 'center', justifyContent: 'center', marginTop: 14 },
