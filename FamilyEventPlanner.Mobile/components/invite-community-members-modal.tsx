@@ -58,10 +58,6 @@ export function InviteCommunityMembersModal({
             <MaterialIcons name="close" size={30} color="#5C7090" />
           </Pressable>
 
-          <View style={styles.iconCircle}>
-            <MaterialIcons name="group" size={54} color="#1674E8" />
-          </View>
-          <ThemedText type="title" style={styles.title}>Invite {COMMUNITY_MEMBERS_LABEL}</ThemedText>
           <ThemedText style={styles.description}>
             Share this code with community members so they can join your community.
           </ThemedText>
@@ -132,22 +128,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginTop: -12,
     marginRight: -12,
-  },
-  iconCircle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 116,
-    height: 116,
-    marginTop: -8,
-    borderRadius: 58,
-    backgroundColor: '#EAF3FF',
-  },
-  title: {
-    marginTop: 22,
-    color: '#102A65',
-    fontSize: 34,
-    lineHeight: 40,
-    textAlign: 'center',
   },
   description: {
     maxWidth: 480,
