@@ -11,7 +11,6 @@ export default function EditProfileScreen() {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [location, setLocation] = useState('');
-  const [photoUrl, setPhotoUrl] = useState('');
   const [bio, setBio] = useState('');
   const [roles, setRoles] = useState<string[]>([]);
   const [error, setError] = useState('');
@@ -23,7 +22,6 @@ export default function EditProfileScreen() {
       setName(value.name ?? '');
       setAge(value.age?.toString() ?? '');
       setLocation(value.location ?? '');
-      setPhotoUrl(value.profilePictureUrl ?? '');
       setBio(value.bio ?? '');
       setRoles(value.roles);
     }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load your profile.'));
@@ -38,7 +36,7 @@ export default function EditProfileScreen() {
         age: age.trim() ? Number(age) : null,
         location: location.trim() || null,
         bio: bio.trim() || null,
-        profilePictureUrl: photoUrl.trim() || null,
+        profilePictureUrl: profile.profilePictureUrl,
         roles,
       });
       router.back();
@@ -61,9 +59,7 @@ export default function EditProfileScreen() {
         <Pressable accessibilityLabel="Save profile" disabled={saving} onPress={save}><ThemedText style={styles.action}>{saving ? 'Saving' : 'Save'}</ThemedText></Pressable>
       </View>
       <View style={styles.photoSection}>
-        {photoUrl ? <Image source={{ uri: photoUrl }} style={styles.avatar} /> : <View style={styles.avatarFallback}><Ionicons name="person" size={52} color="#1769E0" /></View>}
-        <ThemedText style={styles.photoHint}>Profile photo URL</ThemedText>
-        <TextInput value={photoUrl} onChangeText={setPhotoUrl} placeholder="https://..." placeholderTextColor="#8A96AA" style={styles.input} autoCapitalize="none" />
+        {profile.profilePictureUrl ? <Image source={{ uri: profile.profilePictureUrl }} style={styles.avatar} /> : <View style={styles.avatarFallback}><Ionicons name="person" size={52} color="#1769E0" /></View>}
       </View>
       <Field label="Name" value={name} onChangeText={setName} placeholder="Your name" />
       <Field label="Age" value={age} onChangeText={setAge} placeholder="Your age" keyboardType="number-pad" />
@@ -94,7 +90,6 @@ const styles = StyleSheet.create({
   photoSection: { alignItems: 'center', paddingVertical: 18 },
   avatar: { width: 120, height: 120, borderRadius: 60 },
   avatarFallback: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#DDEAFF', alignItems: 'center', justifyContent: 'center' },
-  photoHint: { color: '#1769E0', fontWeight: '600', marginTop: 10 },
   label: { color: '#101B41', fontSize: 16, fontWeight: '600', marginTop: 14, marginBottom: 7 },
   input: { minHeight: 50, borderWidth: 1, borderColor: '#CDD5E3', borderRadius: 11, backgroundColor: '#fff', paddingHorizontal: 14, color: '#101B41', fontSize: 16 },
   bioInput: { minHeight: 110, paddingTop: 12, textAlignVertical: 'top' },
