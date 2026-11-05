@@ -23,6 +23,7 @@ test('Edit Profile continues saving the remaining profile fields', () => {
   for (const field of ['name', 'age', 'location', 'bio']) {
     assert.match(editProfileSource, new RegExp(`${field}:`));
   }
-  assert.match(editProfileSource, /\broles,/);
+  assert.doesNotMatch(editProfileSource, /PROFILE_ROLES|setRoles/);
+  assert.doesNotMatch(profileServiceSource, /PROFILE_ROLES/);
   assert.match(editProfileSource, /await updateProfile\(\{/);
 });

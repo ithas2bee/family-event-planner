@@ -97,6 +97,41 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.ToTable("Announcements");
                 });
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.CommunityRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("FamilyGroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FamilyGroupId", "Name")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("CommunityRoles");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.EventAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -289,6 +324,9 @@ namespace FamilyEventPlanner.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("CommunityRoleId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("FamilyGroupId")
                         .HasColumnType("uniqueidentifier");
 
@@ -306,6 +344,8 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasIndex("FamilyGroupId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("CommunityRoleId", "FamilyGroupId");
 
                     b.ToTable("GroupMembers");
                 });
@@ -686,6 +726,17 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Navigation("FamilyGroup");
                 });
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.CommunityRole", b =>
+                {
+                    b.HasOne("FamilyEventPlanner.Api.Models.FamilyGroup", "FamilyGroup")
+                        .WithMany()
+                        .HasForeignKey("FamilyGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FamilyGroup");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.EventAssignment", b =>
                 {
                     b.HasOne("FamilyEventPlanner.Api.Models.GroupMember", "AssignedTo")
@@ -754,6 +805,14 @@ namespace FamilyEventPlanner.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("FamilyEventPlanner.Api.Models.CommunityRole", "CommunityRole")
+                        .WithMany()
+                        .HasForeignKey("CommunityRoleId", "FamilyGroupId")
+                        .HasPrincipalKey("Id", "FamilyGroupId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("CommunityRole");
 
                     b.Navigation("FamilyGroup");
 

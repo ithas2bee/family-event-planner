@@ -64,6 +64,20 @@ public class ProfileControllerTests
         Assert.Equal("Updated User", (await context.Users.FindAsync(user.Id))!.DisplayName);
     }
 
+    [Fact]
+    public async Task ProfileUpdateWithoutLegacyRolesPreservesExistingUserRoles()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "Test User");
+        user.RolesJson = "[\"Mom\"]";
+        await context.SaveChangesAsync();
+        var controller = await CreateController(context, user.Id);
+
+        await controller.Update(new UpdateProfileRequest { Name = "Updated User" });
+
+        Assert.Equal("[\"Mom\"]", user.RolesJson);
+    }
+
     private static async Task<ProfileController> CreateController(AppDbContext context, Guid userId)
     {
         var controller = new ProfileController(context);

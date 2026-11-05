@@ -54,7 +54,7 @@ export function CommunityMembersSection({
             {members.map((member, index) => {
               const isCurrentUser = member.memberId === currentMemberId;
               const name = isCurrentUser ? 'You' : member.displayName?.trim() || 'Unknown Member';
-              const role = member.isAdmin ? 'Admin' : 'Member';
+              const role = `${member.isAdmin ? 'Admin' : 'Member'}${member.roleName ? ` · ${member.roleName}` : ''}`;
 
               return (
                 <View key={member.memberId ?? `${name}-${index}`} style={styles.member}>

@@ -13,6 +13,7 @@ namespace FamilyEventPlanner.Api.Data
 
         public DbSet<FamilyGroup> FamilyGroups { get; set; }
         public DbSet<GroupMember> GroupMembers { get; set; }
+        public DbSet<CommunityRole> CommunityRoles { get; set; }
         public DbSet<GroupMembershipRequest> GroupMembershipRequests { get; set; }
 
         // Event planning entities
@@ -155,6 +156,21 @@ namespace FamilyEventPlanner.Api.Data
                 .HasForeignKey(gm => gm.UserId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired();
+
+            modelBuilder.Entity<CommunityRole>()
+                .HasIndex(role => new { role.FamilyGroupId, role.Name })
+                .IsUnique()
+                .HasFilter("[IsActive] = 1");
+
+            modelBuilder.Entity<CommunityRole>()
+                .HasAlternateKey(role => new { role.Id, role.FamilyGroupId });
+
+            modelBuilder.Entity<GroupMember>()
+                .HasOne(member => member.CommunityRole)
+                .WithMany()
+                .HasForeignKey(member => new { member.CommunityRoleId, member.FamilyGroupId })
+                .HasPrincipalKey(role => new { role.Id, role.FamilyGroupId })
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

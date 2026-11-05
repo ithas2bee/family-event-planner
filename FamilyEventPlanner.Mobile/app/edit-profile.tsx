@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { getProfile, PROFILE_ROLES, updateProfile, type Profile } from '@/services/profileService';
+import { getProfile, updateProfile, type Profile } from '@/services/profileService';
 
 export default function EditProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -12,7 +12,6 @@ export default function EditProfileScreen() {
   const [age, setAge] = useState('');
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
-  const [roles, setRoles] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -23,11 +22,11 @@ export default function EditProfileScreen() {
       setAge(value.age?.toString() ?? '');
       setLocation(value.location ?? '');
       setBio(value.bio ?? '');
-      setRoles(value.roles);
     }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load your profile.'));
   }, []);
 
   const save = async () => {
+    if (!profile) return;
     setSaving(true);
     setError('');
     try {
@@ -37,7 +36,6 @@ export default function EditProfileScreen() {
         location: location.trim() || null,
         bio: bio.trim() || null,
         profilePictureUrl: profile.profilePictureUrl,
-        roles,
       });
       router.back();
     } catch (reason) {
@@ -64,11 +62,6 @@ export default function EditProfileScreen() {
       <Field label="Name" value={name} onChangeText={setName} placeholder="Your name" />
       <Field label="Age" value={age} onChangeText={setAge} placeholder="Your age" keyboardType="number-pad" />
       <Field label="Location" value={location} onChangeText={setLocation} placeholder="City, State" />
-      <ThemedText style={styles.label}>Roles</ThemedText>
-      <View style={styles.roleList}>{PROFILE_ROLES.map((role) => {
-        const selected = roles.includes(role);
-        return <Pressable key={role} onPress={() => setRoles((current) => selected ? current.filter((item) => item !== role) : [...current, role])} style={[styles.role, selected && styles.selectedRole]}><ThemedText style={[styles.roleText, selected && styles.selectedRoleText]}>{role}</ThemedText>{selected && <Ionicons name="checkmark" size={17} color="#1769E0" />}</Pressable>;
-      })}</View>
       <ThemedText style={styles.label}>Bio</ThemedText>
       <TextInput value={bio} onChangeText={setBio} placeholder="Tell your community a little about yourself." placeholderTextColor="#8A96AA" style={[styles.input, styles.bioInput]} multiline />
       {!!error && <ThemedText style={styles.error}>{error}</ThemedText>}
@@ -93,10 +86,5 @@ const styles = StyleSheet.create({
   label: { color: '#101B41', fontSize: 16, fontWeight: '600', marginTop: 14, marginBottom: 7 },
   input: { minHeight: 50, borderWidth: 1, borderColor: '#CDD5E3', borderRadius: 11, backgroundColor: '#fff', paddingHorizontal: 14, color: '#101B41', fontSize: 16 },
   bioInput: { minHeight: 110, paddingTop: 12, textAlignVertical: 'top' },
-  roleList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  role: { borderWidth: 1, borderColor: '#CDD5E3', borderRadius: 18, backgroundColor: '#fff', paddingHorizontal: 13, paddingVertical: 9, flexDirection: 'row', gap: 5, alignItems: 'center' },
-  selectedRole: { borderColor: '#1769E0', backgroundColor: '#E0ECFF' },
-  roleText: { color: '#53627F' },
-  selectedRoleText: { color: '#1769E0', fontWeight: '600' },
   error: { color: '#B42318', textAlign: 'center', marginTop: 16 },
 });

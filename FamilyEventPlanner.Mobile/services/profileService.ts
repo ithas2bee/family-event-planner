@@ -1,9 +1,6 @@
 import { API_BASE_URL } from '@/config/api';
 import { loadSession } from '@/services/sessionService';
 
-export const PROFILE_ROLES = ['Mom', 'Dad', 'Aunt', 'Uncle', 'Cousin', 'Grandparent', 'Sibling', 'Friend', 'Other'] as const;
-export type ProfileRole = (typeof PROFILE_ROLES)[number];
-
 export type Profile = {
   name: string | null;
   email: string;
@@ -15,7 +12,7 @@ export type Profile = {
   familyNames: string[];
 };
 
-export type ProfileUpdate = Omit<Profile, 'email' | 'familyNames'>;
+export type ProfileUpdate = Omit<Profile, 'email' | 'familyNames' | 'roles'>;
 
 async function profileRequest<T>(method: 'GET' | 'PUT', body?: ProfileUpdate): Promise<T> {
   const session = await loadSession();

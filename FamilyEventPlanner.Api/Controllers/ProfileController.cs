@@ -58,7 +58,8 @@ public sealed class ProfileController : ControllerBase
         user.Location = Clean(request.Location);
         user.Bio = Clean(request.Bio);
         user.ProfilePictureUrl = Clean(request.ProfilePictureUrl);
-        user.RolesJson = JsonSerializer.Serialize(roles);
+        if (request.Roles is not null)
+            user.RolesJson = JsonSerializer.Serialize(roles);
 
         await _context.SaveChangesAsync();
         return Ok(await ToResponse(user));

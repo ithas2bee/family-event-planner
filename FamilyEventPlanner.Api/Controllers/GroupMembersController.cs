@@ -3,6 +3,7 @@ using FamilyEventPlanner.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace FamilyEventPlanner.Api.Controllers
 {
@@ -118,6 +119,7 @@ namespace FamilyEventPlanner.Api.Controllers
             // Include User for each member so the navigation property is available
             var members = await _context.GroupMembers
                 .Include(m => m.User)
+                .Include(m => m.CommunityRole)
                 .Where(m => m.FamilyGroupId == groupId)
                 .ToListAsync();
 
@@ -139,7 +141,9 @@ namespace FamilyEventPlanner.Api.Controllers
                 memberId = m.Id,
                 userId = m.UserId,
                 displayName = m.User?.DisplayName ?? "Unknown User",
-                isAdmin = m.IsAdmin
+                isAdmin = m.IsAdmin,
+                roleId = m.CommunityRoleId,
+                roleName = m.CommunityRole?.Name
             }).ToList();
 
             System.Diagnostics.Debug.WriteLine($"[GET MEMBERS] Returning {result.Count} members");
@@ -177,6 +181,45 @@ namespace FamilyEventPlanner.Api.Controllers
             return Ok(new { memberId = target.Id, isAdmin = target.IsAdmin });
         }
 
+        [Microsoft.AspNetCore.Authorization.Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+        [HttpPut("{groupId}/{memberId}/role")]
+        public async Task<IActionResult> UpdateMemberRole(
+            Guid groupId,
+            Guid memberId,
+            [FromBody] UpdateGroupMemberRoleRequest request)
+        {
+            var callerUserId = GetAuthenticatedUserId();
+            if (callerUserId is null)
+                return Unauthorized();
+            var caller = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.UserId == callerUserId && m.FamilyGroupId == groupId);
+            if (caller == null)
+                return Forbid();
+
+            var target = await _context.GroupMembers
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == groupId);
+            if (target == null)
+                return NotFound();
+            if (caller.UserId != target.UserId && !caller.IsAdmin)
+                return Forbid();
+
+            CommunityRole? role = null;
+            if (request.RoleId.HasValue)
+            {
+                role = await _context.CommunityRoles.FirstOrDefaultAsync(r =>
+                    r.Id == request.RoleId.Value &&
+                    r.FamilyGroupId == groupId &&
+                    r.IsActive);
+                if (role == null)
+                    return BadRequest(new { message = "Select an active role from this community." });
+            }
+
+            target.CommunityRoleId = role?.Id;
+            target.CommunityRole = role;
+            await _context.SaveChangesAsync();
+            return Ok(new { memberId = target.Id, roleId = role?.Id, roleName = role?.Name });
+        }
+
         /// <summary>
         /// Find the GroupMember record for a given user in a specific family group.
         /// This endpoint does not require the X-Member-Id header because it is used
@@ -203,6 +246,13 @@ namespace FamilyEventPlanner.Api.Controllers
         private Guid GetAuthenticatedMemberId()
         {
             return Guid.TryParse(User.FindFirst("memberId")?.Value, out var memberId) ? memberId : Guid.Empty;
+        }
+
+        private Guid? GetAuthenticatedUserId()
+        {
+            return Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var userId)
+                ? userId
+                : null;
         }
     }
 }

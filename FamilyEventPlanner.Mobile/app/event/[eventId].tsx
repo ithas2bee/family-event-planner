@@ -103,6 +103,7 @@ export default function EventDetailsScreen() {
       .map((member) => ({
         memberId: String(member.memberId ?? '').trim(),
         memberName: String(member.displayName ?? '').trim(),
+        roleName: String(member.roleName ?? '').trim(),
       }))
       .filter((member) => member.memberId.length > 0 && member.memberName.length > 0)
       .filter((member) => {
@@ -130,6 +131,9 @@ export default function EventDetailsScreen() {
   const eventImagePresetSource = event ? getEventImagePresetSource(event.eventImagePresetKey) : undefined;
   const memberNames = new Map(
     groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Member']),
+  );
+  const memberRoles = new Map(
+    groupMembers.map((member) => [String(member.memberId ?? ''), member.roleName?.trim() || '']),
   );
   const attendees = attendance
     .map((item) => ({
@@ -421,17 +425,21 @@ export default function EventDetailsScreen() {
         {(event.assignments?.length ?? 0) > 0 ? (
           <View style={styles.assignmentsSection}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Assignments</ThemedText>
-            {event.assignments?.map((assignment, index) => (
-              <View key={`${assignment.memberName}-${index}`} style={styles.assignmentRow}>
-                <View style={styles.assignmentIcon}>
-                  <MaterialIcons name="assignment" size={16} color="#087AC5" />
+            {event.assignments?.map((assignment, index) => {
+              const roleName = assignment.memberId ? memberRoles.get(assignment.memberId) : '';
+              return (
+                <View key={`${assignment.memberName}-${index}`} style={styles.assignmentRow}>
+                  <View style={styles.assignmentIcon}>
+                    <MaterialIcons name="assignment" size={16} color="#087AC5" />
+                  </View>
+                  <View style={styles.assignmentCopy}>
+                    <ThemedText style={styles.assignmentName}>{assignment.memberName}</ThemedText>
+                    {roleName ? <ThemedText style={styles.assignmentRole}>{roleName}</ThemedText> : null}
+                    <ThemedText style={styles.assignmentTask}>{assignment.task}</ThemedText>
+                  </View>
                 </View>
-                <View style={styles.assignmentCopy}>
-                  <ThemedText style={styles.assignmentName}>{assignment.memberName}</ThemedText>
-                  <ThemedText style={styles.assignmentTask}>{assignment.task}</ThemedText>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : null}
 
@@ -642,7 +650,9 @@ export default function EventDetailsScreen() {
                                 setActiveAssignmentIndex(null);
                               }}
                             >
-                              <ThemedText style={styles.suggestionText}>{member.memberName}</ThemedText>
+                              <ThemedText style={styles.suggestionText}>
+                                {member.memberName}{member.roleName ? ` · ${member.roleName}` : ''}
+                              </ThemedText>
                             </Pressable>
                           ))}
                         </View>
@@ -1076,6 +1086,10 @@ const styles = StyleSheet.create({
   },
   assignmentTask: {
     color: '#6B7A90',
+    fontSize: Typography.sizes.xs,
+  },
+  assignmentRole: {
+    color: '#087AC5',
     fontSize: Typography.sizes.xs,
   },
   section: {
