@@ -36,6 +36,25 @@ public class PollsControllerTests
     }
 
     [Fact]
+    public async Task CreateWithoutDurationDefaultsToFourteenDays()
+    {
+        await using var context = CreateContext();
+        var (group, member) = SeedMember(context);
+        var beforeCreate = DateTime.UtcNow;
+
+        var result = await CreateController(context, member.Id).Create(new CreatePollRequest
+        {
+            FamilyGroupId = group.Id,
+            Question = "Choose",
+            Options = ["One", "Two"]
+        });
+
+        Assert.IsType<CreatedAtActionResult>(result);
+        var poll = await context.Polls.SingleAsync();
+        Assert.InRange(poll.ExpiresAt!.Value, beforeCreate.AddDays(14), DateTime.UtcNow.AddDays(14));
+    }
+
+    [Fact]
     public async Task CreateWithNotifyFamilyNotifiesOtherMembersInTheGroup()
     {
         await using var context = CreateContext();
@@ -107,7 +126,7 @@ public class PollsControllerTests
     }
 
     [Fact]
-    public async Task ExistingPollWithoutExpirationRemainsActive()
+    public async Task PollWithoutExpirationDoesNotAppearOrAcceptVotes()
     {
         await using var context = CreateContext();
         var (group, member) = SeedMember(context);
@@ -115,9 +134,59 @@ public class PollsControllerTests
         await context.SaveChangesAsync();
         var controller = CreateController(context, member.Id);
 
-        var result = await controller.Vote(new VoteRequest { PollOptionId = poll.Options[0].Id });
+        var voteResult = await controller.Vote(new VoteRequest { PollOptionId = poll.Options[0].Id });
+        var listResult = await controller.GetForGroup(group.Id);
+        var getResult = await controller.GetById(poll.Id);
+
+        Assert.IsType<BadRequestObjectResult>(voteResult);
+        Assert.Empty(Assert.IsType<OkObjectResult>(listResult).Value as List<PollResponse> ?? []);
+        Assert.IsType<NotFoundObjectResult>(getResult);
+    }
+
+    [Fact]
+    public async Task ExpirationWarningAllowsOneFortyEightHourExtensionForCreator()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        var poll = AddPoll(context, group.Id, creator.Id, DateTime.UtcNow.AddHours(12));
+        poll.ExpirationNotificationSent = true;
+        var notification = new Notification
+        {
+            Id = Guid.NewGuid(),
+            MemberId = creator.Id,
+            Message = "Poll is expiring.",
+            Type = "PollExpiring",
+            Link = $"/poll/{poll.Id}",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Notifications.Add(notification);
+        await context.SaveChangesAsync();
+        var originalExpiration = poll.ExpiresAt;
+        var controller = CreateController(context, creator.Id);
+
+        var result = await controller.ExtendExpiration(poll.Id);
+        var repeatedResult = await controller.ExtendExpiration(poll.Id);
 
         Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(originalExpiration!.Value.AddHours(48), poll.ExpiresAt);
+        Assert.True(poll.ExpirationExtended);
+        Assert.IsType<ConflictObjectResult>(repeatedResult);
+        Assert.Equal("PollExpirationExtended", notification.Type);
+    }
+
+    [Fact]
+    public async Task NonCreatorCannotExtendPollExpiration()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        var otherMember = AddMember(context, group.Id, "other@example.com", "Other");
+        var poll = AddPoll(context, group.Id, creator.Id, DateTime.UtcNow.AddHours(12));
+        poll.ExpirationNotificationSent = true;
+        await context.SaveChangesAsync();
+
+        var result = await CreateController(context, otherMember.Id).ExtendExpiration(poll.Id);
+
+        Assert.IsType<ForbidResult>(result);
     }
 
     private static PollsController CreateController(AppDbContext context, Guid memberId)
