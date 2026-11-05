@@ -119,6 +119,7 @@ export type GroupMember = {
   isAdmin?: boolean;
   roleId?: string | null;
   roleName?: string | null;
+  roleNames?: string[];
 };
 
 export async function getGroupMembers(groupId: string, memberId: string): Promise<GroupMember[]> {

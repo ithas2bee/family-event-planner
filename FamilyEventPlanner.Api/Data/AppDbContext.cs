@@ -14,6 +14,7 @@ namespace FamilyEventPlanner.Api.Data
         public DbSet<FamilyGroup> FamilyGroups { get; set; }
         public DbSet<GroupMember> GroupMembers { get; set; }
         public DbSet<CommunityRole> CommunityRoles { get; set; }
+        public DbSet<CommunityRoleAssignment> CommunityRoleAssignments { get; set; }
         public DbSet<GroupMembershipRequest> GroupMembershipRequests { get; set; }
 
         // Event planning entities
@@ -166,11 +167,34 @@ namespace FamilyEventPlanner.Api.Data
                 .HasAlternateKey(role => new { role.Id, role.FamilyGroupId });
 
             modelBuilder.Entity<GroupMember>()
+                .HasAlternateKey(member => new { member.Id, member.FamilyGroupId });
+
+            modelBuilder.Entity<GroupMember>()
                 .HasOne(member => member.CommunityRole)
                 .WithMany()
                 .HasForeignKey(member => new { member.CommunityRoleId, member.FamilyGroupId })
                 .HasPrincipalKey(role => new { role.Id, role.FamilyGroupId })
                 .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasKey(assignment => new { assignment.GroupMemberId, assignment.CommunityRoleId });
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasOne(assignment => assignment.GroupMember)
+                .WithMany(member => member.CommunityRoleAssignments)
+                .HasForeignKey(assignment => new { assignment.GroupMemberId, assignment.FamilyGroupId })
+                .HasPrincipalKey(member => new { member.Id, member.FamilyGroupId })
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasOne(assignment => assignment.CommunityRole)
+                .WithMany()
+                .HasForeignKey(assignment => new { assignment.CommunityRoleId, assignment.FamilyGroupId })
+                .HasPrincipalKey(role => new { role.Id, role.FamilyGroupId })
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasIndex(assignment => new { assignment.FamilyGroupId, assignment.CommunityRoleId });
         }
     }
 }

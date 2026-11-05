@@ -2,25 +2,26 @@ namespace FamilyEventPlanner.Api.Models;
 
 public static class CommunityRoleDefaults
 {
-    private static readonly string[] FamilyRoles =
-        ["Mom", "Dad", "Aunt", "Uncle", "Cousin", "Grandparent", "Child", "Sibling", "Friend", "Other"];
-    private static readonly string[] AlumniRoles = ["Graduate", "Alumni", "Faculty", "Former Student"];
-    private static readonly string[] SportsRoles = ["Coach", "Player", "Team Manager", "Supporter"];
-    private static readonly string[] GeneralRoles = ["Member", "Moderator", "Organizer"];
-
     public static IReadOnlyList<string> ForGroupType(string? groupType)
     {
         return groupType?.Trim() switch
         {
-            "Family" => FamilyRoles,
-            "Alumni" => AlumniRoles,
-            "Sports & Fitness" => SportsRoles,
+            "Family" => ["Mom", "Dad", "Child", "Grandparent"],
+            "Friends" => ["Friend", "Best Friend", "Host", "Guest"],
+            "Couples" => ["Partner 1", "Partner 2", "Couple Friend", "Guest"],
             "Parents & Kids" => ["Parent", "Child", "Guardian", "Caregiver"],
-            "School & Education" => ["Student", "Teacher", "Faculty", "Organizer"],
-            "Work & Professional" => ["Employee", "Manager", "Organizer"],
-            "Neighborhood & Local" => ["Resident", "Volunteer", "Organizer"],
-            "Support & Care" => ["Member", "Caregiver", "Supporter", "Moderator"],
-            _ => GeneralRoles
+            "Sports & Fitness" => ["Coach", "Player", "Trainer", "Team Manager"],
+            "School & Education" => ["Student", "Teacher", "Parent", "Staff"],
+            "Work & Professional" => ["Employee", "Manager", "Team Lead", "Consultant"],
+            "Neighborhood & Local" => ["Resident", "Neighbor", "Community Leader", "Volunteer"],
+            "Hobbies & Interests" => ["Enthusiast", "Beginner", "Expert", "Instructor"],
+            "Faith & Spiritual" => ["Faith Leader", "Member", "Volunteer", "Ministry Leader"],
+            "Clubs & Organizations" => ["President", "Officer", "Member", "Volunteer"],
+            "Travel" => ["Trip Organizer", "Traveler", "Travel Companion", "Guest"],
+            "Alumni" => ["Graduate", "Current Student", "Faculty", "Alumni Organizer"],
+            "Support & Care" => ["Caregiver", "Recipient", "Support Volunteer", "Coordinator"],
+            "Events & Social" => ["Event Organizer", "Host", "Participant", "Volunteer"],
+            _ => ["Member", "Organizer", "Coordinator", "Guest"]
         };
     }
 }

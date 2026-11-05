@@ -91,6 +91,9 @@ public class GroupMembersControllerTests
             group.Id, member.Id, new UpdateGroupMemberRoleRequest { RoleId = role.Id });
         Assert.IsType<OkObjectResult>(selected);
         Assert.Equal(role.Id, member.CommunityRoleId);
+        Assert.IsType<OkObjectResult>(await controller.UpdateMemberRole(
+            group.Id, member.Id, new UpdateGroupMemberRoleRequest { RoleId = role.Id }));
+        Assert.Single(await context.CommunityRoleAssignments.ToListAsync());
         var memberResult = Assert.IsType<OkObjectResult>(await controller.GetMembers(group.Id));
         using var response = JsonDocument.Parse(JsonSerializer.Serialize(memberResult.Value));
         Assert.Contains(response.RootElement.EnumerateArray(), entry =>

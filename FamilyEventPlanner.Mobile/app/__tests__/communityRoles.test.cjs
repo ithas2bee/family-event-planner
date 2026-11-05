@@ -9,6 +9,10 @@ const eventDetailsSource = source('app/event/[eventId].tsx');
 const rolesScreen = source('app/group-roles.tsx');
 const rolesService = source('services/groupDetailsService.ts');
 const membersService = source('services/groupMemberService.ts');
+const profileScreen = source('app/profile.tsx');
+const editProfileScreen = source('app/edit-profile.tsx');
+const profileService = source('services/profileService.ts');
+const membersScreen = source('components/members-screen.tsx');
 
 test('Community role choices load and save against the current community membership', () => {
   assert.match(rolesScreen, /getCommunityRoles\(groupId\)/);
@@ -28,10 +32,23 @@ test('Only server-authorized community administrators see role customization con
   assert.match(rolesScreen, /deactivateCommunityRole\(groupId, role\.id\)/);
   assert.match(rolesScreen, /restoreCommunityRoleDefaults\(groupId\)/);
   assert.match(rolesService, /\/roles\/defaults/);
+  assert.match(rolesScreen, /customRoleCount} of 4/);
+  assert.match(rolesScreen, /!role\.isDefault/);
 });
 
-test('Profile editing no longer offers a universal family role list', () => {
-  assert.doesNotMatch(source('services/profileService.ts'), /PROFILE_ROLES|Mom|Grandparent/);
-  assert.doesNotMatch(source('app/edit-profile.tsx'), /PROFILE_ROLES|Roles/);
-  assert.doesNotMatch(source('app/profile.tsx'), /profile\.roles/);
+test('Profile editing loads, groups, toggles, and persists each community role selection', () => {
+  assert.match(editProfileScreen, /profile\.communities\.map/);
+  assert.match(editProfileScreen, /community\.availableRoles/);
+  assert.match(editProfileScreen, /accessibilityState=\{\{ selected \}\}/);
+  assert.match(editProfileScreen, /communityRoles: profile\.communities\.map/);
+  assert.match(profileService, /selectedRoleIds\?: string\[\]/);
+  assert.match(profileService, /communityRoles: \{ groupId: string; roleIds: string\[\] \}\[\]/);
+});
+
+test('Community members can open read-only profiles with roles grouped by community', () => {
+  assert.match(membersScreen, /pathname: '\/profile'/);
+  assert.match(profileService, /getCommunityMemberProfile/);
+  assert.match(profileScreen, /getCommunityMemberProfile\(groupId, memberId\)/);
+  assert.match(profileScreen, /profile\.communities\.map/);
+  assert.match(profileScreen, /\{canEdit && \(/);
 });

@@ -33,6 +33,8 @@ export default function GroupRolesScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const customRoleCount = roles.filter((role) => !role.isDefault).length;
+  const customRoleLimitReached = customRoleCount >= 4;
 
   const loadRoles = useCallback(async () => {
     await Promise.resolve();
@@ -197,6 +199,10 @@ export default function GroupRolesScreen() {
               <View style={styles.card}>
                 <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Manage available roles</ThemedText>
                 <ThemedText style={styles.feedback}>Changes apply only to {details.groupName}.</ThemedText>
+                <ThemedText style={styles.feedback}>Custom roles: {customRoleCount} of 4</ThemedText>
+                {customRoleLimitReached && !editingRoleId ? (
+                  <ThemedText style={styles.feedback}>The four custom-role limit has been reached. Remove a custom role before adding another.</ThemedText>
+                ) : null}
                 <TextInput
                   accessibilityLabel="Role name"
                   maxLength={50}
@@ -207,7 +213,12 @@ export default function GroupRolesScreen() {
                   value={roleName}
                 />
                 <View style={styles.actionRow}>
-                  <Pressable accessibilityRole="button" disabled={saving} onPress={() => void saveRole()} style={styles.primaryButton}>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={saving || (!editingRoleId && customRoleLimitReached)}
+                    onPress={() => void saveRole()}
+                    style={[styles.primaryButton, (!editingRoleId && customRoleLimitReached) && styles.disabledButton]}
+                  >
                     <ThemedText style={styles.primaryButtonText}>{editingRoleId ? 'Save role' : 'Add role'}</ThemedText>
                   </Pressable>
                   <Pressable
@@ -228,24 +239,29 @@ export default function GroupRolesScreen() {
                       <ThemedText type="defaultSemiBold" style={styles.roleText}>{role.name}</ThemedText>
                       {role.isDefault ? <ThemedText style={styles.defaultLabel}>Default</ThemedText> : null}
                     </View>
-                    <Pressable
-                      accessibilityLabel={`Edit ${role.name}`}
-                      onPress={() => {
-                        setEditingRoleId(role.id);
-                        setRoleName(role.name);
-                      }}
-                      style={styles.iconButton}
-                    >
-                      <MaterialIcons name="edit" size={20} color="#1769E0" />
-                    </Pressable>
-                    <Pressable
-                      accessibilityLabel={`Remove ${role.name}`}
-                      disabled={saving}
-                      onPress={() => removeRole(role)}
-                      style={styles.iconButton}
-                    >
-                      <MaterialIcons name="delete-outline" size={21} color="#B42318" />
-                    </Pressable>
+                    {!role.isDefault ? (
+                      <>
+                        <Pressable
+                          accessibilityLabel={`Edit ${role.name}`}
+                          disabled={saving}
+                          onPress={() => {
+                            setEditingRoleId(role.id);
+                            setRoleName(role.name);
+                          }}
+                          style={styles.iconButton}
+                        >
+                          <MaterialIcons name="edit" size={20} color="#1769E0" />
+                        </Pressable>
+                        <Pressable
+                          accessibilityLabel={`Remove ${role.name}`}
+                          disabled={saving}
+                          onPress={() => removeRole(role)}
+                          style={styles.iconButton}
+                        >
+                          <MaterialIcons name="delete-outline" size={21} color="#B42318" />
+                        </Pressable>
+                      </>
+                    ) : null}
                   </View>
                 ))}
                 <Pressable accessibilityRole="button" disabled={saving} onPress={() => void restoreDefaults()} style={styles.restoreButton}>
@@ -283,6 +299,7 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, borderWidth: 1, borderColor: '#CDD5E3', borderRadius: 11, backgroundColor: '#FFFFFF', paddingHorizontal: 13, color: '#101B41', fontSize: 16 },
   actionRow: { flexDirection: 'row', gap: 10 },
   primaryButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 11, backgroundColor: '#1769E0' },
+  disabledButton: { opacity: 0.45 },
   primaryButtonText: { color: '#FFFFFF', fontWeight: '700' },
   secondaryButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 11, backgroundColor: '#EEF2F8' },
   secondaryButtonText: { color: '#405675', fontWeight: '600' },

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Collections.Concurrent;
+using System.Data;
 
 namespace FamilyEventPlanner.Api.Controllers;
 
@@ -13,6 +15,8 @@ namespace FamilyEventPlanner.Api.Controllers;
 [Route("api/familygroups/{groupId:guid}/roles")]
 public sealed class CommunityRolesController : ControllerBase
 {
+    private const int MaxCustomRoles = 4;
+    private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> CreationLocks = new();
     private readonly AppDbContext _context;
 
     public CommunityRolesController(AppDbContext context)
@@ -43,23 +47,41 @@ public sealed class CommunityRolesController : ControllerBase
         var name = request.Name.Trim();
         if (string.IsNullOrWhiteSpace(name))
             return BadRequest(new { message = "Role name is required." });
-        if (await HasActiveRole(groupId, name))
-            return Conflict(new { message = "A role with this name already exists in this community." });
 
-        var now = DateTime.UtcNow;
-        var role = new CommunityRole
+        var creationLock = CreationLocks.GetOrAdd(groupId, _ => new SemaphoreSlim(1, 1));
+        await creationLock.WaitAsync();
+        try
         {
-            Id = Guid.NewGuid(),
-            FamilyGroupId = groupId,
-            Name = name,
-            IsDefault = false,
-            IsActive = true,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-        _context.CommunityRoles.Add(role);
-        await _context.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { groupId }, role);
+            await using var transaction = _context.Database.IsRelational()
+                ? await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable)
+                : null;
+            if (await HasActiveRole(groupId, name))
+                return Conflict(new { message = "A role with this name already exists in this community." });
+            if (await _context.CommunityRoles.CountAsync(role =>
+                    role.FamilyGroupId == groupId && role.IsActive && !role.IsDefault) >= MaxCustomRoles)
+                return Conflict(new { message = "A community can have up to four custom roles." });
+
+            var now = DateTime.UtcNow;
+            var role = new CommunityRole
+            {
+                Id = Guid.NewGuid(),
+                FamilyGroupId = groupId,
+                Name = name,
+                IsDefault = false,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            _context.CommunityRoles.Add(role);
+            await _context.SaveChangesAsync();
+            if (transaction is not null)
+                await transaction.CommitAsync();
+            return CreatedAtAction(nameof(Get), new { groupId }, role);
+        }
+        finally
+        {
+            creationLock.Release();
+        }
     }
 
     [HttpPut("{roleId:guid}")]
@@ -79,6 +101,8 @@ public sealed class CommunityRolesController : ControllerBase
             item.Id == roleId && item.FamilyGroupId == groupId && item.IsActive);
         if (role is null)
             return NotFound();
+        if (role.IsDefault)
+            return BadRequest(new { message = "Default roles cannot be changed." });
         if (await HasActiveRole(groupId, name, roleId))
             return Conflict(new { message = "A role with this name already exists in this community." });
 
@@ -99,9 +123,20 @@ public sealed class CommunityRolesController : ControllerBase
             item.Id == roleId && item.FamilyGroupId == groupId && item.IsActive);
         if (role is null)
             return NotFound();
+        if (role.IsDefault)
+            return BadRequest(new { message = "Default roles cannot be removed." });
 
         role.IsActive = false;
         role.UpdatedAt = DateTime.UtcNow;
+        var assignments = await _context.CommunityRoleAssignments
+            .Where(assignment => assignment.FamilyGroupId == groupId && assignment.CommunityRoleId == roleId)
+            .ToListAsync();
+        _context.CommunityRoleAssignments.RemoveRange(assignments);
+        var legacyAssignments = await _context.GroupMembers
+            .Where(member => member.FamilyGroupId == groupId && member.CommunityRoleId == roleId)
+            .ToListAsync();
+        foreach (var member in legacyAssignments)
+            member.CommunityRoleId = null;
         await _context.SaveChangesAsync();
         return NoContent();
     }
@@ -148,6 +183,7 @@ public sealed class CommunityRolesController : ControllerBase
             }
             else if (!role.IsActive)
             {
+                role.Name = name;
                 role.IsActive = true;
                 role.IsDefault = true;
                 role.UpdatedAt = now;

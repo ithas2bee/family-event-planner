@@ -12,6 +12,7 @@ export default function EditProfileScreen() {
   const [age, setAge] = useState('');
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<Record<string, string[]>>({});
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -22,6 +23,9 @@ export default function EditProfileScreen() {
       setAge(value.age?.toString() ?? '');
       setLocation(value.location ?? '');
       setBio(value.bio ?? '');
+      setSelectedRoles(Object.fromEntries(
+        value.communities.map((community) => [community.groupId, community.selectedRoleIds ?? []]),
+      ));
     }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Unable to load your profile.'));
   }, []);
 
@@ -36,6 +40,10 @@ export default function EditProfileScreen() {
         location: location.trim() || null,
         bio: bio.trim() || null,
         profilePictureUrl: profile.profilePictureUrl,
+        communityRoles: profile.communities.map((community) => ({
+          groupId: community.groupId,
+          roleIds: selectedRoles[community.groupId] ?? [],
+        })),
       });
       router.back();
     } catch (reason) {
@@ -64,6 +72,46 @@ export default function EditProfileScreen() {
       <Field label="Location" value={location} onChangeText={setLocation} placeholder="City, State" />
       <ThemedText style={styles.label}>Bio</ThemedText>
       <TextInput value={bio} onChangeText={setBio} placeholder="Tell your community a little about yourself." placeholderTextColor="#8A96AA" style={[styles.input, styles.bioInput]} multiline />
+      <View style={styles.rolesSection}>
+        <ThemedText style={styles.rolesHeading}>Community Roles</ThemedText>
+        <ThemedText style={styles.rolesHint}>Choose any roles that describe you in each community.</ThemedText>
+        {profile.communities.map((community) => (
+          <View key={community.groupId} style={styles.communityRoles}>
+            <ThemedText style={styles.communityName}>{community.communityName}</ThemedText>
+            <View style={styles.roleList}>
+              {community.availableRoles?.map((role) => {
+                const selected = (selectedRoles[community.groupId] ?? []).includes(role.id);
+                return (
+                  <Pressable
+                    key={role.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected }}
+                    onPress={() => setSelectedRoles((current) => {
+                      const selectedForGroup = current[community.groupId] ?? [];
+                      return {
+                        ...current,
+                        [community.groupId]: selected
+                          ? selectedForGroup.filter((id) => id !== role.id)
+                          : [...selectedForGroup, role.id],
+                      };
+                    })}
+                    style={[styles.roleOption, selected && styles.selectedRole]}
+                  >
+                    <ThemedText style={[styles.roleText, selected && styles.selectedRoleText]}>{role.name}</ThemedText>
+                    {selected ? <Ionicons name="checkmark" size={17} color="#1769E0" /> : null}
+                  </Pressable>
+                );
+              })}
+              {community.availableRoles?.length === 0 && (
+                <ThemedText style={styles.rolesHint}>No roles are available yet.</ThemedText>
+              )}
+            </View>
+          </View>
+        ))}
+        {profile.communities.length === 0 && (
+          <ThemedText style={styles.rolesHint}>Join a community to choose your roles.</ThemedText>
+        )}
+      </View>
       {!!error && <ThemedText style={styles.error}>{error}</ThemedText>}
     </ScrollView>
   );
@@ -86,5 +134,15 @@ const styles = StyleSheet.create({
   label: { color: '#101B41', fontSize: 16, fontWeight: '600', marginTop: 14, marginBottom: 7 },
   input: { minHeight: 50, borderWidth: 1, borderColor: '#CDD5E3', borderRadius: 11, backgroundColor: '#fff', paddingHorizontal: 14, color: '#101B41', fontSize: 16 },
   bioInput: { minHeight: 110, paddingTop: 12, textAlignVertical: 'top' },
+  rolesSection: { marginTop: 22, gap: 12 },
+  rolesHeading: { color: '#101B41', fontSize: 20, fontWeight: '700' },
+  rolesHint: { color: '#687A96', fontSize: 14, lineHeight: 20 },
+  communityRoles: { gap: 9, padding: 14, borderRadius: 13, backgroundColor: '#fff' },
+  communityName: { color: '#17345D', fontSize: 16, fontWeight: '700' },
+  roleList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  roleOption: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#CDD5E3', borderRadius: 18, paddingHorizontal: 11, paddingVertical: 8 },
+  selectedRole: { borderColor: '#1769E0', backgroundColor: '#E0ECFF' },
+  roleText: { color: '#293657', fontSize: 14 },
+  selectedRoleText: { color: '#1769E0', fontWeight: '600' },
   error: { color: '#B42318', textAlign: 'center', marginTop: 16 },
 });
