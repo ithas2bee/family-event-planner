@@ -2,6 +2,7 @@ namespace FamilyEventPlanner.Api.Models;
 
 public sealed class MemberProfileResponse
 {
+    public bool IsOwnProfile { get; init; }
     public string? Name { get; init; }
     public int? Age { get; init; }
     public string? Location { get; init; }

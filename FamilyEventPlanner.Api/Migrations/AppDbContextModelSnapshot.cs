@@ -132,6 +132,28 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.ToTable("CommunityRoles");
                 });
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.CommunityRoleAssignment", b =>
+                {
+                    b.Property<Guid>("GroupMemberId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CommunityRoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FamilyGroupId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("GroupMemberId", "CommunityRoleId");
+
+                    b.HasIndex("CommunityRoleId", "FamilyGroupId");
+
+                    b.HasIndex("FamilyGroupId", "CommunityRoleId");
+
+                    b.HasIndex("GroupMemberId", "FamilyGroupId");
+
+                    b.ToTable("CommunityRoleAssignments");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.EventAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -737,6 +759,27 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Navigation("FamilyGroup");
                 });
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.CommunityRoleAssignment", b =>
+                {
+                    b.HasOne("FamilyEventPlanner.Api.Models.CommunityRole", "CommunityRole")
+                        .WithMany()
+                        .HasForeignKey("CommunityRoleId", "FamilyGroupId")
+                        .HasPrincipalKey("Id", "FamilyGroupId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("FamilyEventPlanner.Api.Models.GroupMember", "GroupMember")
+                        .WithMany("CommunityRoleAssignments")
+                        .HasForeignKey("GroupMemberId", "FamilyGroupId")
+                        .HasPrincipalKey("Id", "FamilyGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CommunityRole");
+
+                    b.Navigation("GroupMember");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.EventAssignment", b =>
                 {
                     b.HasOne("FamilyEventPlanner.Api.Models.GroupMember", "AssignedTo")
@@ -976,6 +1019,11 @@ namespace FamilyEventPlanner.Api.Migrations
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.FamilyEvent", b =>
                 {
                     b.Navigation("Assignments");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.GroupMember", b =>
+                {
+                    b.Navigation("CommunityRoleAssignments");
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.Poll", b =>

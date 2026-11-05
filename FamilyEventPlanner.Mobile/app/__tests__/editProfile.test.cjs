@@ -26,4 +26,6 @@ test('Edit Profile continues saving the remaining profile fields', () => {
   assert.doesNotMatch(editProfileSource, /PROFILE_ROLES|setRoles/);
   assert.doesNotMatch(profileServiceSource, /PROFILE_ROLES/);
   assert.match(editProfileSource, /await updateProfile\(\{/);
+  assert.match(editProfileSource, /communityRoles: profile\.communities\.map/);
+  assert.match(editProfileSource, /selectedRoles\[community\.groupId\]/);
 });

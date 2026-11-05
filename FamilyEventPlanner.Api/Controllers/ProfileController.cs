@@ -69,6 +69,7 @@ public sealed class ProfileController : ControllerBase
                 .Where(assignment => assignment.GroupMemberId == membership.Id &&
                                      assignment.CommunityRole.IsActive)
                 .Select(assignment => assignment.CommunityRole.Name)
+                .OrderBy(name => name)
                 .ToListAsync();
             if (membership.CommunityRoleId.HasValue)
             {
@@ -90,6 +91,7 @@ public sealed class ProfileController : ControllerBase
 
         return Ok(new MemberProfileResponse
         {
+            IsOwnProfile = caller.Id == target.UserId,
             Name = target.User.DisplayName,
             Age = target.User.Age,
             Location = target.User.Location,
@@ -127,6 +129,9 @@ public sealed class ProfileController : ControllerBase
 
         if (request.CommunityRoles is not null)
         {
+            if (request.CommunityRoles.Any(selection =>
+                    selection is null || selection.GroupId == Guid.Empty || selection.RoleIds is null))
+                return BadRequest(new { message = "Each community role selection must include a community and role list." });
             if (request.CommunityRoles.Select(item => item.GroupId).Distinct().Count() != request.CommunityRoles.Count)
                 return BadRequest(new { message = "A community may be included only once." });
 
@@ -151,15 +156,21 @@ public sealed class ProfileController : ControllerBase
                 var oldAssignments = await _context.CommunityRoleAssignments
                     .Where(assignment => assignment.GroupMemberId == membership.Id)
                     .ToListAsync();
-                _context.CommunityRoleAssignments.RemoveRange(oldAssignments);
+                var desiredRoleIds = roleIds.ToHashSet();
+                _context.CommunityRoleAssignments.RemoveRange(
+                    oldAssignments.Where(assignment => !desiredRoleIds.Contains(assignment.CommunityRoleId)));
+                var existingRoleIds = oldAssignments.Select(assignment => assignment.CommunityRoleId).ToHashSet();
                 foreach (var roleId in roleIds)
                 {
-                    _context.CommunityRoleAssignments.Add(new CommunityRoleAssignment
+                    if (!existingRoleIds.Contains(roleId))
                     {
-                        FamilyGroupId = selection.GroupId,
-                        GroupMemberId = membership.Id,
-                        CommunityRoleId = roleId
-                    });
+                        _context.CommunityRoleAssignments.Add(new CommunityRoleAssignment
+                        {
+                            FamilyGroupId = selection.GroupId,
+                            GroupMemberId = membership.Id,
+                            CommunityRoleId = roleId
+                        });
+                    }
                 }
 
                 membership.CommunityRoleId = roleIds.Length == 0 ? null : roleIds[0];

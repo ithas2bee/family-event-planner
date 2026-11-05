@@ -153,6 +153,7 @@ namespace FamilyEventPlanner.Api.Controllers
                         ? new[] { m.CommunityRole.Name }
                         : Array.Empty<string>())
                     .Distinct()
+                    .ToArray()
             }).ToList();
 
             System.Diagnostics.Debug.WriteLine($"[GET MEMBERS] Returning {result.Count} members");
@@ -226,15 +227,19 @@ namespace FamilyEventPlanner.Api.Controllers
             var oldAssignments = await _context.CommunityRoleAssignments
                 .Where(assignment => assignment.GroupMemberId == target.Id)
                 .ToListAsync();
-            _context.CommunityRoleAssignments.RemoveRange(oldAssignments);
+            _context.CommunityRoleAssignments.RemoveRange(oldAssignments.Where(assignment =>
+                role is null || assignment.CommunityRoleId != role.Id));
             if (role is not null)
             {
-                _context.CommunityRoleAssignments.Add(new CommunityRoleAssignment
+                if (!oldAssignments.Any(assignment => assignment.CommunityRoleId == role.Id))
                 {
-                    FamilyGroupId = groupId,
-                    GroupMemberId = target.Id,
-                    CommunityRoleId = role.Id
-                });
+                    _context.CommunityRoleAssignments.Add(new CommunityRoleAssignment
+                    {
+                        FamilyGroupId = groupId,
+                        GroupMemberId = target.Id,
+                        CommunityRoleId = role.Id
+                    });
+                }
             }
 
             target.CommunityRoleId = role?.Id;

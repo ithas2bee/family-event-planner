@@ -35,7 +35,7 @@ public class FamilyGroupsControllerTests
         Assert.True(group.IsInviteOnly);
         Assert.False(group.IsSearchable);
         Assert.Equal(
-            ["Coach", "Player", "Supporter", "Team Manager"],
+            ["Coach", "Player", "Team Manager", "Trainer"],
             await context.CommunityRoles.Where(role => role.FamilyGroupId == group.Id)
                 .OrderBy(role => role.Name).Select(role => role.Name).ToArrayAsync());
     }
@@ -60,7 +60,7 @@ public class FamilyGroupsControllerTests
         Assert.True(group.IsInviteOnly);
         Assert.False(group.IsSearchable);
         Assert.Equal(
-            ["Member", "Moderator", "Organizer"],
+            ["Coordinator", "Guest", "Member", "Organizer"],
             await context.CommunityRoles.Where(role => role.FamilyGroupId == group.Id)
                 .OrderBy(role => role.Name).Select(role => role.Name).ToArrayAsync());
     }
