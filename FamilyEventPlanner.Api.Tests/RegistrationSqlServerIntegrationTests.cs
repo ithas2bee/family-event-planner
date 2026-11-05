@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -19,6 +21,98 @@ namespace FamilyEventPlanner.Api.Tests;
 public class RegistrationSqlServerIntegrationTests
 {
     private const string ConnectionStringEnvironmentVariable = "FAMILY_EVENT_PLANNER_TEST_SQLSERVER";
+
+    [SqlServerFact]
+    public async Task CommunityRoleDefaultsMigrationInsertsCoordinatorOnlyOnce()
+    {
+        var configuredConnectionString = Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable)!;
+        var databaseName = $"FamilyEventPlannerCommunityRoleMigrationTest_{Guid.NewGuid():N}";
+        var masterConnectionString = new SqlConnectionStringBuilder(configuredConnectionString)
+        {
+            InitialCatalog = "master"
+        };
+        var testConnectionString = new SqlConnectionStringBuilder(configuredConnectionString)
+        {
+            InitialCatalog = databaseName
+        }.ConnectionString;
+
+        await CreateDatabaseAsync(masterConnectionString.ConnectionString, databaseName);
+        var communityId = Guid.NewGuid();
+        try
+        {
+            await using (var seedContext = CreateContext(testConnectionString))
+            {
+                await seedContext.GetService<IMigrator>()
+                    .MigrateAsync("20261105000254_AddCommunityRoles");
+                var community = new FamilyGroup
+                {
+                    Id = communityId,
+                    Name = "Default role migration regression",
+                    GroupType = "Other",
+                    InviteCode = Guid.NewGuid().ToString("N"),
+                    CreatedAt = DateTime.UtcNow
+                };
+                seedContext.FamilyGroups.Add(community);
+                seedContext.CommunityRoles.AddRange(
+                    new CommunityRole
+                    {
+                        Id = Guid.NewGuid(),
+                        FamilyGroupId = community.Id,
+                        Name = "Member",
+                        IsDefault = false,
+                        IsActive = false,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    },
+                    new CommunityRole
+                    {
+                        Id = Guid.NewGuid(),
+                        FamilyGroupId = community.Id,
+                        Name = "Organizer",
+                        IsDefault = false,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    },
+                    new CommunityRole
+                    {
+                        Id = Guid.NewGuid(),
+                        FamilyGroupId = community.Id,
+                        Name = "Guest",
+                        IsDefault = false,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+                await seedContext.SaveChangesAsync();
+            }
+
+            await using (var migrationContext = CreateContext(testConnectionString))
+            {
+                await migrationContext.GetService<IMigrator>()
+                    .MigrateAsync("20261105025313_AddCommunityRoleAssignmentsAndDefaultRoles");
+            }
+
+            await using var verificationContext = CreateContext(testConnectionString);
+            var roles = await verificationContext.CommunityRoles
+                .Where(role => role.FamilyGroupId == communityId)
+                .OrderBy(role => role.Name)
+                .ToListAsync();
+
+            Assert.Equal(
+                new[] { "Coordinator", "Guest", "Member", "Organizer" },
+                roles.Select(role => role.Name));
+            Assert.All(roles, role =>
+            {
+                Assert.True(role.IsActive);
+                Assert.True(role.IsDefault);
+            });
+        }
+        finally
+        {
+            await DropDatabaseAsync(masterConnectionString.ConnectionString, databaseName);
+        }
+    }
 
     [SqlServerFact]
     public async Task ConcurrentRegistrationAtNinetyNineAccountsCreatesExactlyOneHundredthAccount()

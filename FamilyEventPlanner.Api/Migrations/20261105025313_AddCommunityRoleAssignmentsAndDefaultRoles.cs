@@ -91,7 +91,10 @@ namespace FamilyEventPlanner.Api.Migrations
                     AND NOT EXISTS (
                         SELECT 1
                         FROM FamilyGroups AS community
-                        LEFT JOIN #CommunityRoleDefaults AS knownType ON knownType.GroupType = community.GroupType
+                        LEFT JOIN (
+                            SELECT DISTINCT GroupType
+                            FROM #CommunityRoleDefaults
+                        ) AS knownType ON knownType.GroupType = community.GroupType
                         INNER JOIN #CommunityRoleDefaults AS expected
                             ON expected.GroupType = COALESCE(knownType.GroupType, N'Other')
                             AND LOWER(expected.Name) = LOWER(role.Name)
@@ -101,7 +104,10 @@ namespace FamilyEventPlanner.Api.Migrations
                 SET IsActive = 1, IsDefault = 1, UpdatedAt = SYSUTCDATETIME()
                 FROM CommunityRoles AS role
                 INNER JOIN FamilyGroups AS community ON community.Id = role.FamilyGroupId
-                LEFT JOIN #CommunityRoleDefaults AS knownType ON knownType.GroupType = community.GroupType
+                LEFT JOIN (
+                    SELECT DISTINCT GroupType
+                    FROM #CommunityRoleDefaults
+                ) AS knownType ON knownType.GroupType = community.GroupType
                 INNER JOIN #CommunityRoleDefaults AS expected
                     ON expected.GroupType = COALESCE(knownType.GroupType, N'Other')
                     AND LOWER(expected.Name) = LOWER(role.Name)
@@ -109,7 +115,10 @@ namespace FamilyEventPlanner.Api.Migrations
                 INSERT INTO CommunityRoles (Id, FamilyGroupId, Name, IsDefault, IsActive, CreatedAt, UpdatedAt)
                 SELECT NEWID(), community.Id, expected.Name, 1, 1, SYSUTCDATETIME(), SYSUTCDATETIME()
                 FROM FamilyGroups AS community
-                LEFT JOIN #CommunityRoleDefaults AS knownType ON knownType.GroupType = community.GroupType
+                LEFT JOIN (
+                    SELECT DISTINCT GroupType
+                    FROM #CommunityRoleDefaults
+                ) AS knownType ON knownType.GroupType = community.GroupType
                 INNER JOIN #CommunityRoleDefaults AS expected
                     ON expected.GroupType = COALESCE(knownType.GroupType, N'Other')
                 WHERE NOT EXISTS (

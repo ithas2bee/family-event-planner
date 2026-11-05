@@ -35,10 +35,17 @@ public class CommunityRoleDefaultsMigrationTests
             .ToArray();
 
         Assert.Equal(64, defaultRows.Length);
+        Assert.Equal(defaultRows.Length, defaultRows.Distinct().Count());
         Assert.Equal(16, defaultRows.Select(row => row.Type).Distinct().Count());
         Assert.All(
             defaultRows.GroupBy(row => row.Type),
             communityType => Assert.Equal(4, communityType.Count()));
+        Assert.Single(defaultRows, row => row.Type == "Other" && row.Name == "Coordinator");
+        Assert.Equal(
+            3,
+            Regex.Matches(
+                sql,
+                @"LEFT JOIN \( SELECT DISTINCT GroupType FROM #CommunityRoleDefaults \) AS knownType").Count);
         Assert.Contains("WHERE RoleRank > 4", sql);
     }
 
