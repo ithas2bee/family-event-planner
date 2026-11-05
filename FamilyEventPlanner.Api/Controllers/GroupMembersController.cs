@@ -120,6 +120,8 @@ namespace FamilyEventPlanner.Api.Controllers
             var members = await _context.GroupMembers
                 .Include(m => m.User)
                 .Include(m => m.CommunityRole)
+                .Include(m => m.CommunityRoleAssignments)
+                    .ThenInclude(assignment => assignment.CommunityRole)
                 .Where(m => m.FamilyGroupId == groupId)
                 .ToListAsync();
 
@@ -143,7 +145,14 @@ namespace FamilyEventPlanner.Api.Controllers
                 displayName = m.User?.DisplayName ?? "Unknown User",
                 isAdmin = m.IsAdmin,
                 roleId = m.CommunityRoleId,
-                roleName = m.CommunityRole?.Name
+                roleName = m.CommunityRole?.Name,
+                roleNames = m.CommunityRoleAssignments
+                    .Where(assignment => assignment.CommunityRole.IsActive)
+                    .Select(assignment => assignment.CommunityRole.Name)
+                    .Concat(m.CommunityRole != null && m.CommunityRole.IsActive
+                        ? new[] { m.CommunityRole.Name }
+                        : Array.Empty<string>())
+                    .Distinct()
             }).ToList();
 
             System.Diagnostics.Debug.WriteLine($"[GET MEMBERS] Returning {result.Count} members");
@@ -212,6 +221,20 @@ namespace FamilyEventPlanner.Api.Controllers
                     r.IsActive);
                 if (role == null)
                     return BadRequest(new { message = "Select an active role from this community." });
+            }
+
+            var oldAssignments = await _context.CommunityRoleAssignments
+                .Where(assignment => assignment.GroupMemberId == target.Id)
+                .ToListAsync();
+            _context.CommunityRoleAssignments.RemoveRange(oldAssignments);
+            if (role is not null)
+            {
+                _context.CommunityRoleAssignments.Add(new CommunityRoleAssignment
+                {
+                    FamilyGroupId = groupId,
+                    GroupMemberId = target.Id,
+                    CommunityRoleId = role.Id
+                });
             }
 
             target.CommunityRoleId = role?.Id;

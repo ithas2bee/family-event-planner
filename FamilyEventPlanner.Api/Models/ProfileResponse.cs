@@ -10,4 +10,5 @@ public sealed class ProfileResponse
     public string? ProfilePictureUrl { get; init; }
     public IReadOnlyList<string> Roles { get; init; } = Array.Empty<string>();
     public IReadOnlyList<string> FamilyNames { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<ProfileRoleGroupResponse> Communities { get; init; } = Array.Empty<ProfileRoleGroupResponse>();
 }
