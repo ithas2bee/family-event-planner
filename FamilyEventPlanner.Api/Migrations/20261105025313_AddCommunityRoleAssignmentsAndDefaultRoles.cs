@@ -98,14 +98,13 @@ namespace FamilyEventPlanner.Api.Migrations
                         WHERE community.Id = role.FamilyGroupId);
 
                 UPDATE role
-                SET IsDefault = 1, UpdatedAt = SYSUTCDATETIME()
+                SET IsActive = 1, IsDefault = 1, UpdatedAt = SYSUTCDATETIME()
                 FROM CommunityRoles AS role
                 INNER JOIN FamilyGroups AS community ON community.Id = role.FamilyGroupId
                 LEFT JOIN #CommunityRoleDefaults AS knownType ON knownType.GroupType = community.GroupType
                 INNER JOIN #CommunityRoleDefaults AS expected
                     ON expected.GroupType = COALESCE(knownType.GroupType, N'Other')
                     AND LOWER(expected.Name) = LOWER(role.Name)
-                WHERE role.IsActive = 1;
 
                 INSERT INTO CommunityRoles (Id, FamilyGroupId, Name, IsDefault, IsActive, CreatedAt, UpdatedAt)
                 SELECT NEWID(), community.Id, expected.Name, 1, 1, SYSUTCDATETIME(), SYSUTCDATETIME()
@@ -117,7 +116,6 @@ namespace FamilyEventPlanner.Api.Migrations
                     SELECT 1
                     FROM CommunityRoles AS role
                     WHERE role.FamilyGroupId = community.Id
-                        AND role.IsActive = 1
                         AND LOWER(role.Name) = LOWER(expected.Name));
 
                 CREATE TABLE #ExcessCommunityCustomRoles (Id uniqueidentifier NOT NULL PRIMARY KEY);
