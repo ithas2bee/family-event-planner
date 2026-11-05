@@ -174,6 +174,7 @@ export default function MembersScreen() {
                       </ThemedText>
                       <ThemedText style={styles.memberRole}>
                         {member.isAdmin ? 'Admin' : 'Member'}
+                        {member.roleName ? ` · ${member.roleName}` : ''}
                       </ThemedText>
                     </View>
                     <MaterialIcons name="chevron-right" size={32} color="#7185A0" />

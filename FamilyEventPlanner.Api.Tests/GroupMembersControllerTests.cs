@@ -75,6 +75,59 @@ public class GroupMembersControllerTests
     }
 
     [Fact]
+    public async Task MembersCanSelectOnlyRolesFromTheirOwnCommunity()
+    {
+        await using var context = CreateContext();
+        var group = AddGroup(context);
+        var otherGroup = AddGroup(context);
+        var member = AddMember(context, group, isAdmin: false);
+        var otherGroupMember = AddMember(context, otherGroup, isAdmin: false);
+        var role = AddRole(context, group, "Coach");
+        var otherRole = AddRole(context, otherGroup, "Mom");
+        await context.SaveChangesAsync();
+        var controller = CreateController(context, member.Id);
+
+        var selected = await controller.UpdateMemberRole(
+            group.Id, member.Id, new UpdateGroupMemberRoleRequest { RoleId = role.Id });
+        Assert.IsType<OkObjectResult>(selected);
+        Assert.Equal(role.Id, member.CommunityRoleId);
+        var memberResult = Assert.IsType<OkObjectResult>(await controller.GetMembers(group.Id));
+        using var response = JsonDocument.Parse(JsonSerializer.Serialize(memberResult.Value));
+        Assert.Contains(response.RootElement.EnumerateArray(), entry =>
+            entry.GetProperty("memberId").GetGuid() == member.Id &&
+            entry.GetProperty("roleName").GetString() == "Coach");
+
+        var crossCommunityRole = await controller.UpdateMemberRole(
+            group.Id, member.Id, new UpdateGroupMemberRoleRequest { RoleId = otherRole.Id });
+        Assert.IsType<BadRequestObjectResult>(crossCommunityRole);
+
+        var otherMember = await controller.UpdateMemberRole(
+            group.Id, otherGroupMember.Id, new UpdateGroupMemberRoleRequest { RoleId = role.Id });
+        Assert.IsType<NotFoundResult>(otherMember);
+        Assert.Equal(role.Id, member.CommunityRoleId);
+        Assert.Null(otherGroupMember.CommunityRoleId);
+    }
+
+    [Fact]
+    public async Task RegularMembersCannotChangeAnotherMembersRoleAndInactiveRolesCannotBeSelected()
+    {
+        await using var context = CreateContext();
+        var group = AddGroup(context);
+        var caller = AddMember(context, group, isAdmin: false);
+        var target = AddMember(context, group, isAdmin: false);
+        var role = AddRole(context, group, "Player");
+        await context.SaveChangesAsync();
+        var controller = CreateController(context, caller.Id);
+
+        Assert.IsType<ForbidResult>(await controller.UpdateMemberRole(
+            group.Id, target.Id, new UpdateGroupMemberRoleRequest { RoleId = role.Id }));
+        role.IsActive = false;
+        await context.SaveChangesAsync();
+        Assert.IsType<BadRequestObjectResult>(await controller.UpdateMemberRole(
+            group.Id, caller.Id, new UpdateGroupMemberRoleRequest { RoleId = role.Id }));
+    }
+
+    [Fact]
     public async Task AdminCanPromoteAndRevokeAdminsWithoutChangingAnotherGroupsRole()
     {
         await using var context = CreateContext();
@@ -154,6 +207,23 @@ public class GroupMembersControllerTests
         return member;
     }
 
+    private static CommunityRole AddRole(AppDbContext context, FamilyGroup group, string name)
+    {
+        var role = new CommunityRole
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            FamilyGroup = group,
+            Name = name,
+            IsDefault = false,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.CommunityRoles.Add(role);
+        return role;
+    }
+
     private static GroupMembersController CreateController(AppDbContext context, Guid memberId)
     {
         var controller = new GroupMembersController(context);
@@ -163,7 +233,9 @@ public class GroupMembersControllerTests
             {
                 User = new ClaimsPrincipal(new ClaimsIdentity(new[]
                 {
-                    new Claim("memberId", memberId.ToString())
+                    new Claim("memberId", memberId.ToString()),
+                    new Claim(ClaimTypes.NameIdentifier,
+                        context.GroupMembers.Single(member => member.Id == memberId).UserId.ToString())
                 }, "test"))
             }
         };
