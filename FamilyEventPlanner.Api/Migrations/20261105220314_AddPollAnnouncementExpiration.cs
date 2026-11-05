@@ -64,13 +64,13 @@ namespace FamilyEventPlanner.Api.Migrations
 
                 DELETE vote
                 FROM PollVotes vote
-                INNER JOIN PollOptions option ON option.Id = vote.PollOptionId
-                INNER JOIN Polls poll ON poll.Id = option.PollId
+                INNER JOIN PollOptions po ON po.Id = vote.PollOptionId
+                INNER JOIN Polls poll ON poll.Id = po.PollId
                 WHERE poll.ExpiresAt <= SYSUTCDATETIME();
 
-                DELETE option
-                FROM PollOptions option
-                INNER JOIN Polls poll ON poll.Id = option.PollId
+                DELETE po
+                FROM PollOptions po
+                INNER JOIN Polls poll ON poll.Id = po.PollId
                 WHERE poll.ExpiresAt <= SYSUTCDATETIME();
 
                 DELETE FROM Polls WHERE ExpiresAt <= SYSUTCDATETIME();
