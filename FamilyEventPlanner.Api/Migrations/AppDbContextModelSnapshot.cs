@@ -77,6 +77,14 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Property<Guid?>("CreatedByMemberId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("ExpirationExtended")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ExpirationNotificationSent")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
 
@@ -91,6 +99,8 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByMemberId");
+
+                    b.HasIndex("ExpiresAt");
 
                     b.HasIndex("FamilyGroupId");
 
@@ -592,6 +602,14 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Property<Guid?>("CreatedByMemberId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("ExpirationExtended")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("ExpirationNotificationSent")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
 
@@ -609,6 +627,8 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByMemberId");
+
+                    b.HasIndex("ExpiresAt");
 
                     b.HasIndex("FamilyEventId");
 

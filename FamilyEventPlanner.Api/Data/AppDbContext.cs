@@ -66,6 +66,24 @@ namespace FamilyEventPlanner.Api.Data
                 .HasFilter("[UsedAtUtc] IS NULL")
                 .IsUnique();
 
+            modelBuilder.Entity<Poll>()
+                .HasIndex(poll => poll.ExpiresAt);
+            modelBuilder.Entity<Poll>()
+                .Property(poll => poll.ExpirationNotificationSent)
+                .IsConcurrencyToken();
+            modelBuilder.Entity<Poll>()
+                .Property(poll => poll.ExpirationExtended)
+                .IsConcurrencyToken();
+
+            modelBuilder.Entity<Announcement>()
+                .HasIndex(announcement => announcement.ExpiresAt);
+            modelBuilder.Entity<Announcement>()
+                .Property(announcement => announcement.ExpirationNotificationSent)
+                .IsConcurrencyToken();
+            modelBuilder.Entity<Announcement>()
+                .Property(announcement => announcement.ExpirationExtended)
+                .IsConcurrencyToken();
+
             // Prevent multiple cascade delete paths involving GroupMembers by setting NoAction (SQL: NO ACTION)
             modelBuilder.Entity<EventAttendance>()
                 .HasOne(e => e.Member)
