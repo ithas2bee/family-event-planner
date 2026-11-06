@@ -11,9 +11,10 @@ import { ImmersiveButton } from '@/components/ui/immersive-button';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { getEventAttendance, saveEventAttendance, AttendanceResponse } from '@/services/eventAttendanceService';
-import { Event, getEventById, updateEvent } from '@/services/eventService';
+import { deleteEvent, Event, getEventById, updateEvent } from '@/services/eventService';
 import { EventLocation } from '@/services/locationService';
 import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
+import { AdminDeleteButton } from '@/components/admin-delete-button';
 import { loadSession } from '@/services/sessionService';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -419,6 +420,13 @@ export default function EventDetailsScreen() {
               <ThemedText style={styles.actionText}>Edit Event</ThemedText>
               <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
             </Pressable>
+          ) : null}
+          {groupMembers.some((member) => member.memberId === currentMemberId && member.isAdmin) ? (
+            <AdminDeleteButton
+              contentType="Event"
+              onDelete={() => deleteEvent(event.id)}
+              onDeleted={() => router.back()}
+            />
           ) : null}
         </View>
 

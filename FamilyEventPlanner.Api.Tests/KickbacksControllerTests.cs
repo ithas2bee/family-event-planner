@@ -82,6 +82,65 @@ public class KickbacksControllerTests
         Assert.Single(await context.Kickbacks.ToListAsync());
     }
 
+    [Fact]
+    public async Task DeleteRequiresGroupAdminAndRemovesRelatedData()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        var responder = AddMember(context, group.Id, "responder@example.com", "Responder");
+        var otherGroup = new FamilyGroup { Id = Guid.NewGuid(), Name = "Other", CreatedAt = DateTime.UtcNow };
+        context.FamilyGroups.Add(otherGroup);
+        var otherAdmin = AddMember(context, otherGroup.Id, "admin@example.com", "Admin");
+        otherAdmin.IsAdmin = true;
+        var kickback = new Kickback
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            CreatedByMemberId = creator.Id,
+            Vibe = "BBQ",
+            ExpiresAtUtc = DateTime.UtcNow.AddHours(1),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        context.Kickbacks.Add(kickback);
+        context.KickbackResponses.Add(new KickbackResponse
+        {
+            Id = Guid.NewGuid(),
+            KickbackId = kickback.Id,
+            MemberId = responder.Id,
+            ResponseType = "Maybe",
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        context.ActivityFeed.Add(new ActivityFeed
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            ActorMemberId = creator.Id,
+            ActivityType = "KickbackCreated",
+            RelatedEntityId = kickback.Id,
+            RelatedEntityType = "Kickback",
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        context.Notifications.Add(new Notification
+        {
+            Id = Guid.NewGuid(),
+            MemberId = responder.Id,
+            Message = "Kickback",
+            Link = $"/kickback/{kickback.Id}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        Assert.IsType<ForbidResult>(await CreateController(context, creator.Id).Delete(kickback.Id));
+        Assert.IsType<ForbidResult>(await CreateController(context, otherAdmin.Id).Delete(kickback.Id));
+        creator.IsAdmin = true;
+
+        Assert.IsType<NoContentResult>(await CreateController(context, creator.Id).Delete(kickback.Id));
+        Assert.Empty(await context.Kickbacks.ToListAsync());
+        Assert.Empty(await context.KickbackResponses.ToListAsync());
+        Assert.Empty(await context.ActivityFeed.ToListAsync());
+        Assert.Empty(await context.Notifications.ToListAsync());
+    }
+
     private static KickbacksController CreateController(AppDbContext context, Guid memberId)
     {
         return new KickbacksController(context)

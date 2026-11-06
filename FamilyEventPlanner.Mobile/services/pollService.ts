@@ -221,3 +221,22 @@ export async function voteOnPoll(pollOptionId: string): Promise<void> {
     throw new Error(resolveErrorMessage(response.status, serverMessage));
   }
 }
+
+export async function deletePoll(pollId: string): Promise<void> {
+  const headers = await getPollHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/polls/${pollId}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!response.ok) {
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // ignore parse failure
+    }
+
+    throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
+  }
+}

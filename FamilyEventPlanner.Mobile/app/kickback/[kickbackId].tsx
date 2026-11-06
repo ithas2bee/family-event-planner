@@ -5,7 +5,9 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { getKickbacksByGroup, type Kickback } from '@/services/kickbackService';
+import { AdminDeleteButton } from '@/components/admin-delete-button';
+import { getGroupMembers } from '@/services/groupMemberService';
+import { deleteKickback, getKickbacksByGroup, type Kickback } from '@/services/kickbackService';
 
 function formatTime(value: string): string {
   const date = new Date(value);
@@ -22,6 +24,7 @@ export default function KickbackDetailsScreen() {
   const [kickback, setKickback] = useState<Kickback | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,8 +34,10 @@ export default function KickbackDetailsScreen() {
         const kickbacks = await getKickbacksByGroup(String(groupId ?? ''));
         const result = kickbacks.find((item) => item.id === String(kickbackId ?? ''));
         if (!result) throw new Error('Kickback not found.');
+        const members = await getGroupMembers(String(groupId ?? ''), String(memberId ?? ''));
         if (!cancelled) {
           setKickback(result);
+          setIsAdmin(members.some((member) => member.memberId === memberId && member.isAdmin));
           setError(null);
         }
       } catch (err: unknown) {
@@ -46,7 +51,7 @@ export default function KickbackDetailsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupId, kickbackId]);
+  }, [groupId, kickbackId, memberId]);
 
   const isCreator = Boolean(kickback?.createdByMemberId && kickback.createdByMemberId === memberId);
 
@@ -117,6 +122,13 @@ export default function KickbackDetailsScreen() {
                 <MaterialIcons name="edit" size={19} color="#FFFFFF" />
                 <ThemedText style={styles.editButtonText}>Edit Kickback</ThemedText>
               </Pressable>
+            ) : null}
+            {isAdmin ? (
+              <AdminDeleteButton
+                contentType="Kickback"
+                onDelete={() => deleteKickback(kickback.id)}
+                onDeleted={() => router.back()}
+              />
             ) : null}
           </View>
         )}

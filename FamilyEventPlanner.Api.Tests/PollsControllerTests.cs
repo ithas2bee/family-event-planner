@@ -189,6 +189,56 @@ public class PollsControllerTests
         Assert.IsType<ForbidResult>(result);
     }
 
+    [Fact]
+    public async Task DeleteRequiresGroupAdminAndRemovesRelatedData()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        var voter = AddMember(context, group.Id, "voter@example.com", "Voter");
+        var otherGroup = new FamilyGroup { Id = Guid.NewGuid(), Name = "Other", CreatedAt = DateTime.UtcNow };
+        context.FamilyGroups.Add(otherGroup);
+        var otherAdmin = AddMember(context, otherGroup.Id, "admin@example.com", "Admin");
+        otherAdmin.IsAdmin = true;
+        var poll = AddPoll(context, group.Id, creator.Id, DateTime.UtcNow.AddHours(1));
+        context.PollVotes.Add(new PollVote
+        {
+            Id = Guid.NewGuid(),
+            PollOptionId = poll.Options[0].Id,
+            MemberId = voter.Id,
+            CreatedAt = DateTime.UtcNow
+        });
+        context.ActivityFeed.Add(new ActivityFeed
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            ActorMemberId = creator.Id,
+            ActivityType = "PollCreated",
+            RelatedEntityId = poll.Id,
+            RelatedEntityType = "Poll",
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        context.Notifications.Add(new Notification
+        {
+            Id = Guid.NewGuid(),
+            MemberId = voter.Id,
+            Message = "Poll created",
+            Link = $"/poll/{poll.Id}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        Assert.IsType<ForbidResult>(await CreateController(context, creator.Id).Delete(poll.Id));
+        Assert.IsType<ForbidResult>(await CreateController(context, otherAdmin.Id).Delete(poll.Id));
+        creator.IsAdmin = true;
+
+        Assert.IsType<NoContentResult>(await CreateController(context, creator.Id).Delete(poll.Id));
+        Assert.Empty(await context.Polls.ToListAsync());
+        Assert.Empty(await context.PollOptions.ToListAsync());
+        Assert.Empty(await context.PollVotes.ToListAsync());
+        Assert.Empty(await context.ActivityFeed.ToListAsync());
+        Assert.Empty(await context.Notifications.ToListAsync());
+    }
+
     private static PollsController CreateController(AppDbContext context, Guid memberId)
     {
         var controller = new PollsController(context)
