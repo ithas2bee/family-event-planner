@@ -11,6 +11,7 @@ Deploy the Huddle Up API in the development environment at `https://api-dev.hudd
 - Compose file: `FamilyEventPlanner.Api/compose.yaml`
 - API container: `huddleup-api-1`
 - SQL Server container: `huddleup-sqlserver-1`
+- Compose services: `sqlserver` and `api` (`db-init` is not defined)
 - API host binding: `127.0.0.1:8090` → container port `8080`
 - SQL Server service name inside the Compose network: `sqlserver`
 - Database: `FamilyEventPlannerDb`
@@ -50,7 +51,14 @@ docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml logs --tail=80 api
 ```
 
-Compose builds from the repository root (`context: ..`) and uses `FamilyEventPlanner.Api/Dockerfile`. The Compose file defines `sqlserver` and `api`; the API starts after SQL Server passes its health check.
+Compose builds from the repository root (`context: ..`) and uses `FamilyEventPlanner.Api/Dockerfile`. The Compose file defines only `sqlserver` and `api`; there is no `db-init` service. SQL Server receives `database/bootstrap.sql` as a read-only mount; do not expect Compose to run a one-shot database initialization service.
+
+Verify that the built image includes the exported Expo application and static assets:
+
+```bash
+docker run --rm --entrypoint sh huddleup-api:build-check -c \
+  'test -s /app/wwwroot/index.html && test -d /app/wwwroot/_expo/static && find /app/wwwroot -type f | wc -l'
+```
 
 ## Database restore
 The original Windows development database used LocalDB:

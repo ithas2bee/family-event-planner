@@ -22,10 +22,10 @@ Remove an incorrect override from the current shell:
 unset ConnectionStrings__DefaultConnection
 ```
 
-Then check the resolved configuration without printing it:
+From the repository root, check the resolved configuration without printing it:
 
 ```bash
-docker compose config --format json | python3 -c '
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml config --format json | python3 -c '
 import json,sys
 s=json.load(sys.stdin)["services"]["api"]["environment"].get("ConnectionStrings__DefaultConnection","")
 print("Length:", len(s))
