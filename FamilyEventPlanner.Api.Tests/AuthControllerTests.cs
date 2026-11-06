@@ -203,6 +203,29 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public async Task ForgotPasswordIncludesAnHttpsBrowserFallbackWithTheSameToken()
+    {
+        await using var context = CreateContext();
+        var user = AddUser(context, "old-password");
+        var emailSender = new TestEmailSender();
+        var controller = CreateController(
+            context,
+            emailSender,
+            passwordResetWebUrl: "https://huddleup.example/reset-password?source=email");
+
+        await controller.ForgotPassword(new ForgotPasswordRequest { Email = user.Email });
+
+        var emailBody = emailSender.SentEmails.Single().Body;
+        var token = ReadResetToken(emailBody);
+
+        Assert.Contains($"familyeventplannermobile://reset-password?token={token}", emailBody);
+        Assert.Contains(
+            $"https://huddleup.example/reset-password?source=email&token={token}",
+            emailBody);
+        Assert.Contains("If Huddle Up does not open, reset your password in a browser:", emailBody);
+    }
+
+    [Fact]
     public async Task ForgotPasswordDeliveryFailureKeepsGenericResponseAndInvalidatesToken()
     {
         await using var context = CreateContext();
@@ -299,12 +322,14 @@ public class AuthControllerTests
     private static AuthController CreateController(
         AppDbContext context,
         TestEmailSender? emailSender = null,
-        int registrationLimit = 100)
+        int registrationLimit = 100,
+        string? passwordResetWebUrl = null)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["PasswordReset:DeepLinkUrl"] = "familyeventplannermobile://reset-password",
+                ["PasswordReset:WebUrl"] = passwordResetWebUrl,
                 ["Registration:MaxAccounts"] = registrationLimit.ToString()
             })
             .Build();

@@ -28,7 +28,7 @@ public class ResendEmailSenderTests
         await sender.SendAsync(
             "person@example.com",
             "Reset your Huddle Up password",
-            "Use this link within 30 minutes to reset your Huddle Up password:\n\nfamilyeventplannermobile://reset-password?token=reset-token\n\nIf you did not request a password reset, you can ignore this email.");
+            "Use this link within 30 minutes to reset your Huddle Up password:\n\nfamilyeventplannermobile://reset-password?token=reset-token\n\nIf Huddle Up does not open, reset your password in a browser:\n\nhttps://huddleup.example/reset-password?token=reset-token\n\nIf you did not request a password reset, you can ignore this email.");
 
         Assert.True(sender.IsConfigured);
         Assert.Equal(HttpMethod.Post, sentRequest!.Method);
@@ -43,10 +43,12 @@ public class ResendEmailSenderTests
         var text = payload.RootElement.GetProperty("text").GetString();
         Assert.Contains("within 30 minutes", text);
         Assert.Contains("familyeventplannermobile://reset-password?token=reset-token", text);
+        Assert.Contains("https://huddleup.example/reset-password?token=reset-token", text);
 
         var html = payload.RootElement.GetProperty("html").GetString();
         Assert.Contains("Reset Password</a>", html);
         Assert.Contains("href=\"familyeventplannermobile://reset-password?token=reset-token\"", html);
+        Assert.Contains("href=\"https://huddleup.example/reset-password?token=reset-token\"", html);
         Assert.Contains("within 30 minutes", html);
     }
 

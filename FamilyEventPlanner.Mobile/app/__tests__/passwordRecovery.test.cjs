@@ -43,6 +43,12 @@ test('password reset validates confirmation and applies the existing password ru
   assert.match(resetPasswordSource, /You can now sign in with your new password/);
 });
 
+test('password reset route reads the deep-link token and submits it to the API', () => {
+  assert.match(resetPasswordSource, /useLocalSearchParams/);
+  assert.match(resetPasswordSource, /typeof params\.token === 'string'/);
+  assert.match(resetPasswordSource, /resetPassword\(\{ token, password, confirmPassword \}\)/);
+});
+
 test('username recovery explains that sign-in uses the registered email', () => {
   assert.match(forgotUsernameSource, /email address you registered with/);
   assert.match(forgotUsernameSource, /Contact Support/);
