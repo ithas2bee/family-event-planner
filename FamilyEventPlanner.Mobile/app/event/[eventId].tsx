@@ -45,7 +45,8 @@ export default function EventDetailsScreen() {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   useEffect(() => {
-    if (!eventId || typeof eventId !== 'string') {
+    const validEventId = Array.isArray(eventId) ? eventId[0] : eventId;
+    if (!validEventId) {
       setError('Invalid event ID.');
       setLoading(false);
       return;
@@ -53,10 +54,8 @@ export default function EventDetailsScreen() {
 
     let cancelled = false;
 
-    async function load() {
+    async function load(validEventId: string) {
       try {
-        const validEventId = Array.isArray(eventId) ? eventId[0] : eventId;
-
         const [eventData, session] = await Promise.all([
           getEventById(validEventId),
           loadSession(),
@@ -97,7 +96,7 @@ export default function EventDetailsScreen() {
       }
     }
 
-    load();
+    void load(validEventId);
 
     return () => {
       cancelled = true;

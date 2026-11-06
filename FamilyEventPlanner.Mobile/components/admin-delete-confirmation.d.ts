@@ -1,7 +1,7 @@
 type DeleteConfirmationAlert = (
   title: string,
   message: string,
-  buttons?: Array<{ text: string; onPress?: () => void }>,
+  buttons?: { text: string; onPress?: () => void }[],
 ) => void;
 
 export function createAdminDeleteConfirmation(options: {
@@ -13,9 +13,9 @@ export function createAdminDeleteConfirmation(options: {
 }): {
   title: string;
   message: string;
-  buttons: Array<{
+  buttons: {
     text: string;
     style?: 'cancel' | 'destructive';
     onPress?: () => Promise<void>;
-  }>;
+  }[];
 };
