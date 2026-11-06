@@ -44,10 +44,10 @@ Remove the incorrect override from the current shell:
 unset ConnectionStrings__DefaultConnection
 ```
 
-Then check the resolved Compose configuration without printing the connection string:
+From the repository root, check the resolved Compose configuration without printing the connection string:
 
 ```bash
-docker compose config --format json | python3 -c '
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml config --format json | python3 -c '
 import json,sys
 s=json.load(sys.stdin)["services"]["api"]["environment"].get("ConnectionStrings__DefaultConnection","")
 print("Length:", len(s))
@@ -63,8 +63,8 @@ After `unset`, the resolved value had length `144` and all four checks returned 
 Then recreate only the API:
 
 ```bash
-docker compose up -d --force-recreate api
-docker compose ps
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml up -d --force-recreate api
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml ps
 ```
 
 The API became healthy. The public health check returned HTTP 200 with `{"status":"ready"}`.
