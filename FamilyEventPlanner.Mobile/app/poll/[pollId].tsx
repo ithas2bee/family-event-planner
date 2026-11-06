@@ -34,7 +34,8 @@ export default function PollDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminScope, setAdminScope] = useState<{ groupId: string; memberId: string; contentId: string } | null>(null);
+  const [currentMemberId, setCurrentMemberId] = useState('');
 
   useEffect(() => {
     if (!pollId) {
@@ -50,15 +51,18 @@ export default function PollDetailsScreen() {
           setPoll(data);
         }
         const memberId = String(routeMemberId ?? session?.memberId ?? '');
+        if (!cancelled) setCurrentMemberId(memberId);
         if (memberId) {
           void getGroupMembers(data.familyGroupId, memberId)
             .then((members) => {
               if (!cancelled) {
-                setIsAdmin(members.some((member) => member.memberId === memberId && member.isAdmin));
+                setAdminScope(members.some((member) => member.memberId === memberId && member.isAdmin)
+                  ? { groupId: data.familyGroupId, memberId, contentId: data.id }
+                  : null);
               }
             })
             .catch(() => {
-              if (!cancelled) setIsAdmin(false);
+              if (!cancelled) setAdminScope(null);
             });
         }
       })
@@ -163,7 +167,9 @@ export default function PollDetailsScreen() {
         {voting ? <ThemedText style={styles.feedback}>Submitting vote...</ThemedText> : null}
         {closed ? <ThemedText style={styles.closedMessage}>This poll is closed. Voting is no longer available.</ThemedText> : null}
         {!closed && hasVoted ? <ThemedText style={styles.votedMessage}>Your vote has been recorded.</ThemedText> : null}
-        {isAdmin ? (
+        {adminScope?.groupId === poll.familyGroupId &&
+        adminScope.memberId === currentMemberId &&
+        adminScope.contentId === String(pollId ?? '') ? (
           <AdminDeleteButton
             contentType="Poll"
             onDelete={() => deletePoll(poll.id)}

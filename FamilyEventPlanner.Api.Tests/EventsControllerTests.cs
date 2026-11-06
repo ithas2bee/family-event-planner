@@ -44,6 +44,15 @@ public class EventsControllerTests
             CreatedAt = DateTime.UtcNow,
             Options = [new PollOption { Id = Guid.NewGuid(), Text = "Pizza" }]
         };
+        var photo = new Photo
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            FamilyEventId = familyEvent.Id,
+            UploadedById = attendee.Id,
+            FilePath = "events/dinner.jpg",
+            UploadedAt = DateTime.UtcNow
+        };
         context.FamilyGroups.AddRange(group, otherGroup);
         context.Users.AddRange(creator.User, attendee.User, otherAdmin.User);
         context.GroupMembers.AddRange(creator, attendee, otherAdmin);
@@ -56,6 +65,7 @@ public class EventsControllerTests
             MemberId = attendee.Id
         });
         context.Polls.Add(poll);
+        context.Photos.Add(photo);
         context.ActivityFeed.Add(new ActivityFeed
         {
             Id = Guid.NewGuid(),
@@ -87,6 +97,7 @@ public class EventsControllerTests
         Assert.Empty(await context.ActivityFeed.ToListAsync());
         Assert.Empty(await context.Notifications.ToListAsync());
         Assert.Null((await context.Polls.SingleAsync()).FamilyEventId);
+        Assert.Null((await context.Photos.SingleAsync()).FamilyEventId);
     }
 
     private static GroupMember AddMember(AppDbContext context, Guid groupId, string email, string displayName)

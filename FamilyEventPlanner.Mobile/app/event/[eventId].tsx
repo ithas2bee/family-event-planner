@@ -28,6 +28,7 @@ export default function EventDetailsScreen() {
   const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<Event | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<string>('');
+  const [adminScope, setAdminScope] = useState<{ groupId: string; memberId: string; contentId: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -76,6 +77,11 @@ export default function EventDetailsScreen() {
           setEvent(eventData);
           setCurrentMemberId(session?.memberId || '');
           setGroupMembers(members);
+          setAdminScope({
+            groupId: eventData.familyGroupId,
+            memberId: session?.memberId ?? '',
+            contentId: validEventId,
+          });
           setAttendance(eventAttendance);
           setSelectedResponse(eventAttendance.find((item) => item.memberId === session?.memberId)?.rsvp ?? 0);
           setError(null);
@@ -421,7 +427,10 @@ export default function EventDetailsScreen() {
               <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
             </Pressable>
           ) : null}
-          {groupMembers.some((member) => member.memberId === currentMemberId && member.isAdmin) ? (
+          {adminScope?.groupId === event.familyGroupId &&
+          adminScope.memberId === currentMemberId &&
+          adminScope.contentId === String(Array.isArray(eventId) ? eventId[0] : eventId) &&
+          groupMembers.some((member) => member.memberId === currentMemberId && member.isAdmin) ? (
             <AdminDeleteButton
               contentType="Event"
               onDelete={() => deleteEvent(event.id)}

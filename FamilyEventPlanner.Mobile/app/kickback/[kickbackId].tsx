@@ -24,7 +24,7 @@ export default function KickbackDetailsScreen() {
   const [kickback, setKickback] = useState<Kickback | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminScope, setAdminScope] = useState<{ groupId: string; memberId: string; contentId: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,10 +34,12 @@ export default function KickbackDetailsScreen() {
         const kickbacks = await getKickbacksByGroup(String(groupId ?? ''));
         const result = kickbacks.find((item) => item.id === String(kickbackId ?? ''));
         if (!result) throw new Error('Kickback not found.');
-        const members = await getGroupMembers(String(groupId ?? ''), String(memberId ?? ''));
+        const members = await getGroupMembers(result.familyGroupId, String(memberId ?? ''));
         if (!cancelled) {
           setKickback(result);
-          setIsAdmin(members.some((member) => member.memberId === memberId && member.isAdmin));
+          setAdminScope(members.some((member) => member.memberId === memberId && member.isAdmin)
+            ? { groupId: result.familyGroupId, memberId: String(memberId ?? ''), contentId: result.id }
+            : null);
           setError(null);
         }
       } catch (err: unknown) {
@@ -123,7 +125,9 @@ export default function KickbackDetailsScreen() {
                 <ThemedText style={styles.editButtonText}>Edit Kickback</ThemedText>
               </Pressable>
             ) : null}
-            {isAdmin ? (
+            {adminScope?.groupId === kickback.familyGroupId &&
+            adminScope.memberId === String(memberId ?? '') &&
+            adminScope.contentId === String(kickbackId ?? '') ? (
               <AdminDeleteButton
                 contentType="Kickback"
                 onDelete={() => deleteKickback(kickback.id)}

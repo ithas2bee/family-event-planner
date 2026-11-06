@@ -588,6 +588,9 @@ namespace FamilyEventPlanner.Api.Controllers
             _context.Notifications.RemoveRange(await _context.Notifications
                 .Where(notification => notification.Link == $"/event/{id}")
                 .ToListAsync());
+            var eventPhotos = await _context.Photos.Where(photo => photo.FamilyEventId == id).ToListAsync();
+            foreach (var photo in eventPhotos)
+                photo.FamilyEventId = null;
 
             var relatedPolls = await _context.Polls.Where(poll => poll.FamilyEventId == id).ToListAsync();
             foreach (var poll in relatedPolls)

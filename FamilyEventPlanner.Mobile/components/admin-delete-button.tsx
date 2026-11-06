@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { createAdminDeleteConfirmation } from './admin-delete-confirmation.js';
 
 type AdminDeleteButtonProps = {
   contentType: string;
@@ -14,30 +15,14 @@ export function AdminDeleteButton({ contentType, onDelete, onDeleted }: AdminDel
   const [deleting, setDeleting] = useState(false);
 
   function confirmDelete() {
-    Alert.alert(
-      `Delete ${contentType}?`,
-      `This action cannot be undone. Are you sure you want to delete this ${contentType.toLowerCase()}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              setDeleting(true);
-              try {
-                await onDelete();
-                Alert.alert('Deleted', `${contentType} was deleted.`, [{ text: 'OK', onPress: onDeleted }]);
-              } catch (error: unknown) {
-                Alert.alert('Unable to delete', error instanceof Error ? error.message : `Unable to delete this ${contentType.toLowerCase()}.`);
-              } finally {
-                setDeleting(false);
-              }
-            })();
-          },
-        },
-      ],
-    );
+    const confirmation = createAdminDeleteConfirmation({
+      contentType,
+      onDelete,
+      onDeleted,
+      setDeleting,
+      showAlert: (title, message, buttons) => Alert.alert(title, message, buttons),
+    });
+    Alert.alert(confirmation.title, confirmation.message, confirmation.buttons);
   }
 
   return (

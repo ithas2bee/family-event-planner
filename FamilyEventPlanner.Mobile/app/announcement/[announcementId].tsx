@@ -27,24 +27,32 @@ export default function AnnouncementDetailsScreen() {
   const author = String(params.creatorDisplayName ?? 'Unknown member');
   const createdAt = String(params.createdAt ?? '');
   const expiresAt = String(params.expiresAt ?? '');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminScope, setAdminScope] = useState<{ groupId: string; memberId: string; contentId: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     if (!params.groupId || !params.memberId) return;
     void getGroupMembers(String(params.groupId), String(params.memberId))
       .then((members) => {
-        if (!cancelled) setIsAdmin(members.some(
+        if (!cancelled && members.some(
           (member) => member.memberId === params.memberId && member.isAdmin,
-        ));
+        )) {
+          setAdminScope({
+            groupId: String(params.groupId),
+            memberId: String(params.memberId),
+            contentId: String(params.announcementId),
+          });
+        } else if (!cancelled) {
+          setAdminScope(null);
+        }
       })
       .catch(() => {
-        if (!cancelled) setIsAdmin(false);
+        if (!cancelled) setAdminScope(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [params.groupId, params.memberId]);
+  }, [params.announcementId, params.groupId, params.memberId]);
 
   return (
     <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={[styles.container, { paddingTop: insets.top + 8 }]}>
@@ -99,7 +107,9 @@ export default function AnnouncementDetailsScreen() {
               </ThemedText>
             </View>
           ) : null}
-          {isAdmin && params.announcementId ? (
+          {adminScope?.groupId === String(params.groupId ?? '') &&
+          adminScope.memberId === String(params.memberId ?? '') &&
+          adminScope.contentId === String(params.announcementId ?? '') ? (
             <AdminDeleteButton
               contentType="Announcement"
               onDelete={() => deleteAnnouncement(String(params.announcementId))}
