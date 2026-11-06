@@ -13,6 +13,7 @@ const profileScreen = source('app/profile.tsx');
 const editProfileScreen = source('app/edit-profile.tsx');
 const profileService = source('services/profileService.ts');
 const membersScreen = source('components/members-screen.tsx');
+const communitySelector = source('components/community-selector.tsx');
 
 test('Community role choices load and save against the current community membership', () => {
   assert.match(rolesScreen, /getCommunityRoles\(groupId\)/);
@@ -38,17 +39,26 @@ test('Only server-authorized community administrators see role customization con
 
 test('Profile editing loads, groups, toggles, and persists each community role selection', () => {
   assert.match(editProfileScreen, /profile\.communities\.map/);
-  assert.match(editProfileScreen, /community\.availableRoles/);
+  assert.match(editProfileScreen, /selectedCommunity\.availableRoles\?\.map/);
   assert.match(editProfileScreen, /accessibilityState=\{\{ selected \}\}/);
   assert.match(editProfileScreen, /communityRoles: profile\.communities\.map/);
   assert.match(profileService, /selectedRoleIds\?: string\[\]/);
   assert.match(profileService, /communityRoles: \{ groupId: string; roleIds: string\[\] \}\[\]/);
 });
 
+test('Profile community roles are searchable and limited to the selected community', () => {
+  assert.match(profileScreen, /CommunitySelector/);
+  assert.match(profileScreen, /profile\.communities\.length/);
+  assert.match(profileScreen, /selectedCommunity\.roles\.map/);
+  assert.match(communitySelector, /community\.name\.toLowerCase\(\)\.includes\(search\.trim\(\)\.toLowerCase\(\)\)/);
+  assert.match(communitySelector, /<ScrollView/);
+  assert.match(communitySelector, /accessibilityState=\{\{ selected \}\}/);
+});
+
 test('Community members can open read-only profiles with roles grouped by community', () => {
   assert.match(membersScreen, /pathname: '\/profile'/);
   assert.match(profileService, /getCommunityMemberProfile/);
   assert.match(profileScreen, /getCommunityMemberProfile\(groupId, memberId\)/);
-  assert.match(profileScreen, /profile\.communities\.map/);
+  assert.match(profileScreen, /CommunitySelector/);
   assert.match(profileScreen, /\{canEdit && \(/);
 });

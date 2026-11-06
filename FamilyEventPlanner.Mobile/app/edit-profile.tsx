@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
+import { CommunitySelector } from '@/components/community-selector';
 import { ThemedText } from '@/components/themed-text';
 import { getProfile, updateProfile, type Profile } from '@/services/profileService';
 
@@ -13,6 +14,7 @@ export default function EditProfileScreen() {
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<Record<string, string[]>>({});
+  const [selectedCommunityId, setSelectedCommunityId] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -23,6 +25,7 @@ export default function EditProfileScreen() {
       setAge(value.age?.toString() ?? '');
       setLocation(value.location ?? '');
       setBio(value.bio ?? '');
+      setSelectedCommunityId(value.communities[0]?.groupId ?? '');
       setSelectedRoles(Object.fromEntries(
         value.communities.map((community) => [community.groupId, community.selectedRoleIds ?? []]),
       ));
@@ -57,6 +60,9 @@ export default function EditProfileScreen() {
     return <View style={styles.center}>{error ? <ThemedText style={styles.error}>{error}</ThemedText> : <ActivityIndicator color="#1769E0" />}</View>;
   }
 
+  const selectedCommunity = profile.communities.find((community) => community.groupId === selectedCommunityId)
+    ?? profile.communities[0];
+
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.navigation}>
@@ -75,39 +81,46 @@ export default function EditProfileScreen() {
       <View style={styles.rolesSection}>
         <ThemedText style={styles.rolesHeading}>Community Roles</ThemedText>
         <ThemedText style={styles.rolesHint}>Choose any roles that describe you in each community.</ThemedText>
-        {profile.communities.map((community) => (
-          <View key={community.groupId} style={styles.communityRoles}>
-            <ThemedText style={styles.communityName}>{community.communityName}</ThemedText>
-            <View style={styles.roleList}>
-              {community.availableRoles?.map((role) => {
-                const selected = (selectedRoles[community.groupId] ?? []).includes(role.id);
-                return (
-                  <Pressable
-                    key={role.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    onPress={() => setSelectedRoles((current) => {
-                      const selectedForGroup = current[community.groupId] ?? [];
-                      return {
-                        ...current,
-                        [community.groupId]: selected
-                          ? selectedForGroup.filter((id) => id !== role.id)
-                          : [...selectedForGroup, role.id],
-                      };
-                    })}
-                    style={[styles.roleOption, selected && styles.selectedRole]}
-                  >
-                    <ThemedText style={[styles.roleText, selected && styles.selectedRoleText]}>{role.name}</ThemedText>
-                    {selected ? <Ionicons name="checkmark" size={17} color="#1769E0" /> : null}
-                  </Pressable>
-                );
-              })}
-              {community.availableRoles?.length === 0 && (
-                <ThemedText style={styles.rolesHint}>No roles are available yet.</ThemedText>
-              )}
-            </View>
-          </View>
-        ))}
+        {profile.communities.length > 0 && (
+          <>
+            <CommunitySelector
+              communities={profile.communities.map((community) => ({ id: community.groupId, name: community.communityName }))}
+              selectedCommunityId={selectedCommunity?.groupId ?? ''}
+              onSelect={setSelectedCommunityId}
+            />
+            {selectedCommunity && <View style={styles.communityRoles}>
+              <ThemedText style={styles.communityName}>{selectedCommunity.communityName}</ThemedText>
+              <View style={styles.roleList}>
+                {selectedCommunity.availableRoles?.map((role) => {
+                  const selected = (selectedRoles[selectedCommunity.groupId] ?? []).includes(role.id);
+                  return (
+                    <Pressable
+                      key={role.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      onPress={() => setSelectedRoles((current) => {
+                        const selectedForGroup = current[selectedCommunity.groupId] ?? [];
+                        return {
+                          ...current,
+                          [selectedCommunity.groupId]: selected
+                            ? selectedForGroup.filter((id) => id !== role.id)
+                            : [...selectedForGroup, role.id],
+                        };
+                      })}
+                      style={[styles.roleOption, selected && styles.selectedRole]}
+                    >
+                      <ThemedText style={[styles.roleText, selected && styles.selectedRoleText]}>{role.name}</ThemedText>
+                      {selected ? <Ionicons name="checkmark" size={17} color="#1769E0" /> : null}
+                    </Pressable>
+                  );
+                })}
+                {selectedCommunity.availableRoles?.length === 0 && (
+                  <ThemedText style={styles.rolesHint}>No roles are available yet.</ThemedText>
+                )}
+              </View>
+            </View>}
+          </>
+        )}
         {profile.communities.length === 0 && (
           <ThemedText style={styles.rolesHint}>Join a community to choose your roles.</ThemedText>
         )}

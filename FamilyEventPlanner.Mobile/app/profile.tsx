@@ -3,6 +3,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { CommunitySelector } from '@/components/community-selector';
 import { ThemedText } from '@/components/themed-text';
 import { getCommunityMemberProfile, getProfile, type MemberProfile, type Profile } from '@/services/profileService';
 
@@ -21,6 +22,7 @@ export default function ProfileScreen() {
   const memberId = String(params.memberId ?? '');
   const viewingMember = Boolean(groupId && memberId);
   const [profile, setProfile] = useState<Profile | MemberProfile | null>(null);
+  const [selectedCommunityId, setSelectedCommunityId] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -48,6 +50,8 @@ export default function ProfileScreen() {
 
   const displayName = profile.name || (viewingMember ? 'Community member' : 'Your profile');
   const canEdit = !viewingMember || ('isOwnProfile' in profile && profile.isOwnProfile);
+  const selectedCommunity = profile.communities.find((community) => community.groupId === selectedCommunityId)
+    ?? profile.communities[0];
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.navigation}>
@@ -71,7 +75,11 @@ export default function ProfileScreen() {
       <View style={styles.card}>
         <InfoRow icon="calendar-outline" label="Age" value={profile.age !== null ? String(profile.age) : 'Not provided'} />
         <InfoRow icon="location-outline" label="Location" value={profile.location || 'Not provided'} />
-        {profile.communities.length > 0 && <InfoRow icon="people-outline" label="Communities" value={profile.communities.map((community) => community.communityName).join(', ')} />}
+        <InfoRow
+          icon="people-outline"
+          label="Communities"
+          value={`${profile.communities.length} ${profile.communities.length === 1 ? 'community' : 'communities'}`}
+        />
       </View>
 
       <View style={styles.card}>
@@ -79,14 +87,20 @@ export default function ProfileScreen() {
         <ThemedText style={styles.bio}>{profile.bio || (viewingMember ? 'No bio provided.' : 'Tell your community a little about yourself.')}</ThemedText>
       </View>
 
-      {profile.communities.map((community) => (
-        <View key={community.groupId} style={styles.card}>
-          <ThemedText style={styles.cardTitle}>{community.communityName}</ThemedText>
-          {community.roles.length > 0 ? community.roles.map((role) => (
+      {profile.communities.length > 0 && (
+        <View style={styles.card}>
+          <ThemedText style={styles.cardTitle}>Community roles</ThemedText>
+          <CommunitySelector
+            communities={profile.communities.map((community) => ({ id: community.groupId, name: community.communityName }))}
+            selectedCommunityId={selectedCommunity?.groupId ?? ''}
+            onSelect={setSelectedCommunityId}
+          />
+          {selectedCommunity && <ThemedText style={styles.communityName}>{selectedCommunity.communityName}</ThemedText>}
+          {selectedCommunity && selectedCommunity.roles.length > 0 ? selectedCommunity.roles.map((role) => (
             <ThemedText key={role} style={styles.role}>{role}</ThemedText>
           )) : <ThemedText style={styles.bio}>No roles selected.</ThemedText>}
         </View>
-      ))}
+      )}
 
       {!!error && <ThemedText style={styles.error}>{error}</ThemedText>}
       {canEdit && (
@@ -122,6 +136,7 @@ const styles = StyleSheet.create({
   label: { color: '#53627F', fontSize: 16, width: 72 },
   value: { flex: 1, color: '#101B41', fontSize: 16 },
   cardTitle: { fontSize: 20, fontWeight: '700', color: '#101B41', marginBottom: 8 },
+  communityName: { color: '#17345D', fontSize: 16, fontWeight: '700', marginTop: 14 },
   bio: { color: '#293657', fontSize: 16, lineHeight: 24 },
   role: { color: '#293657', fontSize: 16, lineHeight: 24, paddingVertical: 2 },
   editButton: { marginHorizontal: 18, minHeight: 58, borderRadius: 14, backgroundColor: '#2877E8', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },

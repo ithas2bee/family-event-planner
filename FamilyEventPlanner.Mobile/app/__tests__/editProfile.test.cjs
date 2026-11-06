@@ -28,4 +28,7 @@ test('Edit Profile continues saving the remaining profile fields', () => {
   assert.match(editProfileSource, /await updateProfile\(\{/);
   assert.match(editProfileSource, /communityRoles: profile\.communities\.map/);
   assert.match(editProfileSource, /selectedRoles\[community\.groupId\]/);
+  assert.match(editProfileSource, /selectedCommunity\.availableRoles\?\.map/);
+  assert.match(editProfileSource, /CommunitySelector/);
+  assert.match(editProfileSource, /setSelectedCommunityId\(value\.communities\[0\]\?\.groupId \?\? ''\)/);
 });
