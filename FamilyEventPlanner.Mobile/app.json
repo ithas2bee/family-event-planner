@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.huddleup.dev",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#F4F5F7",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
