@@ -1,16 +1,22 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { formatAnnouncementDate } from '@/services/announcementService';
+import { AdminDeleteButton } from '@/components/admin-delete-button';
+import { getGroupMembers } from '@/services/groupMemberService';
+import { deleteAnnouncement, formatAnnouncementDate } from '@/services/announcementService';
 
 export default function AnnouncementDetailsScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
+    announcementId?: string;
     title?: string;
+    groupId?: string;
+    memberId?: string;
     body?: string;
     creatorDisplayName?: string;
     createdAt?: string;
@@ -21,6 +27,33 @@ export default function AnnouncementDetailsScreen() {
   const author = String(params.creatorDisplayName ?? 'Unknown member');
   const createdAt = String(params.createdAt ?? '');
   const expiresAt = String(params.expiresAt ?? '');
+  const [adminScope, setAdminScope] = useState<{ groupId: string; memberId: string; contentId: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!params.groupId || !params.memberId) return;
+    void getGroupMembers(String(params.groupId), String(params.memberId))
+      .then((members) => {
+        if (!cancelled && members.some(
+          (member) => member.memberId === params.memberId && member.isAdmin,
+        )) {
+          setAdminScope({
+            groupId: String(params.groupId),
+            memberId: String(params.memberId),
+            contentId: String(params.announcementId),
+          });
+        } else if (!cancelled) {
+          setAdminScope(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setAdminScope(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [params.announcementId, params.groupId, params.memberId]);
+
   return (
     <ThemedView lightColor="#F5F9FF" darkColor="#F5F9FF" style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.navigation}>
@@ -73,6 +106,15 @@ export default function AnnouncementDetailsScreen() {
                 Expires {formatAnnouncementDate(expiresAt)}
               </ThemedText>
             </View>
+          ) : null}
+          {adminScope?.groupId === String(params.groupId ?? '') &&
+          adminScope.memberId === String(params.memberId ?? '') &&
+          adminScope.contentId === String(params.announcementId ?? '') ? (
+            <AdminDeleteButton
+              contentType="Announcement"
+              onDelete={() => deleteAnnouncement(String(params.announcementId))}
+              onDeleted={() => router.back()}
+            />
           ) : null}
         </View>
       </ScrollView>

@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router/react-navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -62,14 +63,12 @@ function AnnouncementListCard({
 }
 
 export default function AnnouncementsScreen() {
-  const { groupId, refreshToken } = useLocalSearchParams<{
+  const { groupId } = useLocalSearchParams<{
     groupId: string;
-    refreshToken?: string;
   }>();
-  const { groupId: contextGroupId, setActiveGroup, isReady } = useActiveGroupContext();
+  const { groupId: contextGroupId, memberId, setActiveGroup, isReady } = useActiveGroupContext();
   const insets = useSafeAreaInsets();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
-  const refreshTokenValue = String(refreshToken ?? '');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +77,7 @@ export default function AnnouncementsScreen() {
     if (groupId) void setActiveGroup({ groupId: String(groupId) });
   }, [groupId, setActiveGroup]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
     async function loadAnnouncements() {
       setLoading(true);
@@ -102,7 +101,7 @@ export default function AnnouncementsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, refreshTokenValue, isReady]);
+  }, [groupIdValue, isReady]));
 
   return (
     <ThemedView
@@ -159,6 +158,8 @@ export default function AnnouncementsScreen() {
                   pathname: COMMUNITY_HOME_ROUTES.announcementDetails,
                   params: {
                     announcementId: item.id,
+                    groupId: groupIdValue,
+                    memberId,
                     title: item.title,
                     body: item.body,
                     creatorDisplayName: item.creatorDisplayName ?? '',

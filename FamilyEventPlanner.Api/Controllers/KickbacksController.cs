@@ -228,6 +228,37 @@ namespace FamilyEventPlanner.Api.Controllers
             });
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var kickback = await _context.Kickbacks.FirstOrDefaultAsync(k => k.Id == id);
+            if (kickback == null)
+                return NotFound(new { message = "Kickback not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var member = await _context.GroupMembers.FirstOrDefaultAsync(
+                m => m.Id == memberId && m.FamilyGroupId == kickback.FamilyGroupId);
+            if (member == null || !member.IsAdmin)
+                return Forbid();
+
+            _context.KickbackResponses.RemoveRange(await _context.KickbackResponses
+                .Where(response => response.KickbackId == id)
+                .ToListAsync());
+            _context.ActivityFeed.RemoveRange(await _context.ActivityFeed
+                .Where(activity => activity.RelatedEntityType == "Kickback" && activity.RelatedEntityId == id)
+                .ToListAsync());
+            _context.Notifications.RemoveRange(await _context.Notifications
+                .Where(notification => notification.Link == $"/kickback/{id}")
+                .ToListAsync());
+            _context.Kickbacks.Remove(kickback);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         // POST: api/kickbacks/respond
         [HttpPost("respond")]
         public async Task<IActionResult> Respond([FromBody] RespondToKickbackRequest request)

@@ -6,7 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { getPollById, type Poll, voteOnPoll } from '@/services/pollService';
+import { AdminDeleteButton } from '@/components/admin-delete-button';
+import { getGroupMembers } from '@/services/groupMemberService';
+import { deletePoll, getPollById, type Poll, voteOnPoll } from '@/services/pollService';
+import { loadSession } from '@/services/sessionService';
 
 function formatPollDate(value: string): string {
   const date = new Date(value);
@@ -25,12 +28,14 @@ function isPollClosed(poll: Poll): boolean {
 }
 
 export default function PollDetailsScreen() {
-  const { pollId } = useLocalSearchParams<{ pollId: string }>();
+  const { pollId, memberId: routeMemberId } = useLocalSearchParams<{ pollId: string; memberId?: string }>();
   const insets = useSafeAreaInsets();
   const [poll, setPoll] = useState<Poll | null>(null);
   const [loading, setLoading] = useState(true);
   const [voting, setVoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adminScope, setAdminScope] = useState<{ groupId: string; memberId: string; contentId: string } | null>(null);
+  const [currentMemberId, setCurrentMemberId] = useState('');
 
   useEffect(() => {
     if (!pollId) {
@@ -40,9 +45,26 @@ export default function PollDetailsScreen() {
     }
 
     let cancelled = false;
-    void getPollById(String(pollId))
-      .then((data) => {
-        if (!cancelled) setPoll(data);
+    void Promise.all([getPollById(String(pollId)), loadSession()])
+      .then(([data, session]) => {
+        if (!cancelled) {
+          setPoll(data);
+        }
+        const memberId = String(routeMemberId ?? session?.memberId ?? '');
+        if (!cancelled) setCurrentMemberId(memberId);
+        if (memberId) {
+          void getGroupMembers(data.familyGroupId, memberId)
+            .then((members) => {
+              if (!cancelled) {
+                setAdminScope(members.some((member) => member.memberId === memberId && member.isAdmin)
+                  ? { groupId: data.familyGroupId, memberId, contentId: data.id }
+                  : null);
+              }
+            })
+            .catch(() => {
+              if (!cancelled) setAdminScope(null);
+            });
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Unable to load this poll.');
@@ -54,7 +76,7 @@ export default function PollDetailsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [pollId]);
+  }, [pollId, routeMemberId]);
 
   async function handleVote(optionId: string) {
     if (!poll || voting || poll.currentMemberSelectedOptionId || isPollClosed(poll)) return;
@@ -145,6 +167,15 @@ export default function PollDetailsScreen() {
         {voting ? <ThemedText style={styles.feedback}>Submitting vote...</ThemedText> : null}
         {closed ? <ThemedText style={styles.closedMessage}>This poll is closed. Voting is no longer available.</ThemedText> : null}
         {!closed && hasVoted ? <ThemedText style={styles.votedMessage}>Your vote has been recorded.</ThemedText> : null}
+        {adminScope?.groupId === poll.familyGroupId &&
+        adminScope.memberId === currentMemberId &&
+        adminScope.contentId === String(pollId ?? '') ? (
+          <AdminDeleteButton
+            contentType="Poll"
+            onDelete={() => deletePoll(poll.id)}
+            onDeleted={() => router.back()}
+          />
+        ) : null}
       </ScrollView>
     </ThemedView>
   );

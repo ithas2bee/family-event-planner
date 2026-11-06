@@ -276,6 +276,40 @@ namespace FamilyEventPlanner.Api.Controllers
             return Ok(resp);
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var poll = await _context.Polls.FirstOrDefaultAsync(p => p.Id == id);
+            if (poll == null)
+                return NotFound(new { message = "Poll not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var member = await _context.GroupMembers.FirstOrDefaultAsync(
+                m => m.Id == memberId && m.FamilyGroupId == poll.FamilyGroupId);
+            if (member == null || !member.IsAdmin)
+                return Forbid();
+
+            var options = await _context.PollOptions.Where(option => option.PollId == id).ToListAsync();
+            var optionIds = options.Select(option => option.Id).ToList();
+            _context.PollVotes.RemoveRange(await _context.PollVotes
+                .Where(vote => optionIds.Contains(vote.PollOptionId))
+                .ToListAsync());
+            _context.PollOptions.RemoveRange(options);
+            _context.ActivityFeed.RemoveRange(await _context.ActivityFeed
+                .Where(activity => activity.RelatedEntityType == "Poll" && activity.RelatedEntityId == id)
+                .ToListAsync());
+            _context.Notifications.RemoveRange(await _context.Notifications
+                .Where(notification => notification.Link == $"/poll/{id}")
+                .ToListAsync());
+            _context.Polls.Remove(poll);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         // POST: api/polls/vote
         [HttpPost("vote")]
         public async Task<IActionResult> Vote([FromBody] VoteRequest request)
