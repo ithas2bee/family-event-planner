@@ -211,7 +211,7 @@ public class AuthControllerTests
         var controller = CreateController(
             context,
             emailSender,
-            passwordResetWebUrl: "https://huddleup.example/reset-password?source=email");
+            passwordResetWebUrl: "https://api-dev.huddleupmobileapp.com/reset-password?source=email");
 
         await controller.ForgotPassword(new ForgotPasswordRequest { Email = user.Email });
 
@@ -220,7 +220,7 @@ public class AuthControllerTests
 
         Assert.Contains($"familyeventplannermobile://reset-password?token={token}", emailBody);
         Assert.Contains(
-            $"https://huddleup.example/reset-password?source=email&token={token}",
+            $"https://api-dev.huddleupmobileapp.com/reset-password?source=email&token={token}",
             emailBody);
         Assert.Contains("If Huddle Up does not open, reset your password in a browser:", emailBody);
     }

@@ -6,9 +6,9 @@ Deploy the Huddle Up API in the development environment at `https://api-dev.hudd
 ## Environment
 - Repository: `ithas2bee/family-event-planner`
 - Branch: `development`
-- Directory: `~/Development/Sites/HuddleUp/FamilyEventPlanner.Api`
+- Directory: `~/Development/Sites/HuddleUp/family-event-planner` (repository root)
 - API project: `FamilyEventPlanner.Api` (.NET 8, EF Core 8)
-- Compose file: `compose.yaml`
+- Compose file: `FamilyEventPlanner.Api/compose.yaml`
 - API container: `huddleup-api-1`
 - SQL Server container: `huddleup-sqlserver-1`
 - API host binding: `127.0.0.1:8090` → container port `8080`
@@ -19,7 +19,7 @@ Deploy the Huddle Up API in the development environment at `https://api-dev.hudd
 Do not alter the existing PresiCompare or Byron Professional Site deployments, their ports, or their Cloudflare routes.
 
 ## Deployment files
-The API deployment includes `Dockerfile`, `.dockerignore`, `compose.yaml`, `.env`, `.env.example`, and `database/bootstrap.sql`.
+The development Compose build uses the repository root as its context so the API image can include the Expo static web export. Set `PasswordReset__WebUrl=https://api-dev.huddleupmobileapp.com/reset-password` in the API deployment `.env`; the corresponding Compose setting defaults to this development route. The API deployment also includes `FamilyEventPlanner.Api/Dockerfile`, `FamilyEventPlanner.Api/.env`, `FamilyEventPlanner.Api/.env.example`, `FamilyEventPlanner.Api/compose.yaml`, and `FamilyEventPlanner.Api/database/bootstrap.sql`.
 
 Compose starts SQL Server, runs the one-shot `db-init` service, then starts the API. The `db-init` service exiting after successful completion is expected.
 

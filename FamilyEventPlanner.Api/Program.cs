@@ -200,6 +200,18 @@ namespace FamilyEventPlanner.Api
             // Re-enable for production with proper SSL certificates
             // app.UseHttpsRedirection();
 
+            app.Use(async (context, next) =>
+            {
+                if (HttpMethods.IsGet(context.Request.Method) &&
+                    context.Request.Path == "/reset-password")
+                {
+                    context.Request.Path = "/index.html";
+                }
+
+                await next();
+            });
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
             app.UseRouting();
             app.UseCors("AllowExpo");
             app.UseRateLimiter();

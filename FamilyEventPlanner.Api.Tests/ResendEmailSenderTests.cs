@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using FamilyEventPlanner.Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -28,7 +29,7 @@ public class ResendEmailSenderTests
         await sender.SendAsync(
             "person@example.com",
             "Reset your Huddle Up password",
-            "Use this link within 30 minutes to reset your Huddle Up password:\n\nfamilyeventplannermobile://reset-password?token=reset-token\n\nIf Huddle Up does not open, reset your password in a browser:\n\nhttps://huddleup.example/reset-password?token=reset-token\n\nIf you did not request a password reset, you can ignore this email.");
+            "Use this link within 30 minutes to reset your Huddle Up password:\n\nfamilyeventplannermobile://reset-password?token=reset-token\n\nIf Huddle Up does not open, reset your password in a browser:\n\nhttps://api-dev.huddleupmobileapp.com/reset-password?token=reset-token\n\nIf you did not request a password reset, you can ignore this email.");
 
         Assert.True(sender.IsConfigured);
         Assert.Equal(HttpMethod.Post, sentRequest!.Method);
@@ -43,13 +44,45 @@ public class ResendEmailSenderTests
         var text = payload.RootElement.GetProperty("text").GetString();
         Assert.Contains("within 30 minutes", text);
         Assert.Contains("familyeventplannermobile://reset-password?token=reset-token", text);
-        Assert.Contains("https://huddleup.example/reset-password?token=reset-token", text);
+        Assert.Contains("https://api-dev.huddleupmobileapp.com/reset-password?token=reset-token", text);
 
         var html = payload.RootElement.GetProperty("html").GetString();
         Assert.Contains("Reset Password</a>", html);
-        Assert.Contains("href=\"familyeventplannermobile://reset-password?token=reset-token\"", html);
-        Assert.Contains("href=\"https://huddleup.example/reset-password?token=reset-token\"", html);
+        var hrefs = Regex.Matches(html!, "<a\\b[^>]*\\bhref=\"([^\"]*)\"")
+            .Select(match => WebUtility.HtmlDecode(match.Groups[1].Value))
+            .ToArray();
+        Assert.Equal(
+            ["https://api-dev.huddleupmobileapp.com/reset-password?token=reset-token"],
+            hrefs);
+        Assert.True(Uri.TryCreate(hrefs.Single(), UriKind.Absolute, out var resetUri));
+        Assert.Equal(Uri.UriSchemeHttps, resetUri!.Scheme);
+        Assert.DoesNotContain("href=\"familyeventplannermobile:", html);
         Assert.Contains("within 30 minutes", html);
+    }
+
+    [Theory]
+    [InlineData("familyeventplannermobile://reset-password?token=reset-token")]
+    [InlineData("javascript:alert(1)")]
+    public async Task SendAsyncDoesNotRenderNonHttpsUrisAsLinks(string uri)
+    {
+        string? html = null;
+        var handler = new StubHttpMessageHandler(async (request, cancellationToken) =>
+        {
+            using var payload = JsonDocument.Parse(
+                await request.Content!.ReadAsStringAsync(cancellationToken));
+            html = payload.RootElement.GetProperty("html").GetString();
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var sender = CreateSender(handler, new Dictionary<string, string?>
+        {
+            ["RESEND_API_KEY"] = "test-resend-key",
+            ["Email:FromAddress"] = "no-reply@send.huddleupmobileapp.com"
+        });
+
+        await sender.SendAsync("person@example.com", "subject", uri);
+
+        Assert.DoesNotContain("<a ", html);
+        Assert.Contains(WebUtility.HtmlEncode(uri), html);
     }
 
     [Fact]
