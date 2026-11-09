@@ -11,7 +11,7 @@ Deploy the Huddle Up API in the development environment at `https://api-dev.hudd
 - Compose file: `FamilyEventPlanner.Api/compose.yaml`
 - API container: `huddleup-api-1`
 - SQL Server container: `huddleup-sqlserver-1`
-- Compose services: `sqlserver` and `api` (`db-init` is not defined)
+- Compose services: `sqlserver` and `api`
 - API host binding: `127.0.0.1:8090` → container port `8080`
 - SQL Server service name inside the Compose network: `sqlserver`
 - Database: `FamilyEventPlannerDb`
@@ -34,6 +34,7 @@ chmod 600 FamilyEventPlanner.Api/.env
 Edit `FamilyEventPlanner.Api/.env` with the deployment's actual credentials and connection string. To build the API image directly and verify the repository-root Docker context:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 docker build \
   --file FamilyEventPlanner.Api/Dockerfile \
   --tag huddleup-api:build-check \
@@ -44,20 +45,24 @@ docker build \
 For deployment, validate the Compose configuration, build the API service, and start the services using the Compose file in the API directory:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml config --quiet
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml build api
-docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml up -d
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml up -d sqlserver
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml exec -T sqlserver bash -lc '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -v AppDbPassword="$APP_DB_PASSWORD" -i /opt/huddleup/bootstrap.sql'
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml up -d api
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml ps
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml logs --tail=80 api
 ```
 
-Compose builds from the repository root (`context: ..`) and uses `FamilyEventPlanner.Api/Dockerfile`. The Compose file defines only `sqlserver` and `api`; there is no `db-init` service. SQL Server receives `database/bootstrap.sql` as a read-only mount; do not expect Compose to run a one-shot database initialization service.
+Compose builds from the repository root (`context: ..`) and uses `FamilyEventPlanner.Api/Dockerfile`. The Compose file defines only `sqlserver` and `api`. The bootstrap SQL is mounted read-only into SQL Server and must be applied manually on a fresh database volume before starting the API; the command above uses the configured container environment values rather than literal passwords.
 
 Verify that the built image includes the exported Expo application and static assets:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 docker run --rm --entrypoint sh huddleup-api:build-check -c \
-  'test -s /app/wwwroot/index.html && test -d /app/wwwroot/_expo/static && find /app/wwwroot -type f | wc -l'
+  'test -s /app/wwwroot/index.html && test -d /app/wwwroot/_expo/static && find /app/wwwroot/_expo/static -type f -print -quit | grep -q .'
 ```
 
 ## Database restore
@@ -73,26 +78,18 @@ The restored database contained 18 tables, including `Users`, `FamilyGroups`, `G
 Run:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 curl -i https://api-dev.huddleupmobileapp.com/health/ready
 ```
 
 Known-good response: HTTP `200` and `{"status":"ready"}`.
 
-## Container health and logs
-
-```bash
-docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml ps
-docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml logs --tail=80 api
-```
-
-Inspect logs before changing configuration. Redact credentials before sharing output.
-
 ## Safe API restart
-Only recreate the API after the resolved configuration has been verified:
+Only recreate the API after the resolved configuration has been verified. Run from the repository root:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml up -d --force-recreate api
-docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml ps
 ```
 
 This targets Huddle Up's API service, not the other server applications.

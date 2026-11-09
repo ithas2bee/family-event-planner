@@ -5,7 +5,7 @@ After restoring the existing database, the API entered a restart loop. Logs show
 
 `The remote certificate was rejected by the provided RemoteCertificateValidationCallback`
 
-The failure occurred during EF Core startup migration at `Program.cs:line 186`, where `Database.MigrateAsync()` was called. The public endpoint temporarily returned HTTP 502 while the API was unavailable.
+The failure occurred during EF Core's startup migration, where `Database.MigrateAsync()` was called. The public endpoint temporarily returned HTTP 502 while the API was unavailable.
 
 The intended connection string was structurally:
 
@@ -41,12 +41,14 @@ It reported `Shell override exists`.
 Remove the incorrect override from the current shell:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 unset ConnectionStrings__DefaultConnection
 ```
 
 From the repository root, check the resolved Compose configuration without printing the connection string:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml config --format json | python3 -c '
 import json,sys
 s=json.load(sys.stdin)["services"]["api"]["environment"].get("ConnectionStrings__DefaultConnection","")
@@ -63,6 +65,7 @@ After `unset`, the resolved value had length `144` and all four checks returned 
 Then recreate only the API:
 
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml up -d --force-recreate api
 docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml ps
 ```

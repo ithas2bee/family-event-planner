@@ -2,6 +2,9 @@
 
 This archive collects the steps and findings from the Huddle Up development deployment and Android development-build work.
 
+## Command working directory
+The repository root is `~/Development/Sites/HuddleUp/family-event-planner`. Run Docker Compose commands from that directory using `docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml`. Mobile and Gradle instructions also start at repository root and explicitly change into `FamilyEventPlanner.Mobile` or its `android` subdirectory when required.
+
 ## Contents
 1. `01-ubuntu-api-deployment.md` — Ubuntu Docker deployment, database restore, Cloudflare Tunnel, and API health checks.
 2. `02-docker-compose-connection-string.md` — the environment-variable override that caused the API crash loop.
