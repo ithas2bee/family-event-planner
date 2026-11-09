@@ -140,6 +140,60 @@ export async function getActivityByGroup(groupId: string): Promise<ActivityFeedI
     .sort((a, b) => new Date(b.createdAtUtc).getTime() - new Date(a.createdAtUtc).getTime());
 }
 
+export async function getExpirationNotifications(groupId: string): Promise<ActivityFeedItem[]> {
+  const headers = await getActivityHeaders();
+  const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+    method: 'GET',
+    headers,
+  });
+  if (!response.ok) {
+    return [];
+  }
+
+  const notifications = (await response.json()) as {
+    id?: string;
+    message?: string;
+    type?: string;
+    link?: string;
+    createdAt?: string;
+  }[];
+
+  return notifications.flatMap((notification) => {
+    const type = notification.type ?? '';
+    const match = notification.link?.match(/^\/(poll|announcement)\/([0-9a-f-]+)$/i);
+    if (!match || !['PollExpiring', 'AnnouncementExpiring', 'PollExpirationExtended', 'AnnouncementExpirationExtended'].includes(type)) {
+      return [];
+    }
+
+    return [{
+      id: String(notification.id ?? ''),
+      familyGroupId: groupId,
+      message: String(notification.message ?? ''),
+      activityType: type,
+      relatedEntityId: match[2],
+      relatedEntityType: match[1].toLowerCase() === 'poll' ? 'Poll' : 'Announcement',
+      createdAtUtc: String(notification.createdAt ?? ''),
+    }];
+  });
+}
+
+export async function extendContentExpiration(
+  relatedEntityType: string,
+  relatedEntityId: string,
+): Promise<void> {
+  if (relatedEntityType !== 'Poll' && relatedEntityType !== 'Announcement') {
+    throw new Error('Expiration could not be extended.');
+  }
+  const path = relatedEntityType === 'Poll' ? 'polls' : 'announcements';
+  const response = await fetch(`${API_BASE_URL}/api/${path}/${relatedEntityId}/extend`, {
+    method: 'POST',
+    headers: await getActivityHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error('Expiration could not be extended.');
+  }
+}
+
 export async function markAllNotificationsRead(memberId: string): Promise<void> {
   const headers = await getActivityHeaders();
   const response = await fetch(`${API_BASE_URL}/api/notifications`, {

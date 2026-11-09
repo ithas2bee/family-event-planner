@@ -21,7 +21,9 @@ import type {
   NotificationPreferences,
 } from '@/services/notificationPreferencesService';
 import {
+  extendContentExpiration,
   getActivityByGroup,
+  getExpirationNotifications,
   markAllNotificationsRead,
   type ActivityFeedItem,
 } from '@/services/activityService';
@@ -173,6 +175,7 @@ export default function ActivityScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<NotificationCategory>('All');
   const [markingRead, setMarkingRead] = useState(false);
+  const [extendingId, setExtendingId] = useState<string | null>(null);
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
 
   useEffect(() => {
@@ -209,7 +212,12 @@ export default function ActivityScreen() {
       }
 
       try {
-        const data = await getActivityByGroup(groupIdValue);
+        const [activityData, expirationNotifications] = await Promise.all([
+          getActivityByGroup(groupIdValue),
+          getExpirationNotifications(groupIdValue),
+        ]);
+        const data = [...activityData, ...expirationNotifications]
+          .sort((left, right) => new Date(right.createdAtUtc).getTime() - new Date(left.createdAtUtc).getTime());
         if (!cancelled) {
           setActivities(data);
           setError(null);
@@ -294,6 +302,29 @@ export default function ActivityScreen() {
     }
   }
 
+  async function extendExpiration(item: ActivityFeedItem) {
+    if (!item.relatedEntityId || !item.relatedEntityType || extendingId !== null) return;
+
+    setExtendingId(item.id);
+    try {
+      await extendContentExpiration(item.relatedEntityType, item.relatedEntityId);
+      setActivities((current) => current.map((activity) => activity.id === item.id
+        ? {
+            ...activity,
+            activityType: activity.relatedEntityType === 'Poll'
+              ? 'PollExpirationExtended'
+              : 'AnnouncementExpirationExtended',
+            message: activity.message?.replace('is about to expire. Extend it by 48 hours from this notification.',
+              'was extended by 48 hours.'),
+          }
+        : activity));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Expiration could not be extended.');
+    } finally {
+      setExtendingId(null);
+    }
+  }
+
   return (
     <ThemedView style={styles.container}>
       <ScrollView
@@ -357,28 +388,51 @@ export default function ActivityScreen() {
                     ['Event', 'Kickback', 'Poll', 'Announcement', 'Group'].includes(
                       item.relatedEntityType ?? '',
                     );
+                  const isExpirationWarning =
+                    item.activityType === 'PollExpiring' || item.activityType === 'AnnouncementExpiring';
+                  const isExpirationNotice =
+                    isExpirationWarning ||
+                    item.activityType === 'PollExpirationExtended' ||
+                    item.activityType === 'AnnouncementExpirationExtended';
                   return (
-                    <Pressable
-                      key={item.id}
-                      accessibilityRole={canNavigate ? 'button' : undefined}
-                      onPress={() => openActivity(item)}
-                      style={[styles.card, styles[`${getCategory(item).toLowerCase()}Card` as 'allCard'] ?? styles.allCard]}>
-                      <View style={[styles.iconCircle, styles[`${getCategory(item).toLowerCase()}Icon` as 'allIcon'] ?? styles.allIcon]}>
-                        <MaterialIcons name={details.icon} size={23} color="#fff" />
-                      </View>
-                      <View style={styles.cardBody}>
-                        <ThemedText style={styles.cardText}>
-                          <ThemedText style={styles.actor}>{item.actorDisplayName || 'Someone'}</ThemedText>{' '}
-                          {details.detail}
-                        </ThemedText>
-                        {details.title ? <ThemedText style={styles.entity}>{details.title}</ThemedText> : null}
-                        {item.message && !details.title ? (
-                          <ThemedText style={styles.secondary}>{getNotificationText(item)}</ThemedText>
-                        ) : null}
-                        <ThemedText style={styles.timestamp}>{getRelativeTime(item.createdAtUtc)}</ThemedText>
-                      </View>
-                      {canNavigate ? <MaterialIcons name="chevron-right" size={28} color="#172A4D" /> : null}
-                    </Pressable>
+                    <View key={item.id}>
+                      <Pressable
+                        accessibilityRole={canNavigate ? 'button' : undefined}
+                        onPress={() => openActivity(item)}
+                        style={[styles.card, styles[`${getCategory(item).toLowerCase()}Card` as 'allCard'] ?? styles.allCard]}>
+                        <View style={[styles.iconCircle, styles[`${getCategory(item).toLowerCase()}Icon` as 'allIcon'] ?? styles.allIcon]}>
+                          <MaterialIcons name={details.icon} size={23} color="#fff" />
+                        </View>
+                        <View style={styles.cardBody}>
+                          {isExpirationNotice ? (
+                            <ThemedText style={styles.secondary}>{getNotificationText(item)}</ThemedText>
+                          ) : (
+                            <ThemedText style={styles.cardText}>
+                              <ThemedText style={styles.actor}>{item.actorDisplayName || 'Someone'}</ThemedText>{' '}
+                              {details.detail}
+                            </ThemedText>
+                          )}
+                          {details.title ? <ThemedText style={styles.entity}>{details.title}</ThemedText> : null}
+                          {item.message && !details.title && !isExpirationNotice ? (
+                            <ThemedText style={styles.secondary}>{getNotificationText(item)}</ThemedText>
+                          ) : null}
+                          <ThemedText style={styles.timestamp}>{getRelativeTime(item.createdAtUtc)}</ThemedText>
+                        </View>
+                        {canNavigate ? <MaterialIcons name="chevron-right" size={28} color="#172A4D" /> : null}
+                      </Pressable>
+                      {isExpirationWarning && (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityState={{ busy: extendingId === item.id }}
+                          disabled={extendingId !== null}
+                          onPress={() => void extendExpiration(item)}
+                          style={styles.extendButton}>
+                          <ThemedText style={styles.extendButtonText}>
+                            {extendingId === item.id ? 'Extending…' : 'Extend by 48 hours'}
+                          </ThemedText>
+                        </Pressable>
+                      )}
+                    </View>
                   );
                 })}
               </View>
@@ -427,6 +481,19 @@ const styles = StyleSheet.create({
     color: '#1677E8',
     fontSize: 14,
     fontWeight: '600',
+  },
+  extendButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#1687EE',
+    borderRadius: 18,
+    marginTop: 6,
+    paddingHorizontal: 15,
+    paddingVertical: 9,
+  },
+  extendButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   filters: {
     gap: 9,

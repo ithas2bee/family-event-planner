@@ -14,6 +14,9 @@ const userServiceSource = fs.readFileSync(path.join(mobileDirectory, 'services/u
 const layoutSource = fs.readFileSync(path.join(appDirectory, '_layout.tsx'), 'utf8');
 const appConfig = JSON.parse(fs.readFileSync(path.join(mobileDirectory, 'app.json'), 'utf8'));
 const authControllerSource = fs.readFileSync(path.join(apiDirectory, 'Controllers/AuthController.cs'), 'utf8');
+const apiProgramSource = fs.readFileSync(path.join(apiDirectory, 'Program.cs'), 'utf8');
+const dockerfileSource = fs.readFileSync(path.join(apiDirectory, 'Dockerfile'), 'utf8');
+const composeSource = fs.readFileSync(path.join(apiDirectory, 'compose.yaml'), 'utf8');
 
 test('sign in provides password and username recovery navigation', () => {
   assert.match(loginSource, /Forgot Password\?/);
@@ -41,6 +44,28 @@ test('password reset validates confirmation and applies the existing password ru
   assert.match(resetPasswordSource, /password\.length >= 8/);
   assert.match(resetPasswordSource, /\/\\d\//);
   assert.match(resetPasswordSource, /You can now sign in with your new password/);
+});
+
+test('password reset route reads the deep-link token and submits it to the API', () => {
+  assert.match(resetPasswordSource, /useLocalSearchParams/);
+  assert.match(resetPasswordSource, /typeof params\.token === 'string'/);
+  assert.match(resetPasswordSource, /resetPassword\(\{ token, password, confirmPassword \}\)/);
+});
+
+test('repository-root Compose build exports Expo web assets into the API image', () => {
+  assert.match(composeSource, /context:\s*\.\./);
+  assert.match(composeSource, /dockerfile:\s*FamilyEventPlanner\.Api\/Dockerfile/);
+  assert.match(dockerfileSource, /WORKDIR \/src\/FamilyEventPlanner\.Mobile/);
+  assert.match(dockerfileSource, /COPY FamilyEventPlanner\.Mobile\/package\.json FamilyEventPlanner\.Mobile\/package-lock\.json \.\//);
+  assert.match(dockerfileSource, /COPY \["FamilyEventPlanner\.Api\/FamilyEventPlanner\.Api\.csproj", "FamilyEventPlanner\.Api\/"\]/);
+  assert.match(dockerfileSource, /COPY --from=web-build .*\/app\/web-dist \.\/wwwroot/);
+});
+
+test('GET reset-password serves the Expo static application entry point', () => {
+  assert.match(apiProgramSource, /HttpMethods\.IsGet\(context\.Request\.Method\)/);
+  assert.match(apiProgramSource, /context\.Request\.Path == "\/reset-password"/);
+  assert.match(apiProgramSource, /context\.Request\.Path = "\/index\.html"/);
+  assert.match(apiProgramSource, /app\.UseStaticFiles\(\)/);
 });
 
 test('username recovery explains that sign-in uses the registered email', () => {

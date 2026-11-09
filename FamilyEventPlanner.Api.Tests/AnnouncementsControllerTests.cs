@@ -36,11 +36,12 @@ public class AnnouncementsControllerTests
     }
 
     [Fact]
-    public async Task CreateWithoutDurationLeavesAnnouncementWithoutExpiration()
+    public async Task CreateWithoutDurationDefaultsToFourteenDays()
     {
         await using var context = CreateContext();
         var (group, member) = SeedMember(context);
         var controller = CreateController(context, member.Id);
+        var beforeCreate = DateTime.UtcNow;
 
         var result = await controller.Create(new CreateAnnouncementRequest
         {
@@ -50,11 +51,32 @@ public class AnnouncementsControllerTests
         });
 
         Assert.IsType<CreatedAtActionResult>(result);
-        Assert.Null((await context.Announcements.SingleAsync()).ExpiresAt);
+        Assert.InRange(
+            (await context.Announcements.SingleAsync()).ExpiresAt!.Value,
+            beforeCreate.AddDays(14),
+            DateTime.UtcNow.AddDays(14));
     }
 
     [Fact]
-    public async Task ExpiredAnnouncementsAreExcludedButNonExpiringAnnouncementsRemainVisible()
+    public async Task CreateRejectsExpirationBeyondFourteenDays()
+    {
+        await using var context = CreateContext();
+        var (group, member) = SeedMember(context);
+
+        var result = await CreateController(context, member.Id).Create(new CreateAnnouncementRequest
+        {
+            FamilyGroupId = group.Id,
+            Title = "Too long",
+            Body = "This should not be stored.",
+            ExpiresAt = DateTime.UtcNow.AddDays(15)
+        });
+
+        Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Empty(await context.Announcements.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ExpiredAndNullExpirationAnnouncementsAreExcluded()
     {
         await using var context = CreateContext();
         var (group, member) = SeedMember(context);
@@ -94,7 +116,110 @@ public class AnnouncementsControllerTests
 
         var announcements = Assert.IsType<OkObjectResult>(result).Value as List<AnnouncementResponse>;
         Assert.NotNull(announcements);
-        Assert.Equal(["Active", "Permanent"], announcements.Select(a => a.Title));
+        Assert.Equal(["Active"], announcements.Select(a => a.Title));
+        Assert.IsType<NotFoundObjectResult>(await CreateController(context, member.Id).GetById(
+            (await context.Announcements.SingleAsync(a => a.Title == "Expired")).Id));
+    }
+
+    [Fact]
+    public async Task ExpirationWarningAllowsOneFortyEightHourExtensionForCreator()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        var announcement = new Announcement
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            CreatedByMemberId = creator.Id,
+            Title = "Dinner",
+            Body = "Dinner is ready.",
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddHours(12),
+            ExpirationNotificationSent = true
+        };
+        var notification = new Notification
+        {
+            Id = Guid.NewGuid(),
+            MemberId = creator.Id,
+            Message = "Announcement is expiring.",
+            Type = "AnnouncementExpiring",
+            Link = $"/announcement/{announcement.Id}",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Announcements.Add(announcement);
+        context.Notifications.Add(notification);
+        await context.SaveChangesAsync();
+        var originalExpiration = announcement.ExpiresAt;
+        var controller = CreateController(context, creator.Id);
+
+        var result = await controller.ExtendExpiration(announcement.Id);
+        var repeatedResult = await controller.ExtendExpiration(announcement.Id);
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(originalExpiration!.Value.AddHours(48), announcement.ExpiresAt);
+        Assert.True(announcement.ExpirationExtended);
+        Assert.IsType<ConflictObjectResult>(repeatedResult);
+        Assert.Equal("AnnouncementExpirationExtended", notification.Type);
+    }
+
+    [Fact]
+    public async Task DeleteRequiresGroupAdminAndRemovesRelatedData()
+    {
+        await using var context = CreateContext();
+        var (group, creator) = SeedMember(context);
+        var otherGroup = new FamilyGroup { Id = Guid.NewGuid(), Name = "Other", CreatedAt = DateTime.UtcNow };
+        var otherUser = new User { Id = Guid.NewGuid(), Email = "admin@example.com", DisplayName = "Admin" };
+        var otherAdmin = new GroupMember
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = otherGroup.Id,
+            UserId = otherUser.Id,
+            User = otherUser,
+            IsAdmin = true,
+            JoinedAt = DateTime.UtcNow
+        };
+        var announcement = new Announcement
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            CreatedByMemberId = creator.Id,
+            Title = "Dinner",
+            Body = "Dinner is ready.",
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddHours(1)
+        };
+        context.FamilyGroups.Add(otherGroup);
+        context.Users.Add(otherUser);
+        context.GroupMembers.Add(otherAdmin);
+        context.Announcements.Add(announcement);
+        context.ActivityFeed.Add(new ActivityFeed
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            ActorMemberId = creator.Id,
+            ActivityType = "AnnouncementCreated",
+            RelatedEntityId = announcement.Id,
+            RelatedEntityType = "Announcement",
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        context.Notifications.Add(new Notification
+        {
+            Id = Guid.NewGuid(),
+            MemberId = creator.Id,
+            Message = "Announcement",
+            Link = $"/announcement/{announcement.Id}",
+            CreatedAt = DateTime.UtcNow
+        });
+        await context.SaveChangesAsync();
+
+        Assert.IsType<ForbidResult>(await CreateController(context, creator.Id).Delete(announcement.Id));
+        Assert.IsType<ForbidResult>(await CreateController(context, otherAdmin.Id).Delete(announcement.Id));
+        creator.IsAdmin = true;
+
+        Assert.IsType<NoContentResult>(await CreateController(context, creator.Id).Delete(announcement.Id));
+        Assert.Empty(await context.Announcements.ToListAsync());
+        Assert.Empty(await context.ActivityFeed.ToListAsync());
+        Assert.Empty(await context.Notifications.ToListAsync());
     }
 
     private static AnnouncementsController CreateController(AppDbContext context, Guid memberId)

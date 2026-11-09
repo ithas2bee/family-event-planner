@@ -71,6 +71,18 @@ namespace FamilyEventPlanner.Api.Controllers
             };
 
             _context.GroupMembers.Add(creatorMember);
+            var now = DateTime.UtcNow;
+            _context.CommunityRoles.AddRange(CommunityRoleDefaults.ForGroupType(group.GroupType)
+                .Select(name => new CommunityRole
+                {
+                    Id = Guid.NewGuid(),
+                    FamilyGroupId = group.Id,
+                    Name = name,
+                    IsDefault = true,
+                    IsActive = true,
+                    CreatedAt = now,
+                    UpdatedAt = now
+                }));
             await _context.SaveChangesAsync();
 
             System.Diagnostics.Debug.WriteLine($"[CREATE GROUP] Group {group.Id} created by user {request.UserId} as admin member {creatorMember.Id}");

@@ -49,6 +49,19 @@ namespace FamilyEventPlanner.Api.Controllers
             if (member == null)
                 return Forbid();
 
+            var now = DateTime.UtcNow;
+            var requestedExpiresAt = request.ExpiresAt.HasValue
+                ? request.ExpiresAt.Value.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(request.ExpiresAt.Value, DateTimeKind.Utc)
+                    : request.ExpiresAt.Value.ToUniversalTime()
+                : (DateTime?)null;
+            if (!request.DurationHours.HasValue &&
+                requestedExpiresAt.HasValue &&
+                (requestedExpiresAt.Value <= now || requestedExpiresAt.Value > now.AddDays(14)))
+            {
+                return BadRequest(new { message = "Announcement expiration must be in the next 14 days." });
+            }
+
             var ann = new Announcement
             {
                 Id = Guid.NewGuid(),
@@ -56,10 +69,10 @@ namespace FamilyEventPlanner.Api.Controllers
                 Title = request.Title,
                 Body = request.Body,
                 CreatedByMemberId = memberId,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = now,
                 ExpiresAt = request.DurationHours.HasValue
-                    ? DateTime.UtcNow.AddHours(request.DurationHours.Value)
-                    : request.ExpiresAt
+                    ? now.AddHours(request.DurationHours.Value)
+                    : requestedExpiresAt ?? now.AddDays(14)
             };
 
             _context.Announcements.Add(ann);
@@ -118,7 +131,7 @@ namespace FamilyEventPlanner.Api.Controllers
             // Join with GroupMembers and Users to get creator display name
             var list = await _context.Announcements
                 .Where(a => a.FamilyGroupId == familyGroupId &&
-                    (!a.ExpiresAt.HasValue || a.ExpiresAt.Value > DateTime.UtcNow))
+                    a.ExpiresAt.HasValue && a.ExpiresAt.Value > DateTime.UtcNow)
                 .OrderByDescending(a => a.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
@@ -149,7 +162,9 @@ namespace FamilyEventPlanner.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var ann = await _context.Announcements.Include(a => a.FamilyGroup).FirstOrDefaultAsync(a => a.Id == id);
+            var ann = await _context.Announcements
+                .Include(a => a.FamilyGroup)
+                .FirstOrDefaultAsync(a => a.Id == id && a.ExpiresAt.HasValue && a.ExpiresAt.Value > DateTime.UtcNow);
             if (ann == null)
                 return NotFound(new { message = "Announcement not found." });
             var memberIdClaim = User.FindFirst("memberId")?.Value;
@@ -192,7 +207,8 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var ann = await _context.Announcements.FirstOrDefaultAsync(a => a.Id == id);
+            var ann = await _context.Announcements.FirstOrDefaultAsync(a =>
+                a.Id == id && a.ExpiresAt.HasValue && a.ExpiresAt.Value > DateTime.UtcNow);
             if (ann == null)
                 return NotFound(new { message = "Announcement not found." });
 
@@ -210,11 +226,61 @@ namespace FamilyEventPlanner.Api.Controllers
 
             ann.Title = request.Title;
             ann.Body = request.Body;
-            ann.ExpiresAt = request.ExpiresAt;
+            if (request.ExpiresAt.HasValue)
+            {
+                var expiresAt = request.ExpiresAt.Value.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(request.ExpiresAt.Value, DateTimeKind.Utc)
+                    : request.ExpiresAt.Value.ToUniversalTime();
+                if (!ann.ExpiresAt.HasValue || expiresAt <= DateTime.UtcNow || expiresAt > ann.ExpiresAt.Value)
+                    return BadRequest(new { message = "Expiration can only be extended through its expiration notification." });
+                ann.ExpiresAt = expiresAt;
+            }
 
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        [HttpPost("{id}/extend")]
+        public async Task<IActionResult> ExtendExpiration(Guid id)
+        {
+            var announcement = await _context.Announcements.FirstOrDefaultAsync(a => a.Id == id);
+            if (announcement == null)
+                return NotFound(new { message = "Announcement not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+            if (announcement.CreatedByMemberId != memberId)
+                return Forbid();
+            if (!announcement.ExpiresAt.HasValue || announcement.ExpiresAt.Value <= DateTime.UtcNow)
+                return BadRequest(new { message = "This announcement has expired." });
+            if (!announcement.ExpirationNotificationSent)
+                return BadRequest(new { message = "The expiration notification has not been sent." });
+            if (announcement.ExpirationExtended)
+                return Conflict(new { message = "This announcement has already been extended." });
+
+            announcement.ExpiresAt = announcement.ExpiresAt.Value.AddHours(48);
+            announcement.ExpirationExtended = true;
+            var notification = await _context.Notifications.FirstOrDefaultAsync(n =>
+                n.MemberId == memberId &&
+                n.Type == "AnnouncementExpiring" &&
+                n.Link == $"/announcement/{announcement.Id}");
+            if (notification != null)
+            {
+                notification.Type = "AnnouncementExpirationExtended";
+                notification.Message = $"Your announcement \"{announcement.Title}\" was extended by 48 hours.";
+            }
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "This announcement has already been extended." });
+            }
+
+            return Ok(new { announcement.ExpiresAt });
         }
 
         // DELETE: api/announcements/{id}
@@ -233,10 +299,15 @@ namespace FamilyEventPlanner.Api.Controllers
             if (member == null)
                 return Forbid();
 
-            // Only creator or admin can delete
-            if (ann.CreatedByMemberId.HasValue && ann.CreatedByMemberId != memberId && !member.IsAdmin)
+            if (!member.IsAdmin)
                 return Forbid();
 
+            _context.ActivityFeed.RemoveRange(await _context.ActivityFeed
+                .Where(activity => activity.RelatedEntityType == "Announcement" && activity.RelatedEntityId == ann.Id)
+                .ToListAsync());
+            _context.Notifications.RemoveRange(await _context.Notifications
+                .Where(notification => notification.Link == $"/announcement/{ann.Id}")
+                .ToListAsync());
             _context.Announcements.Remove(ann);
             await _context.SaveChangesAsync();
 

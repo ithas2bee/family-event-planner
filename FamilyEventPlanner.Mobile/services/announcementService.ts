@@ -185,3 +185,28 @@ export async function createAnnouncement(request: CreateAnnouncementRequest): Pr
 
   return mapAnnouncement(parsedBody);
 }
+
+export async function deleteAnnouncement(announcementId: string): Promise<void> {
+  const headers = await getAnnouncementHeaders();
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/announcements/${announcementId}`, { method: 'DELETE', headers });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  const rawBody = await response.text();
+  let payload: unknown = null;
+  if (rawBody.length > 0) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      payload = rawBody;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
+  }
+}

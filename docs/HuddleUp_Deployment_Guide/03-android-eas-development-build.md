@@ -47,7 +47,7 @@ The project had this profile structure:
 The development profile uses internal distribution and an APK, suitable for installing on an Android phone. Compare with the repository's current version before replacing any file.
 
 ## Install dependencies
-On Ubuntu, EAS initially could not proceed because `node_modules` was absent. Dependencies were installed with:
+From the repository root, change to the mobile project directory. On Ubuntu, EAS initially could not proceed because `node_modules` was absent. Dependencies were installed with:
 
 ```bash
 cd FamilyEventPlanner.Mobile
@@ -68,13 +68,15 @@ The URL is not a secret. Do not paste secret values from EAS output.
 To list development environment variables, confirm the installed CLI syntax and use:
 
 ```bash
+cd FamilyEventPlanner.Mobile
 npx eas-cli env:list --environment development
 ```
 
 ## Successful build command
-From `FamilyEventPlanner.Mobile` on the authenticated Windows machine:
+From the repository root on the authenticated Windows machine:
 
 ```bash
+cd FamilyEventPlanner.Mobile
 npx eas-cli build --platform android --profile development
 ```
 

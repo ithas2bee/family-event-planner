@@ -13,6 +13,8 @@ namespace FamilyEventPlanner.Api.Data
 
         public DbSet<FamilyGroup> FamilyGroups { get; set; }
         public DbSet<GroupMember> GroupMembers { get; set; }
+        public DbSet<CommunityRole> CommunityRoles { get; set; }
+        public DbSet<CommunityRoleAssignment> CommunityRoleAssignments { get; set; }
         public DbSet<GroupMembershipRequest> GroupMembershipRequests { get; set; }
 
         // Event planning entities
@@ -63,6 +65,24 @@ namespace FamilyEventPlanner.Api.Data
                 .HasIndex(token => token.UserId)
                 .HasFilter("[UsedAtUtc] IS NULL")
                 .IsUnique();
+
+            modelBuilder.Entity<Poll>()
+                .HasIndex(poll => poll.ExpiresAt);
+            modelBuilder.Entity<Poll>()
+                .Property(poll => poll.ExpirationNotificationSent)
+                .IsConcurrencyToken();
+            modelBuilder.Entity<Poll>()
+                .Property(poll => poll.ExpirationExtended)
+                .IsConcurrencyToken();
+
+            modelBuilder.Entity<Announcement>()
+                .HasIndex(announcement => announcement.ExpiresAt);
+            modelBuilder.Entity<Announcement>()
+                .Property(announcement => announcement.ExpirationNotificationSent)
+                .IsConcurrencyToken();
+            modelBuilder.Entity<Announcement>()
+                .Property(announcement => announcement.ExpirationExtended)
+                .IsConcurrencyToken();
 
             // Prevent multiple cascade delete paths involving GroupMembers by setting NoAction (SQL: NO ACTION)
             modelBuilder.Entity<EventAttendance>()
@@ -155,6 +175,44 @@ namespace FamilyEventPlanner.Api.Data
                 .HasForeignKey(gm => gm.UserId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .IsRequired();
+
+            modelBuilder.Entity<CommunityRole>()
+                .HasIndex(role => new { role.FamilyGroupId, role.Name })
+                .IsUnique()
+                .HasFilter("[IsActive] = 1");
+
+            modelBuilder.Entity<CommunityRole>()
+                .HasAlternateKey(role => new { role.Id, role.FamilyGroupId });
+
+            modelBuilder.Entity<GroupMember>()
+                .HasAlternateKey(member => new { member.Id, member.FamilyGroupId });
+
+            modelBuilder.Entity<GroupMember>()
+                .HasOne(member => member.CommunityRole)
+                .WithMany()
+                .HasForeignKey(member => new { member.CommunityRoleId, member.FamilyGroupId })
+                .HasPrincipalKey(role => new { role.Id, role.FamilyGroupId })
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasKey(assignment => new { assignment.GroupMemberId, assignment.CommunityRoleId });
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasOne(assignment => assignment.GroupMember)
+                .WithMany(member => member.CommunityRoleAssignments)
+                .HasForeignKey(assignment => new { assignment.GroupMemberId, assignment.FamilyGroupId })
+                .HasPrincipalKey(member => new { member.Id, member.FamilyGroupId })
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasOne(assignment => assignment.CommunityRole)
+                .WithMany()
+                .HasForeignKey(assignment => new { assignment.CommunityRoleId, assignment.FamilyGroupId })
+                .HasPrincipalKey(role => new { role.Id, role.FamilyGroupId })
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<CommunityRoleAssignment>()
+                .HasIndex(assignment => new { assignment.FamilyGroupId, assignment.CommunityRoleId });
         }
     }
 }

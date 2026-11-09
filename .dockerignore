@@ -1,0 +1,9 @@
+**/.git
+**/.env
+**/.env.*
+**/node_modules
+**/.expo
+**/bin
+**/obj
+**/dist
+**/web-dist

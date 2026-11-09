@@ -234,6 +234,31 @@ export async function updateKickback(kickbackId: string, request: UpdateKickback
   return mapKickback(parsedBody);
 }
 
+export async function deleteKickback(kickbackId: string): Promise<void> {
+  const headers = await getKickbackHeaders();
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/api/kickbacks/${kickbackId}`, { method: 'DELETE', headers });
+  } catch {
+    throw new Error('Could not reach the server. Check your network connection.');
+  }
+
+  const rawBody = await response.text();
+  let payload: unknown = null;
+  if (rawBody.length > 0) {
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      payload = rawBody;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(resolveErrorMessage(response.status, extractServerMessage(payload)));
+  }
+}
+
 export async function respondToKickback(request: RespondToKickbackRequest): Promise<void> {
   let response: Response;
   const headers = await getKickbackHeaders();

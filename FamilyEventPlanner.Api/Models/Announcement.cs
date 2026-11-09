@@ -23,5 +23,9 @@ namespace FamilyEventPlanner.Api.Models
         public DateTime CreatedAt { get; set; }
 
         public DateTime? ExpiresAt { get; set; }
+
+        public bool ExpirationExtended { get; set; }
+
+        public bool ExpirationNotificationSent { get; set; }
     }
 }

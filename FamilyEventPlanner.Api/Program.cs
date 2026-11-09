@@ -69,6 +69,8 @@ namespace FamilyEventPlanner.Api
 
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
+            builder.Services.AddScoped<ContentExpirationProcessor>();
+            builder.Services.AddHostedService<ContentExpirationHostedService>();
             builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
             builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();
             builder.Services.AddRateLimiter(options =>
@@ -198,6 +200,18 @@ namespace FamilyEventPlanner.Api
             // Re-enable for production with proper SSL certificates
             // app.UseHttpsRedirection();
 
+            app.Use(async (context, next) =>
+            {
+                if (HttpMethods.IsGet(context.Request.Method) &&
+                    context.Request.Path == "/reset-password")
+                {
+                    context.Request.Path = "/index.html";
+                }
+
+                await next();
+            });
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
             app.UseRouting();
             app.UseCors("AllowExpo");
             app.UseRateLimiter();

@@ -564,21 +564,37 @@ namespace FamilyEventPlanner.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEvent(Guid id)
         {
-            var ev = await _context.FamilyEvents.FindAsync(id);
+            var ev = await _context.FamilyEvents.FirstOrDefaultAsync(e => e.Id == id);
             if (ev == null)
                 return NotFound(new { message = "Event not found." });
 
-            // Only allow deletion by event creator or a group admin
             var memberIdClaim = User.FindFirst("memberId")?.Value;
             if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
                 return Forbid();
 
             var member = await _context.GroupMembers.FirstOrDefaultAsync(m => m.Id == memberId && m.FamilyGroupId == ev.FamilyGroupId);
-            if (member == null)
+            if (member == null || !member.IsAdmin)
                 return Forbid();
 
-            if (ev.CreatedByMemberId != memberId && !member.IsAdmin)
-                return Forbid();
+            _context.EventAssignments.RemoveRange(await _context.EventAssignments
+                .Where(assignment => assignment.FamilyEventId == id)
+                .ToListAsync());
+            _context.EventAttendances.RemoveRange(await _context.EventAttendances
+                .Where(attendance => attendance.FamilyEventId == id)
+                .ToListAsync());
+            _context.ActivityFeed.RemoveRange(await _context.ActivityFeed
+                .Where(activity => activity.RelatedEntityType == "Event" && activity.RelatedEntityId == id)
+                .ToListAsync());
+            _context.Notifications.RemoveRange(await _context.Notifications
+                .Where(notification => notification.Link == $"/event/{id}")
+                .ToListAsync());
+            var eventPhotos = await _context.Photos.Where(photo => photo.FamilyEventId == id).ToListAsync();
+            foreach (var photo in eventPhotos)
+                photo.FamilyEventId = null;
+
+            var relatedPolls = await _context.Polls.Where(poll => poll.FamilyEventId == id).ToListAsync();
+            foreach (var poll in relatedPolls)
+                poll.FamilyEventId = null;
 
             _context.FamilyEvents.Remove(ev);
             await _context.SaveChangesAsync();

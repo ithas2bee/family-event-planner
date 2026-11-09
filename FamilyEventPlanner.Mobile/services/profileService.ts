@@ -1,9 +1,6 @@
 import { API_BASE_URL } from '@/config/api';
 import { loadSession } from '@/services/sessionService';
 
-export const PROFILE_ROLES = ['Mom', 'Dad', 'Aunt', 'Uncle', 'Cousin', 'Grandparent', 'Sibling', 'Friend', 'Other'] as const;
-export type ProfileRole = (typeof PROFILE_ROLES)[number];
-
 export type Profile = {
   name: string | null;
   email: string;
@@ -13,13 +10,34 @@ export type Profile = {
   profilePictureUrl: string | null;
   roles: string[];
   familyNames: string[];
+  communities: ProfileRoleGroup[];
 };
 
-export type ProfileUpdate = Omit<Profile, 'email' | 'familyNames'>;
+export type ProfileRoleOption = {
+  id: string;
+  name: string;
+  isDefault: boolean;
+};
 
-async function profileRequest<T>(method: 'GET' | 'PUT', body?: ProfileUpdate): Promise<T> {
+export type ProfileRoleGroup = {
+  groupId: string;
+  communityName: string;
+  roles: string[];
+  selectedRoleIds?: string[];
+  availableRoles?: ProfileRoleOption[];
+};
+
+export type MemberProfile = Omit<Profile, 'email' | 'roles' | 'familyNames'> & {
+  isOwnProfile: boolean;
+};
+
+export type ProfileUpdate = Omit<Profile, 'email' | 'familyNames' | 'roles' | 'communities'> & {
+  communityRoles: { groupId: string; roleIds: string[] }[];
+};
+
+async function profileRequest<T>(method: 'GET' | 'PUT', body?: ProfileUpdate, path = '/api/profile'): Promise<T> {
   const session = await loadSession();
-  const response = await fetch(`${API_BASE_URL}/api/profile`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: {
       Accept: 'application/json',
@@ -43,4 +61,12 @@ export function getProfile(): Promise<Profile> {
 
 export function updateProfile(profile: ProfileUpdate): Promise<Profile> {
   return profileRequest<Profile>('PUT', profile);
+}
+
+export function getCommunityMemberProfile(groupId: string, memberId: string): Promise<MemberProfile> {
+  return profileRequest<MemberProfile>(
+    'GET',
+    undefined,
+    `/api/profile/communities/${groupId}/members/${memberId}`,
+  );
 }

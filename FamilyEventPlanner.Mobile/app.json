@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FamilyEventPlanner.Mobile",
+    "name": "Huddle Up Dev",
     "slug": "family-event-planner",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.huddleup.familyeventplanner"
     },
     "android": {
-      "package": "com.huddleup.familyeventplanner",
+      "package": "com.huddleup.dev",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#F4F5F7",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -22,7 +23,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

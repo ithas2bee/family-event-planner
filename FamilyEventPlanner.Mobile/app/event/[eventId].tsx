@@ -11,9 +11,10 @@ import { ImmersiveButton } from '@/components/ui/immersive-button';
 import { ModalSheet } from '@/components/ui/modal-sheet';
 import { ScreenContainer } from '@/components/ui/screen-container';
 import { getEventAttendance, saveEventAttendance, AttendanceResponse } from '@/services/eventAttendanceService';
-import { Event, getEventById, updateEvent } from '@/services/eventService';
+import { deleteEvent, Event, getEventById, updateEvent } from '@/services/eventService';
 import { EventLocation } from '@/services/locationService';
 import { GroupMember, getGroupMembers } from '@/services/groupMemberService';
+import { AdminDeleteButton } from '@/components/admin-delete-button';
 import { loadSession } from '@/services/sessionService';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -27,6 +28,7 @@ export default function EventDetailsScreen() {
   const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<Event | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<string>('');
+  const [adminScope, setAdminScope] = useState<{ groupId: string; memberId: string; contentId: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -43,7 +45,8 @@ export default function EventDetailsScreen() {
   const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   useEffect(() => {
-    if (!eventId || typeof eventId !== 'string') {
+    const validEventId = Array.isArray(eventId) ? eventId[0] : eventId;
+    if (!validEventId) {
       setError('Invalid event ID.');
       setLoading(false);
       return;
@@ -51,10 +54,8 @@ export default function EventDetailsScreen() {
 
     let cancelled = false;
 
-    async function load() {
+    async function load(validEventId: string) {
       try {
-        const validEventId = Array.isArray(eventId) ? eventId[0] : eventId;
-
         const [eventData, session] = await Promise.all([
           getEventById(validEventId),
           loadSession(),
@@ -75,6 +76,11 @@ export default function EventDetailsScreen() {
           setEvent(eventData);
           setCurrentMemberId(session?.memberId || '');
           setGroupMembers(members);
+          setAdminScope({
+            groupId: eventData.familyGroupId,
+            memberId: session?.memberId ?? '',
+            contentId: validEventId,
+          });
           setAttendance(eventAttendance);
           setSelectedResponse(eventAttendance.find((item) => item.memberId === session?.memberId)?.rsvp ?? 0);
           setError(null);
@@ -90,7 +96,7 @@ export default function EventDetailsScreen() {
       }
     }
 
-    load();
+    void load(validEventId);
 
     return () => {
       cancelled = true;
@@ -103,6 +109,7 @@ export default function EventDetailsScreen() {
       .map((member) => ({
         memberId: String(member.memberId ?? '').trim(),
         memberName: String(member.displayName ?? '').trim(),
+        roleName: String(member.roleName ?? '').trim(),
       }))
       .filter((member) => member.memberId.length > 0 && member.memberName.length > 0)
       .filter((member) => {
@@ -130,6 +137,9 @@ export default function EventDetailsScreen() {
   const eventImagePresetSource = event ? getEventImagePresetSource(event.eventImagePresetKey) : undefined;
   const memberNames = new Map(
     groupMembers.map((member) => [String(member.memberId ?? ''), member.displayName?.trim() || 'Member']),
+  );
+  const memberRoles = new Map(
+    groupMembers.map((member) => [String(member.memberId ?? ''), member.roleName?.trim() || '']),
   );
   const attendees = attendance
     .map((item) => ({
@@ -416,22 +426,36 @@ export default function EventDetailsScreen() {
               <MaterialIcons name="chevron-right" size={20} color="#8A9AAF" />
             </Pressable>
           ) : null}
+          {adminScope?.groupId === event.familyGroupId &&
+          adminScope.memberId === currentMemberId &&
+          adminScope.contentId === String(Array.isArray(eventId) ? eventId[0] : eventId) &&
+          groupMembers.some((member) => member.memberId === currentMemberId && member.isAdmin) ? (
+            <AdminDeleteButton
+              contentType="Event"
+              onDelete={() => deleteEvent(event.id)}
+              onDeleted={() => router.back()}
+            />
+          ) : null}
         </View>
 
         {(event.assignments?.length ?? 0) > 0 ? (
           <View style={styles.assignmentsSection}>
             <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Assignments</ThemedText>
-            {event.assignments?.map((assignment, index) => (
-              <View key={`${assignment.memberName}-${index}`} style={styles.assignmentRow}>
-                <View style={styles.assignmentIcon}>
-                  <MaterialIcons name="assignment" size={16} color="#087AC5" />
+            {event.assignments?.map((assignment, index) => {
+              const roleName = assignment.memberId ? memberRoles.get(assignment.memberId) : '';
+              return (
+                <View key={`${assignment.memberName}-${index}`} style={styles.assignmentRow}>
+                  <View style={styles.assignmentIcon}>
+                    <MaterialIcons name="assignment" size={16} color="#087AC5" />
+                  </View>
+                  <View style={styles.assignmentCopy}>
+                    <ThemedText style={styles.assignmentName}>{assignment.memberName}</ThemedText>
+                    {roleName ? <ThemedText style={styles.assignmentRole}>{roleName}</ThemedText> : null}
+                    <ThemedText style={styles.assignmentTask}>{assignment.task}</ThemedText>
+                  </View>
                 </View>
-                <View style={styles.assignmentCopy}>
-                  <ThemedText style={styles.assignmentName}>{assignment.memberName}</ThemedText>
-                  <ThemedText style={styles.assignmentTask}>{assignment.task}</ThemedText>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         ) : null}
 
@@ -642,7 +666,9 @@ export default function EventDetailsScreen() {
                                 setActiveAssignmentIndex(null);
                               }}
                             >
-                              <ThemedText style={styles.suggestionText}>{member.memberName}</ThemedText>
+                              <ThemedText style={styles.suggestionText}>
+                                {member.memberName}{member.roleName ? ` · ${member.roleName}` : ''}
+                              </ThemedText>
                             </Pressable>
                           ))}
                         </View>
@@ -1076,6 +1102,10 @@ const styles = StyleSheet.create({
   },
   assignmentTask: {
     color: '#6B7A90',
+    fontSize: Typography.sizes.xs,
+  },
+  assignmentRole: {
+    color: '#087AC5',
     fontSize: Typography.sizes.xs,
   },
   section: {

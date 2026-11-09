@@ -18,6 +18,11 @@ namespace FamilyEventPlanner.Api.Models
 
         public bool IsAdmin { get; set; }
 
+        public Guid? CommunityRoleId { get; set; }
+        public CommunityRole? CommunityRole { get; set; }
+
+        public ICollection<CommunityRoleAssignment> CommunityRoleAssignments { get; set; } = new List<CommunityRoleAssignment>();
+
         public DateTime JoinedAt { get; set; }
 
         /// <summary>

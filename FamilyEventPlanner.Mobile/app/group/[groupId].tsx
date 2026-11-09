@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -83,9 +83,9 @@ export default function GroupDetailsScreen() {
     }
   }, [contextGroupId, contextMemberId, groupId, params.memberId]);
 
-  useEffect(() => {
-    void loadDetails();
-  }, [loadDetails]);
+  useFocusEffect(useCallback(() => {
+    void Promise.resolve().then(loadDetails);
+  }, [loadDetails]));
 
   function toggleGroupSwitch() {
     setSwitchGroupOpen((open) => !open);
@@ -338,6 +338,13 @@ export default function GroupDetailsScreen() {
                   {details.description?.trim() || 'No description yet.'}
                 </ThemedText>
               )}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push({ pathname: '/group-roles', params: { groupId, memberId: currentMemberId } })}
+                style={styles.secondaryButton}
+              >
+                <ThemedText style={styles.secondaryButtonText}>Community roles</ThemedText>
+              </Pressable>
               {details.isAdmin ? (
                 <View style={styles.buttonRow}>
                   {editingDescription ? (
@@ -371,7 +378,9 @@ export default function GroupDetailsScreen() {
                       <View style={styles.memberIcon}><ThemedText style={styles.initial}>{name[0]?.toUpperCase() ?? '?'}</ThemedText></View>
                       <View style={styles.memberCopy}>
                         <ThemedText type="defaultSemiBold" style={styles.memberName}>{name}</ThemedText>
-                        <ThemedText style={styles.memberRole}>{member.isAdmin ? 'Admin' : 'Member'}</ThemedText>
+                        <ThemedText style={styles.memberRole}>
+                          {member.isAdmin ? 'Admin' : 'Member'}{member.roleName ? ` · ${member.roleName}` : ''}
+                        </ThemedText>
                       </View>
                       {details.isAdmin && member.memberId ? (
                         isOnlyAdmin ? (
