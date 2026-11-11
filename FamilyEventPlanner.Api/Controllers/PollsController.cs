@@ -59,6 +59,7 @@ namespace FamilyEventPlanner.Api.Controllers
             if (member == null)
                 return Forbid();
 
+            var now = DateTime.UtcNow;
             var poll = new Poll
             {
                 Id = Guid.NewGuid(),
@@ -66,10 +67,10 @@ namespace FamilyEventPlanner.Api.Controllers
                 FamilyGroupId = request.FamilyGroupId,
                 Question = request.Question,
                 CreatedByMemberId = memberId,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = now,
                 ExpiresAt = request.DurationHours.HasValue
-                    ? DateTime.UtcNow.AddHours(request.DurationHours.Value)
-                    : null
+                    ? now.AddHours(request.DurationHours.Value)
+                    : now.AddDays(14)
             };
 
             foreach (var optText in request.Options)
@@ -166,7 +167,7 @@ namespace FamilyEventPlanner.Api.Controllers
             pageSize = Math.Clamp(pageSize, 1, 100);
 
             var polls = await _context.Polls
-                .Where(p => p.FamilyGroupId == familyGroupId)
+                .Where(p => p.FamilyGroupId == familyGroupId && p.ExpiresAt.HasValue && p.ExpiresAt.Value > DateTime.UtcNow)
                 .Include(p => p.Options)
                 .OrderByDescending(p => p.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
@@ -224,7 +225,9 @@ namespace FamilyEventPlanner.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var poll = await _context.Polls.Include(p => p.Options).FirstOrDefaultAsync(p => p.Id == id);
+            var poll = await _context.Polls
+                .Include(p => p.Options)
+                .FirstOrDefaultAsync(p => p.Id == id && p.ExpiresAt.HasValue && p.ExpiresAt.Value > DateTime.UtcNow);
             if (poll == null)
                 return NotFound(new { message = "Poll not found." });
             var memberIdClaim = User.FindFirst("memberId")?.Value;
@@ -273,6 +276,40 @@ namespace FamilyEventPlanner.Api.Controllers
             return Ok(resp);
         }
 
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var poll = await _context.Polls.FirstOrDefaultAsync(p => p.Id == id);
+            if (poll == null)
+                return NotFound(new { message = "Poll not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+
+            var member = await _context.GroupMembers.FirstOrDefaultAsync(
+                m => m.Id == memberId && m.FamilyGroupId == poll.FamilyGroupId);
+            if (member == null || !member.IsAdmin)
+                return Forbid();
+
+            var options = await _context.PollOptions.Where(option => option.PollId == id).ToListAsync();
+            var optionIds = options.Select(option => option.Id).ToList();
+            _context.PollVotes.RemoveRange(await _context.PollVotes
+                .Where(vote => optionIds.Contains(vote.PollOptionId))
+                .ToListAsync());
+            _context.PollOptions.RemoveRange(options);
+            _context.ActivityFeed.RemoveRange(await _context.ActivityFeed
+                .Where(activity => activity.RelatedEntityType == "Poll" && activity.RelatedEntityId == id)
+                .ToListAsync());
+            _context.Notifications.RemoveRange(await _context.Notifications
+                .Where(notification => notification.Link == $"/poll/{id}")
+                .ToListAsync());
+            _context.Polls.Remove(poll);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         // POST: api/polls/vote
         [HttpPost("vote")]
         public async Task<IActionResult> Vote([FromBody] VoteRequest request)
@@ -293,7 +330,7 @@ namespace FamilyEventPlanner.Api.Controllers
             if (!isMember)
                 return Forbid();
 
-            if (option.Poll.ExpiresAt.HasValue && option.Poll.ExpiresAt.Value <= DateTime.UtcNow)
+            if (!option.Poll.ExpiresAt.HasValue || option.Poll.ExpiresAt.Value <= DateTime.UtcNow)
                 return BadRequest(new { message = "This poll has expired and is no longer accepting votes." });
 
             // Ensure one vote per member per poll
@@ -327,6 +364,46 @@ namespace FamilyEventPlanner.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { vote.Id, vote.PollOptionId, vote.MemberId, vote.CreatedAt });
+        }
+
+        [HttpPost("{id}/extend")]
+        public async Task<IActionResult> ExtendExpiration(Guid id)
+        {
+            var poll = await _context.Polls.FirstOrDefaultAsync(p => p.Id == id);
+            if (poll == null)
+                return NotFound(new { message = "Poll not found." });
+
+            var memberIdClaim = User.FindFirst("memberId")?.Value;
+            if (memberIdClaim == null || !Guid.TryParse(memberIdClaim, out var memberId))
+                return Forbid();
+            if (poll.CreatedByMemberId != memberId)
+                return Forbid();
+            if (!poll.ExpiresAt.HasValue || poll.ExpiresAt.Value <= DateTime.UtcNow)
+                return BadRequest(new { message = "This poll has expired." });
+            if (!poll.ExpirationNotificationSent)
+                return BadRequest(new { message = "The expiration notification has not been sent." });
+            if (poll.ExpirationExtended)
+                return Conflict(new { message = "This poll has already been extended." });
+
+            poll.ExpiresAt = poll.ExpiresAt.Value.AddHours(48);
+            poll.ExpirationExtended = true;
+            var notification = await _context.Notifications.FirstOrDefaultAsync(n =>
+                n.MemberId == memberId && n.Type == "PollExpiring" && n.Link == $"/poll/{poll.Id}");
+            if (notification != null)
+            {
+                notification.Type = "PollExpirationExtended";
+                notification.Message = $"Your poll \"{poll.Question}\" was extended by 48 hours.";
+            }
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Conflict(new { message = "This poll has already been extended." });
+            }
+
+            return Ok(new { poll.ExpiresAt });
         }
     }
 }

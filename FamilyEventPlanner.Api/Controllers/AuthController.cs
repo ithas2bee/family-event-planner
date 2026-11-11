@@ -22,6 +22,7 @@ namespace FamilyEventPlanner.Api.Controllers
         private readonly ITokenService _tokenService;
         private readonly IEmailSender _emailSender;
         private readonly string _passwordResetUrl;
+        private readonly string? _passwordResetWebUrl;
         private readonly int _maxRegisteredAccounts;
         private readonly PasswordHasher<User> _passwordHasher = new();
 
@@ -36,6 +37,11 @@ namespace FamilyEventPlanner.Api.Controllers
             _emailSender = emailSender;
             _passwordResetUrl = configuration["PasswordReset:DeepLinkUrl"] ??
                 "familyeventplannermobile://reset-password";
+            var passwordResetWebUrl = configuration["PasswordReset:WebUrl"];
+            _passwordResetWebUrl = Uri.TryCreate(passwordResetWebUrl, UriKind.Absolute, out var webUrl) &&
+                                   webUrl.Scheme == Uri.UriSchemeHttps
+                ? passwordResetWebUrl
+                : null;
             _maxRegisteredAccounts = configuration.GetValue<int?>("Registration:MaxAccounts") ?? 100;
             if (_maxRegisteredAccounts < 1)
             {
@@ -211,13 +217,20 @@ namespace FamilyEventPlanner.Api.Controllers
                 return Ok(new { message = confirmation });
             }
 
-            var resetLink = $"{_passwordResetUrl}?token={Uri.EscapeDataString(resetToken)}";
+            var resetLink = AddResetToken(_passwordResetUrl, resetToken);
+            var emailBody = $"Use this link within 30 minutes to reset your Huddle Up password:\n\n{resetLink}";
+            if (_passwordResetWebUrl is not null)
+            {
+                var webResetLink = AddResetToken(_passwordResetWebUrl, resetToken);
+                emailBody += $"\n\nIf Huddle Up does not open, reset your password in a browser:\n\n{webResetLink}";
+            }
+
             try
             {
                 await _emailSender.SendAsync(
                     user.Email,
                     "Reset your Huddle Up password",
-                    $"Use this link within 30 minutes to reset your Huddle Up password:\n\n{resetLink}\n\nIf you did not request a password reset, you can ignore this email.");
+                    $"{emailBody}\n\nIf you did not request a password reset, you can ignore this email.");
             }
             catch
             {
@@ -291,6 +304,18 @@ namespace FamilyEventPlanner.Api.Controllers
         private static string HashResetToken(string token)
         {
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
+        }
+
+        private static string AddResetToken(string baseUrl, string token)
+        {
+            var fragmentIndex = baseUrl.IndexOf('#');
+            var fragment = fragmentIndex >= 0 ? baseUrl[fragmentIndex..] : string.Empty;
+            var url = fragmentIndex >= 0 ? baseUrl[..fragmentIndex] : baseUrl;
+            var separator = url.Contains('?')
+                ? url.EndsWith('?') || url.EndsWith('&') ? string.Empty : "&"
+                : "?";
+            var tokenParameter = $"token={Uri.EscapeDataString(token)}";
+            return $"{url}{separator}{tokenParameter}{fragment}";
         }
 
         private static bool FixedTimeEquals(string left, string right)

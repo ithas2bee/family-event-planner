@@ -6,21 +6,25 @@
 - Expected response: HTTP 200, `{"status":"ready"}`
 - API container: `huddleup-api-1`
 - SQL container: `huddleup-sqlserver-1`
-- Compose directory: `~/Development/Sites/HuddleUp/FamilyEventPlanner.Api`
+- Repository root: `~/Development/Sites/HuddleUp/family-event-planner`
+- Compose file: `FamilyEventPlanner.Api/compose.yaml`
 
 ## Check API and SQL health
 ```bash
-docker compose ps
+cd ~/Development/Sites/HuddleUp/family-event-planner
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml ps
 curl -i https://api-dev.huddleupmobileapp.com/health/ready
 ```
 
 ## Recent API logs
 ```bash
-docker compose logs --tail=80 api
+cd ~/Development/Sites/HuddleUp/family-event-planner
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml logs --tail=80 api
 ```
 
 ## Check for the known shell override
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 printenv ConnectionStrings__DefaultConnection >/dev/null \\
   && echo "Shell override exists" \\
   || echo "No shell override"
@@ -28,6 +32,7 @@ printenv ConnectionStrings__DefaultConnection >/dev/null \\
 
 If incorrect:
 ```bash
+cd ~/Development/Sites/HuddleUp/family-event-planner
 unset ConnectionStrings__DefaultConnection
 ```
 
@@ -35,14 +40,16 @@ Then run the safe Compose configuration check in `02-docker-compose-connection-s
 
 ## Recreate only the API after verifying config
 ```bash
-docker compose up -d --force-recreate api
-docker compose ps
+cd ~/Development/Sites/HuddleUp/family-event-planner
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml up -d --force-recreate api
+docker compose --env-file FamilyEventPlanner.Api/.env -f FamilyEventPlanner.Api/compose.yaml ps
 ```
 
 ## Android EAS development APK
-From `FamilyEventPlanner.Mobile` in an authenticated environment:
+From the repository root in an authenticated environment:
 
 ```bash
+cd FamilyEventPlanner.Mobile
 npm ci
 npx eas-cli build --platform android --profile development
 ```

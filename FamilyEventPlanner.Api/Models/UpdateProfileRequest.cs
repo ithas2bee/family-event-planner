@@ -20,4 +20,6 @@ public sealed class UpdateProfileRequest
     public string? ProfilePictureUrl { get; init; }
 
     public List<string>? Roles { get; init; }
+
+    public List<ProfileCommunityRolesUpdateRequest>? CommunityRoles { get; init; }
 }

@@ -161,6 +161,10 @@ export default function MembersScreen() {
                     key={member.memberId ?? `${name}-${index}`}
                     accessibilityLabel={`View ${name}`}
                     accessibilityRole="button"
+                    onPress={() => member.memberId && router.push({
+                      pathname: '/profile',
+                      params: { groupId: groupIdValue, memberId: member.memberId },
+                    })}
                     style={styles.memberCard}
                   >
                     <View style={[styles.avatar, { backgroundColor: palette.background }]}>
@@ -174,6 +178,9 @@ export default function MembersScreen() {
                       </ThemedText>
                       <ThemedText style={styles.memberRole}>
                         {member.isAdmin ? 'Admin' : 'Member'}
+                        {(member.roleNames?.length ? member.roleNames.join(', ') : member.roleName)
+                          ? ` · ${member.roleNames?.length ? member.roleNames.join(', ') : member.roleName}`
+                          : ''}
                       </ThemedText>
                     </View>
                     <MaterialIcons name="chevron-right" size={32} color="#7185A0" />

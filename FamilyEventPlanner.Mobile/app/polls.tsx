@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router/react-navigation';
+import { useCallback, useEffect, useState } from 'react';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
@@ -22,10 +23,9 @@ function isPollClosed(poll: Poll): boolean {
 }
 
 export default function PollsScreen() {
-  const { groupId, memberId, refreshToken } = useLocalSearchParams<{
+  const { groupId, memberId } = useLocalSearchParams<{
     groupId: string;
     memberId: string;
-    refreshToken?: string;
   }>();
   const {
     groupId: contextGroupId,
@@ -36,8 +36,6 @@ export default function PollsScreen() {
   } = useActiveGroupContext();
   const groupIdValue = String(groupId ?? contextGroupId ?? '');
   const memberIdValue = String(memberId ?? contextMemberId ?? '');
-  const refreshTokenValue = String(refreshToken ?? '');
-
   const [polls, setPolls] = useState<Poll[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +57,7 @@ export default function PollsScreen() {
     void setActiveGroup(update);
   }, [groupId, memberId, setActiveGroup]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let cancelled = false;
 
     async function refreshPolls() {
@@ -98,7 +96,7 @@ export default function PollsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [groupIdValue, memberIdValue, refreshTokenValue, isReady, isResolvingMember]);
+  }, [groupIdValue, memberIdValue, isReady, isResolvingMember]));
 
   const visiblePolls = polls.filter((poll) => {
     if (filter === 'Active') return !isPollClosed(poll);
@@ -152,7 +150,7 @@ export default function PollsScreen() {
               onPress={() =>
                 router.push({
                   pathname: COMMUNITY_HOME_ROUTES.pollDetails,
-                  params: { pollId: item.id },
+                  params: { pollId: item.id, groupId: groupIdValue, memberId: memberIdValue },
                 })
               }
               accessibilityRole="button"

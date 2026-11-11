@@ -26,6 +26,10 @@ namespace FamilyEventPlanner.Api.Models
 
         public DateTime? ExpiresAt { get; set; }
 
+        public bool ExpirationExtended { get; set; }
+
+        public bool ExpirationNotificationSent { get; set; }
+
         public List<PollOption> Options { get; set; } = new();
     }
 }

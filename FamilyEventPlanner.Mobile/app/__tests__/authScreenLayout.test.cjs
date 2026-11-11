@@ -8,6 +8,7 @@ const layoutSource = fs.readFileSync(
   path.resolve(appDirectory, '../components/auth-screen-layout.tsx'),
   'utf8',
 );
+const appConfig = JSON.parse(fs.readFileSync(path.resolve(appDirectory, '../app.json'), 'utf8'));
 
 test('Sign In and Create Account use the shared authentication layout', () => {
   for (const screen of ['login.tsx', 'create-account.tsx']) {
@@ -47,4 +48,10 @@ test('the shared authentication surface fills the screen and keeps form padding'
   assert.match(layoutSource, /<SafeAreaView style=\{styles\.safeArea\}>/);
   assert.match(layoutSource, /content: \{ flexGrow: 1 \}/);
   assert.match(layoutSource, /container: \{ flexGrow: 1, justifyContent: 'center', padding: 24, gap: 12 \}/);
+});
+
+test('authentication forms avoid the keyboard and scroll focused fields into view', () => {
+  assert.match(layoutSource, /<KeyboardAvoidingView[^>]*behavior=\{Platform\.OS === 'ios' \? 'padding' : 'height'\}/);
+  assert.match(layoutSource, /<ScrollView contentContainerStyle=\{styles\.content\} keyboardShouldPersistTaps="handled">/);
+  assert.equal(appConfig.expo.android.softwareKeyboardLayoutMode, 'resize');
 });

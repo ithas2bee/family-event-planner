@@ -81,9 +81,11 @@ public sealed class ResendEmailSender : IEmailSender
             .Select(line => line.TrimEnd('\r'))
             .Select(line =>
             {
-                if (Uri.TryCreate(line, UriKind.Absolute, out _))
+                if (Uri.TryCreate(line, UriKind.Absolute, out var uri) &&
+                    uri.Scheme == Uri.UriSchemeHttps &&
+                    !string.IsNullOrWhiteSpace(uri.Host))
                 {
-                    var encodedUrl = WebUtility.HtmlEncode(line);
+                    var encodedUrl = WebUtility.HtmlEncode(uri.AbsoluteUri);
                     return $"<a href=\"{encodedUrl}\" style=\"display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;\">Reset Password</a>";
                 }
 

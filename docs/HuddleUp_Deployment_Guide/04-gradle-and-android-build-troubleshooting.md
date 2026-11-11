@@ -12,14 +12,14 @@ If local Gradle setup is troublesome and the project is configured for EAS, use 
 ## Capture the real error
 Do not diagnose from the final line alone. Capture the first meaningful error and the task that failed.
 
-From the mobile project directory, run:
+From the repository root, enter the mobile project directory and run:
 
 ```bash
 cd FamilyEventPlanner.Mobile
 npx expo-doctor
 ```
 
-If the project has an `android/` directory and Gradle wrapper, run the wrapper's `--stacktrace` option against the failing task. Use the wrapper in the project rather than installing an arbitrary global Gradle version.
+If the project has an `android/` directory and Gradle wrapper, enter that directory from the repository root and run the wrapper's `--stacktrace` option against the failing task. Use the wrapper in the project rather than installing an arbitrary global Gradle version.
 
 ```bash
 cd FamilyEventPlanner.Mobile/android
@@ -40,6 +40,8 @@ Replace `<failing-task>` with the task named in the actual error. On Windows, us
 Do not randomly upgrade Gradle, Android Gradle Plugin, Expo, React Native, or packages. Version changes can introduce more incompatibilities.
 
 ## Reproducible dependency install
+From the repository root:
+
 ```bash
 cd FamilyEventPlanner.Mobile
 npm ci
@@ -48,7 +50,10 @@ npm ci
 Keep the lockfile. Do not delete it or use `npm install` as a reflexive fix for a Gradle error.
 
 ## EAS cloud build path that succeeded
+From the repository root:
+
 ```bash
+cd FamilyEventPlanner.Mobile
 npx eas-cli build --platform android --profile development
 ```
 

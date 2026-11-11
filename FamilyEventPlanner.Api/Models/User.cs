@@ -26,7 +26,7 @@ namespace FamilyEventPlanner.Api.Models
         [MaxLength(1024)]
         public string? ProfilePictureUrl { get; set; }
 
-        // Stored as JSON so a user can have more than one family role.
+        // Legacy profile roles are retained while community roles are stored on GroupMember.
         public string? RolesJson { get; set; }
 
         public DateTime CreatedAt { get; set; }
