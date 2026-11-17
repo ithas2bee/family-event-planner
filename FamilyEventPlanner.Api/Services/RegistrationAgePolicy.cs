@@ -4,7 +4,7 @@ namespace FamilyEventPlanner.Api.Services;
 
 public sealed class RegistrationAgePolicy
 {
-    private const int MaximumPlausibleAge = 120;
+    public const int MaximumPlausibleAge = 120;
     private const string DateFormat = "yyyy-MM-dd";
 
     public RegistrationAgePolicy(int minimumAge)

@@ -4,6 +4,9 @@ Huddle Up registration requires users to be at least 14 years old. The backend
 policy is configured once in `Registration:MinimumAge` in
 `FamilyEventPlanner.Api/appsettings.json`; deployment configuration can override
 that setting without duplicating the rule in backend endpoints.
+The mobile app retrieves the current eligibility policy from
+`GET /api/auth/registration-policy` so its validation and explanatory copy use
+the same configured threshold.
 
 The mobile app collects a date of birth in `YYYY-MM-DD` format so eligibility can
 be calculated accurately at the birthday boundary. It sends the date only with

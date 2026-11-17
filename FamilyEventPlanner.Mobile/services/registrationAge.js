@@ -1,6 +1,3 @@
-const MINIMUM_REGISTRATION_AGE = 14;
-const MAXIMUM_PLAUSIBLE_AGE = 120;
-
 function parseDateOfBirth(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!match) {
@@ -19,7 +16,7 @@ function parseDateOfBirth(value) {
   return { year, month, day };
 }
 
-function getDateOfBirthError(value, now = new Date()) {
+function getDateOfBirthError(value, minimumAge, maximumAge, now = new Date()) {
   const birthDate = parseDateOfBirth(value);
   if (!birthDate) {
     return 'Enter a valid date of birth using YYYY-MM-DD.';
@@ -30,7 +27,7 @@ function getDateOfBirthError(value, now = new Date()) {
     month: now.getUTCMonth() + 1,
     day: now.getUTCDate(),
   };
-  const minimumBirthYear = currentDate.year - MAXIMUM_PLAUSIBLE_AGE;
+  const minimumBirthYear = currentDate.year - maximumAge;
   const isTooOld =
     birthDate.year < minimumBirthYear ||
     (birthDate.year === minimumBirthYear &&
@@ -45,7 +42,7 @@ function getDateOfBirthError(value, now = new Date()) {
     return 'Enter a valid date of birth using YYYY-MM-DD.';
   }
 
-  const eligibilityYear = birthDate.year + MINIMUM_REGISTRATION_AGE;
+  const eligibilityYear = birthDate.year + minimumAge;
   const eligibilityDay =
     birthDate.month === 2 &&
     birthDate.day === 29 &&
@@ -60,11 +57,11 @@ function getDateOfBirthError(value, now = new Date()) {
 
   return hasReachedEligibilityDate
     ? null
-    : 'You must be at least 14 years old to create an account.';
+    : `You must be at least ${minimumAge} years old to create an account.`;
 }
 
 function isLeapYear(year) {
   return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
 }
 
-module.exports = { MINIMUM_REGISTRATION_AGE, getDateOfBirthError };
+module.exports = { getDateOfBirthError };

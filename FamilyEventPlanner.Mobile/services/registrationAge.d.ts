@@ -1,2 +1,6 @@
-export const MINIMUM_REGISTRATION_AGE: number;
-export function getDateOfBirthError(value: string, now?: Date): string | null;
+export function getDateOfBirthError(
+  value: string,
+  minimumAge: number,
+  maximumAge: number,
+  now?: Date,
+): string | null;

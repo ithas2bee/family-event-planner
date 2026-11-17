@@ -105,6 +105,18 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public void RegistrationPolicyReturnsTheConfiguredMinimumAge()
+    {
+        var result = Assert.IsType<OkObjectResult>(
+            CreateController(CreateContext(), minimumAge: 16).GetRegistrationPolicy());
+
+        Assert.Equal(16, result.Value!.GetType().GetProperty("minimumAge")!.GetValue(result.Value));
+        Assert.Equal(
+            RegistrationAgePolicy.MaximumPlausibleAge,
+            result.Value.GetType().GetProperty("maximumAge")!.GetValue(result.Value));
+    }
+
+    [Fact]
     public async Task RegisterRejectsAnUnderageDateOfBirthEvenWhenCalledDirectly()
     {
         await using var context = CreateContext();
@@ -398,7 +410,8 @@ public class AuthControllerTests
         AppDbContext context,
         TestEmailSender? emailSender = null,
         int registrationLimit = 100,
-        string? passwordResetWebUrl = null)
+        string? passwordResetWebUrl = null,
+        int minimumAge = 14)
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -406,7 +419,7 @@ public class AuthControllerTests
                 ["PasswordReset:DeepLinkUrl"] = "familyeventplannermobile://reset-password",
                 ["PasswordReset:WebUrl"] = passwordResetWebUrl,
                 ["Registration:MaxAccounts"] = registrationLimit.ToString(),
-                ["Registration:MinimumAge"] = "14"
+                ["Registration:MinimumAge"] = minimumAge.ToString()
             })
             .Build();
         return new AuthController(context, new TestTokenService(), emailSender ?? new TestEmailSender(), configuration);

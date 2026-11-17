@@ -54,6 +54,14 @@ namespace FamilyEventPlanner.Api.Controllers
             _registrationAgePolicy = new RegistrationAgePolicy(minimumAge);
         }
 
+        [HttpGet("registration-policy")]
+        public IActionResult GetRegistrationPolicy() =>
+            Ok(new
+            {
+                minimumAge = _registrationAgePolicy.MinimumAge,
+                maximumAge = RegistrationAgePolicy.MaximumPlausibleAge
+            });
+
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
