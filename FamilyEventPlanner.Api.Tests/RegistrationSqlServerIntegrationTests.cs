@@ -157,12 +157,29 @@ public class RegistrationSqlServerIntegrationTests
                 var server = application.Services.GetRequiredService<IServer>();
                 var address = server.Features.Get<IServerAddressesFeature>()!.Addresses.Single();
                 using var client = new HttpClient { BaseAddress = new Uri(address) };
+                var underageDateOfBirth = DateOnly.FromDateTime(DateTime.UtcNow)
+                    .AddYears(-14)
+                    .AddDays(1)
+                    .ToString("yyyy-MM-dd");
+                var underageResponse = await client.PostAsJsonAsync("/api/auth/register", new
+                {
+                    email = "underage-registration@example.com",
+                    displayName = "Underage User",
+                    password = "Password1!",
+                    dateOfBirth = underageDateOfBirth
+                });
+                Assert.Equal(HttpStatusCode.BadRequest, underageResponse.StatusCode);
+                var underageError = await underageResponse.Content.ReadAsStringAsync();
+                Assert.DoesNotContain(underageDateOfBirth, underageError);
+                underageResponse.Dispose();
+
                 var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(index =>
                     client.PostAsJsonAsync("/api/auth/register", new
                     {
                         email = $"registration-attempt-{index}@example.com",
                         displayName = $"New User {index}",
-                        password = "Password1!"
+                        password = "Password1!",
+                        dateOfBirth = "1990-01-01"
                     })));
 
                 Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
@@ -209,7 +226,8 @@ public class RegistrationSqlServerIntegrationTests
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Registration:MaxAccounts"] = "100"
+            ["Registration:MaxAccounts"] = "100",
+            ["Registration:MinimumAge"] = "14"
         });
         builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
         builder.Services.AddSingleton<ITokenService, TestTokenService>();

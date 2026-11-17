@@ -24,6 +24,7 @@ namespace FamilyEventPlanner.Api.Controllers
         private readonly string _passwordResetUrl;
         private readonly string? _passwordResetWebUrl;
         private readonly int _maxRegisteredAccounts;
+        private readonly RegistrationAgePolicy _registrationAgePolicy;
         private readonly PasswordHasher<User> _passwordHasher = new();
 
         public AuthController(
@@ -47,13 +48,41 @@ namespace FamilyEventPlanner.Api.Controllers
             {
                 throw new InvalidOperationException("Registration:MaxAccounts must be greater than zero.");
             }
+
+            var minimumAge = configuration.GetValue<int?>("Registration:MinimumAge")
+                ?? throw new InvalidOperationException("Registration:MinimumAge must be configured.");
+            _registrationAgePolicy = new RegistrationAgePolicy(minimumAge);
         }
+
+        [HttpGet("registration-policy")]
+        public IActionResult GetRegistrationPolicy() =>
+            Ok(new
+            {
+                minimumAge = _registrationAgePolicy.MinimumAge,
+                maximumAge = RegistrationAgePolicy.MaximumPlausibleAge
+            });
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             try
             {
+                if (!_registrationAgePolicy.TryParseDateOfBirth(request.DateOfBirth, out var dateOfBirth))
+                {
+                    return BadRequest(new { message = "Enter a valid date of birth." });
+                }
+
+                var currentDate = DateOnly.FromDateTime(DateTime.UtcNow);
+                if (!_registrationAgePolicy.IsValidDateOfBirth(dateOfBirth, currentDate))
+                {
+                    return BadRequest(new { message = "Enter a valid date of birth." });
+                }
+
+                if (!_registrationAgePolicy.IsEligible(dateOfBirth, currentDate))
+                {
+                    return BadRequest(new { message = "You must meet Huddle Up's minimum age requirement to register." });
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);

@@ -14,5 +14,7 @@ namespace FamilyEventPlanner.Api.Models.Auth
         [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).+$",
             ErrorMessage = "Password must be at least 8 characters and include a letter, number, and symbol.")]
         public string Password { get; set; }
+
+        public string? DateOfBirth { get; set; }
     }
 }

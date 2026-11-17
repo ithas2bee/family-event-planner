@@ -41,6 +41,7 @@ services:
       Jwt__Secret: "${JWT_SECRET:?Set a unique 32-byte-or-longer JWT secret in .env}"
       Jwt__Issuer: "${JWT_ISSUER:-FamilyEventPlanner.Api}"
       Jwt__Audience: "${JWT_AUDIENCE:-FamilyEventPlanner.Mobile}"
+      Registration__MinimumAge: "${REGISTRATION_MINIMUM_AGE:-14}"
       GooglePlaces__ApiKey: "${GOOGLE_PLACES_API_KEY:-}"
       RESEND_API_KEY: "${RESEND_API_KEY:-}"
       Email__FromAddress: "${EMAIL_FROM_ADDRESS:-}"

@@ -4,6 +4,12 @@ export type RegisterRequest = {
   email: string;
   password: string;
   displayName: string;
+  dateOfBirth: string;
+};
+
+export type RegistrationPolicy = {
+  minimumAge: number;
+  maximumAge: number;
 };
 
 export type LoginRequest = {
@@ -152,6 +158,41 @@ async function postRecovery<TRequest>(endpoint: string, payload: TRequest): Prom
 
 export async function registerUser(request: RegisterRequest): Promise<AuthUserResponse> {
   return postAuth('/api/auth/register', request);
+}
+
+export async function getRegistrationPolicy(): Promise<RegistrationPolicy> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/api/auth/registration-policy`, {
+      headers: { Accept: 'application/json' },
+    });
+  } catch {
+    throw new Error('Unable to load registration requirements. Check your network connection.');
+  }
+
+  if (!response.ok) {
+    throw new Error('Unable to load registration requirements. Please try again later.');
+  }
+
+  let policy: unknown;
+  try {
+    policy = await response.json();
+  } catch {
+    throw new Error('Unable to load registration requirements. Please try again later.');
+  }
+
+  if (
+    typeof policy !== 'object' ||
+    policy === null ||
+    !Number.isInteger((policy as RegistrationPolicy).minimumAge) ||
+    !Number.isInteger((policy as RegistrationPolicy).maximumAge) ||
+    (policy as RegistrationPolicy).minimumAge < 1 ||
+    (policy as RegistrationPolicy).maximumAge < (policy as RegistrationPolicy).minimumAge
+  ) {
+    throw new Error('Unable to load registration requirements. Please try again later.');
+  }
+
+  return policy as RegistrationPolicy;
 }
 
 export async function loginUser(request: LoginRequest): Promise<AuthUserResponse> {
