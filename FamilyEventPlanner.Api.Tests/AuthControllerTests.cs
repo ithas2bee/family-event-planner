@@ -123,6 +123,22 @@ public class AuthControllerTests
         Assert.DoesNotContain(request.DateOfBirth!, GetMessage(result));
     }
 
+    [Fact]
+    public async Task RegisterAllowsAUserOnTheirFourteenthBirthday()
+    {
+        await using var context = CreateContext();
+        var currentDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        var request = CreateRegisterRequest(
+            "fourteen@example.com",
+            currentDate.AddYears(-14).ToString("yyyy-MM-dd"));
+
+        var result = await CreateController(context).Register(request);
+
+        Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Single(context.Users);
+        Assert.Null(context.Users.Single().Age);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

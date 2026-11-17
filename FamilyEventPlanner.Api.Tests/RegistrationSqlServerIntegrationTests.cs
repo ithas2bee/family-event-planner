@@ -157,6 +157,22 @@ public class RegistrationSqlServerIntegrationTests
                 var server = application.Services.GetRequiredService<IServer>();
                 var address = server.Features.Get<IServerAddressesFeature>()!.Addresses.Single();
                 using var client = new HttpClient { BaseAddress = new Uri(address) };
+                var underageDateOfBirth = DateOnly.FromDateTime(DateTime.UtcNow)
+                    .AddYears(-14)
+                    .AddDays(1)
+                    .ToString("yyyy-MM-dd");
+                var underageResponse = await client.PostAsJsonAsync("/api/auth/register", new
+                {
+                    email = "underage-registration@example.com",
+                    displayName = "Underage User",
+                    password = "Password1!",
+                    dateOfBirth = underageDateOfBirth
+                });
+                Assert.Equal(HttpStatusCode.BadRequest, underageResponse.StatusCode);
+                var underageError = await underageResponse.Content.ReadAsStringAsync();
+                Assert.DoesNotContain(underageDateOfBirth, underageError);
+                underageResponse.Dispose();
+
                 var responses = await Task.WhenAll(Enumerable.Range(0, 10).Select(index =>
                     client.PostAsJsonAsync("/api/auth/register", new
                     {
