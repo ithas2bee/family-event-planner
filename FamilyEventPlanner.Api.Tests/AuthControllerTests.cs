@@ -105,6 +105,65 @@ public class AuthControllerTests
     }
 
     [Fact]
+    public async Task RegisterRejectsAnUnderageDateOfBirthEvenWhenCalledDirectly()
+    {
+        await using var context = CreateContext();
+        var controller = CreateController(context);
+        var currentDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        var request = CreateRegisterRequest(
+            "underage@example.com",
+            currentDate.AddYears(-14).AddDays(1).ToString("yyyy-MM-dd"));
+
+        var result = Assert.IsType<BadRequestObjectResult>(await controller.Register(request));
+
+        Assert.Equal(
+            "You must meet Huddle Up's minimum age requirement to register.",
+            GetMessage(result));
+        Assert.Empty(context.Users);
+        Assert.DoesNotContain(request.DateOfBirth!, GetMessage(result));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not-a-date")]
+    [InlineData("2012-02-30")]
+    [InlineData("2027-01-01")]
+    [InlineData("1890-01-01")]
+    public async Task RegisterRejectsMissingMalformedAndImpossibleDateOfBirth(string? dateOfBirth)
+    {
+        await using var context = CreateContext();
+        var controller = CreateController(context);
+        var request = CreateRegisterRequest("invalid@example.com");
+        request.DateOfBirth = dateOfBirth;
+
+        var result = Assert.IsType<BadRequestObjectResult>(
+            await controller.Register(request));
+
+        Assert.Equal("Enter a valid date of birth.", GetMessage(result));
+        Assert.Empty(context.Users);
+    }
+
+    [Fact]
+    public async Task ExistingAccountWithoutAgeCanStillLogIn()
+    {
+        const string password = "secure-password";
+        await using var context = CreateContext();
+        var user = AddUser(context, null, "existing@example.com");
+        user.PasswordHash = new PasswordHasher<User>().HashPassword(user, password);
+        await context.SaveChangesAsync();
+
+        var result = await CreateController(context).Login(new LoginRequest
+        {
+            Email = user.Email,
+            Password = password
+        });
+
+        Assert.IsType<OkObjectResult>(result);
+        Assert.Null(user.Age);
+    }
+
+    [Fact]
     public async Task RegisterRejectsAnAccountWhenConfiguredLimitIsReached()
     {
         await using var context = CreateContext();
@@ -330,7 +389,8 @@ public class AuthControllerTests
             {
                 ["PasswordReset:DeepLinkUrl"] = "familyeventplannermobile://reset-password",
                 ["PasswordReset:WebUrl"] = passwordResetWebUrl,
-                ["Registration:MaxAccounts"] = registrationLimit.ToString()
+                ["Registration:MaxAccounts"] = registrationLimit.ToString(),
+                ["Registration:MinimumAge"] = "14"
             })
             .Build();
         return new AuthController(context, new TestTokenService(), emailSender ?? new TestEmailSender(), configuration);
@@ -349,11 +409,15 @@ public class AuthControllerTests
     private static string GetMessage(ConflictObjectResult result) =>
         (string)result.Value!.GetType().GetProperty("message")!.GetValue(result.Value)!;
 
-    private static RegisterRequest CreateRegisterRequest(string email) => new()
+    private static string GetMessage(BadRequestObjectResult result) =>
+        (string)result.Value!.GetType().GetProperty("message")!.GetValue(result.Value)!;
+
+    private static RegisterRequest CreateRegisterRequest(string email, string? dateOfBirth = null) => new()
     {
         Email = email,
         DisplayName = "Test User",
-        Password = "Password1!"
+        Password = "Password1!",
+        DateOfBirth = dateOfBirth ?? DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-30).ToString("yyyy-MM-dd")
     };
 
     private static string ReadResetToken(string emailBody)

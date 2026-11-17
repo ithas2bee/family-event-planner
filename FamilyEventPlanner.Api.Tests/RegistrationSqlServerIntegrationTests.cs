@@ -162,7 +162,8 @@ public class RegistrationSqlServerIntegrationTests
                     {
                         email = $"registration-attempt-{index}@example.com",
                         displayName = $"New User {index}",
-                        password = "Password1!"
+                        password = "Password1!",
+                        dateOfBirth = "1990-01-01"
                     })));
 
                 Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
