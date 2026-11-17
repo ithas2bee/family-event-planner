@@ -226,7 +226,8 @@ public class RegistrationSqlServerIntegrationTests
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Registration:MaxAccounts"] = "100"
+            ["Registration:MaxAccounts"] = "100",
+            ["Registration:MinimumAge"] = "14"
         });
         builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
         builder.Services.AddSingleton<ITokenService, TestTokenService>();
