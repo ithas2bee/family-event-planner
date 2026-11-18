@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Reflection;
 using FamilyEventPlanner.Api.Constants;
 using FamilyEventPlanner.Api.Controllers;
 using FamilyEventPlanner.Api.Data;
@@ -7,6 +8,8 @@ using FamilyEventPlanner.Api.Models.Auth;
 using FamilyEventPlanner.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -217,6 +220,26 @@ public sealed class AccountDeletionTests
         Assert.IsType<OkObjectResult>(deleted);
         Assert.False(await context.Users.AnyAsync(user => user.Id == target.Id));
         Assert.True(await context.Users.AnyAsync(user => user.Id == anotherUser.Id));
+    }
+
+    [Fact]
+    public void DeleteEndpointRequiresBearerAuthenticationAndHasNoTargetIdInput()
+    {
+        var authorization = typeof(AccountDeletionController).GetCustomAttribute<AuthorizeAttribute>();
+
+        Assert.Equal(JwtBearerDefaults.AuthenticationScheme, authorization?.AuthenticationSchemes);
+        Assert.Null(typeof(DeleteAccountRequest).GetProperty("UserId"));
+    }
+
+    [Fact]
+    public async Task DeleteNeverRemovesUnknownGuestSystemIdentity()
+    {
+        await using var context = CreateContext();
+        var result = await new AccountDeletionService(context)
+            .DeleteAsync(SystemConstants.UnknownGuestUserId, "any-password", CancellationToken.None);
+
+        Assert.Equal(AccountDeletionResult.SystemAccount, result);
+        Assert.False(await context.Users.AnyAsync(user => user.Id == SystemConstants.UnknownGuestUserId));
     }
 
     [Fact]

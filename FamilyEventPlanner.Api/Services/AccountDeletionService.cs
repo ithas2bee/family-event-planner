@@ -172,17 +172,7 @@ public sealed class AccountDeletionService : IAccountDeletionService
         if (string.IsNullOrWhiteSpace(user.PasswordHash))
             return false;
 
-        byte[] decoded;
-        try
-        {
-            decoded = Convert.FromBase64String(user.PasswordHash);
-        }
-        catch (FormatException)
-        {
-            return FixedTimeEquals(user.PasswordHash, password);
-        }
-
-        if (decoded.Length >= 14 && decoded[0] == 1)
+        if (IsIdentityPasswordHash(user.PasswordHash))
         {
             try
             {
@@ -195,13 +185,42 @@ public sealed class AccountDeletionService : IAccountDeletionService
             }
         }
 
-        if (decoded.Length == 49 && decoded[0] == 0)
+        return FixedTimeEquals(user.PasswordHash, password);
+    }
+
+    private static bool IsIdentityPasswordHash(string value)
+    {
+        byte[] decoded;
+        try
         {
-            return _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password)
-                != PasswordVerificationResult.Failed;
+            decoded = Convert.FromBase64String(value);
+        }
+        catch (FormatException)
+        {
+            return false;
         }
 
-        return FixedTimeEquals(user.PasswordHash, password);
+        if (decoded.Length == 49 && decoded[0] == 0)
+            return true;
+        if (decoded.Length < 14 || decoded[0] != 1)
+            return false;
+
+        var saltLength = ReadNetworkOrderInt32(decoded, 9);
+        var prf = ReadNetworkOrderInt32(decoded, 1);
+        var iterationCount = ReadNetworkOrderInt32(decoded, 5);
+        var subkeyLength = decoded.Length - 13 - saltLength;
+        return (prf is 0 or 1 or 2) &&
+               iterationCount > 0 &&
+               saltLength > 0 &&
+               subkeyLength > 0;
+    }
+
+    private static int ReadNetworkOrderInt32(byte[] bytes, int offset)
+    {
+        return (bytes[offset] << 24) |
+               (bytes[offset + 1] << 16) |
+               (bytes[offset + 2] << 8) |
+               bytes[offset + 3];
     }
 
     private static bool FixedTimeEquals(string left, string right)
