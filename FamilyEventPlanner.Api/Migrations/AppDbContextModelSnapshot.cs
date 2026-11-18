@@ -22,6 +22,22 @@ namespace FamilyEventPlanner.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.AccountDeletionAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedAtUtc");
+
+                    b.ToTable("AccountDeletionAudits");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.ActivityFeed", b =>
                 {
                     b.Property<Guid>("Id")

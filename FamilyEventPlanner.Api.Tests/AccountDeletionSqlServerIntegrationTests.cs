@@ -55,6 +55,9 @@ public sealed class AccountDeletionSqlServerIntegrationTests
             Assert.Empty(await verifyContext.PollVotes.ToListAsync());
             Assert.Empty(await verifyContext.KickbackResponses.ToListAsync());
             Assert.Empty(await verifyContext.Notifications.Where(notification => notification.MemberId != otherMemberId).ToListAsync());
+            Assert.Equal(
+                "Keep for other member",
+                (await verifyContext.Notifications.SingleAsync()).Message);
             Assert.Null((await verifyContext.Photos.SingleAsync()).UploadedById);
             Assert.Null((await verifyContext.EventAssignments.SingleAsync()).AssignedToId);
             Assert.Empty(await verifyContext.PasswordResetTokens.ToListAsync());
