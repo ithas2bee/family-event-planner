@@ -84,7 +84,7 @@ public sealed class AccountDeletionSqlServerIntegrationTests
                 (userId, memberId, _, _, _, _) = await SeedDeletionScenarioAsync(seedContext);
             }
 
-            var failureInterceptor = new FailOnUserDeleteCommandInterceptor();
+            var failureInterceptor = new FailOnCommitInterceptor();
             var failureOptions = new DbContextOptionsBuilder<AppDbContext>()
                 .UseSqlServer(testConnectionString)
                 .AddInterceptors(failureInterceptor)
@@ -335,24 +335,19 @@ public sealed class AccountDeletionSqlServerIntegrationTests
         }
     }
 
-    private sealed class FailOnUserDeleteCommandInterceptor : DbCommandInterceptor
+    private sealed class FailOnCommitInterceptor : DbTransactionInterceptor
     {
         public bool FailureWasTriggered { get; private set; }
 
-        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
-            DbCommand command,
-            CommandEventData eventData,
-            InterceptionResult<DbDataReader> result,
+        public override ValueTask<InterceptionResult> TransactionCommittingAsync(
+            DbTransaction transaction,
+            TransactionEventData eventData,
+            InterceptionResult result,
             CancellationToken cancellationToken = default)
         {
-            if (command.CommandText.Contains("DELETE FROM [Users]", StringComparison.OrdinalIgnoreCase))
-            {
-                FailureWasTriggered = true;
-                return ValueTask.FromException<InterceptionResult<DbDataReader>>(
-                    new InvalidOperationException("Simulated failure before account deletion commit."));
-            }
-
-            return ValueTask.FromResult(result);
+            FailureWasTriggered = true;
+            return ValueTask.FromException<InterceptionResult>(
+                new InvalidOperationException("Simulated failure before account deletion commit."));
         }
     }
 }
