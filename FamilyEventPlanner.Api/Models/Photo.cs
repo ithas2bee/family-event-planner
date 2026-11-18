@@ -14,10 +14,8 @@ namespace FamilyEventPlanner.Api.Models
         public Guid? FamilyEventId { get; set; }
         public FamilyEvent? FamilyEvent { get; set; }
 
-        [Required]
-        // Use UploadedById to match EF conventions and avoid duplicate FK columns
-        public Guid UploadedById { get; set; }
-        public GroupMember UploadedBy { get; set; }
+        public Guid? UploadedById { get; set; }
+        public GroupMember? UploadedBy { get; set; }
 
         [Required, MaxLength(1024)]
         public string FilePath { get; set; }

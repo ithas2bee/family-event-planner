@@ -133,13 +133,6 @@ namespace FamilyEventPlanner.Api.Data
                 .HasForeignKey(kr => kr.MemberId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // Align naming conventions for foreign keys if necessary
-            modelBuilder.Entity<EventAssignment>()
-                .Property<Guid>("AssignedToId");  // Changed to required (not nullable)
-
-            modelBuilder.Entity<Photo>()
-                .Property<Guid>("UploadedById");
-
             // Unique constraints to enforce business rules at DB level
             modelBuilder.Entity<FamilyGroup>()
                 .HasIndex(g => g.InviteCode)

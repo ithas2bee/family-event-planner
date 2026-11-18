@@ -69,6 +69,8 @@ namespace FamilyEventPlanner.Api
 
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
+            builder.Services.AddScoped<ActiveAccountTokenValidator>();
+            builder.Services.AddScoped<IAccountDeletionService, AccountDeletionService>();
             builder.Services.AddScoped<ContentExpirationProcessor>();
             builder.Services.AddHostedService<ContentExpirationHostedService>();
             builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
@@ -121,10 +123,17 @@ namespace FamilyEventPlanner.Api
                         System.Diagnostics.Debug.WriteLine($"[JWT] Authentication failed: {context.Exception.Message}");
                         return Task.CompletedTask;
                     },
-                    OnTokenValidated = context =>
+                    OnTokenValidated = async context =>
                     {
-                        System.Diagnostics.Debug.WriteLine($"[JWT] Token validated for user: {context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value}");
-                        return Task.CompletedTask;
+                        var rawUserId = context.Principal?
+                            .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                        if (!Guid.TryParse(rawUserId, out var userId) ||
+                            !await context.HttpContext.RequestServices
+                                .GetRequiredService<ActiveAccountTokenValidator>()
+                                .IsActiveAsync(userId, context.HttpContext.RequestAborted))
+                        {
+                            context.Fail("The account is no longer active.");
+                        }
                     }
                 };
             })
