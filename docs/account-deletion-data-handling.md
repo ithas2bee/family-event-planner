@@ -1,54 +1,92 @@
 # Account deletion: data handling
 
-The authenticated `DELETE /api/account` operation implements this policy. It
-requires the current password and the exact confirmation value `DELETE`.
-The target is taken only from the JWT subject; the request has no account ID.
-The operation does not accept `X-Member-Id` authentication.
+The authenticated `DELETE /api/account` operation applies this policy. It
+requires the current email/password account password and exact confirmation
+value `DELETE`. The target comes only from the JWT subject; the request accepts
+no account ID and does not accept `X-Member-Id` authentication. No Google or
+Facebook authentication flow is implemented by this endpoint.
 
-## Deletion and retention matrix
+## Permanently deleted
 
-| Data | Handling | Retention boundary |
-| --- | --- | --- |
-| Account, credentials, email, display name, profile fields, social IDs, login timestamp | Delete the user row after removing its dependent data. The profile-picture URL is removed with the row. | No account data remains in the live application database. External copies of profile images, backups, logs, or provider records are not managed by this API. |
-| Password-reset tokens and membership requests | Explicitly delete all records for the user. | None in the live database after commit. |
-| Memberships and member role assignments | Explicitly delete memberships and role assignments. Preserve community role definitions. Never delete or repurpose the Unknown Guest user or membership. | Role definitions remain while their community exists. |
-| Last-admin membership | Block deletion with a conflict response until another administrator has been assigned. No automatic transfer or community deletion. | No retention; request must be retried after the community has another administrator. |
-| Communities and shared events | Preserve communities and events. Clear the event creator reference. | Shared content follows its existing community lifecycle; this API adds no separate account-deletion expiry. |
-| Event attendance | Delete only attendance rows belonging to the departing member. Preserve other participants. | None in the live database after commit. |
-| Event assignments | Preserve each assignment but clear the departing assignee. Change `Assigned` to `Needed`; preserve other statuses. Do not assign it to another person or to Unknown Guest. An update that omits an assignee preserves the current value. | Shared assignment remains under the event's existing community lifecycle until an authorized community action changes it. |
-| Polls and options | Preserve shared polls and options; clear poll creator references. | Poll expiration and cleanup continue under existing application behavior. |
-| Poll votes | Delete only votes belonging to the departing member. | None in the live database after commit. |
-| Announcements | Preserve announcements and clear creator references. | Existing announcement expiration and cleanup apply. |
-| Kickbacks | Preserve kickbacks and clear creator references. | Existing kickback lifecycle applies; this API adds no new expiry. |
-| Kickback responses | Delete only responses belonging to the departing member. | None in the live database after commit. |
-| Notifications | Delete notifications addressed to the departing member. | None in the live database after commit. |
-| Activity feed | Preserve activity rows, clear actor references, and remove metadata from those rows. Remove metadata containing the departing user's display name in the `displayName` field. | Existing community activity lifecycle applies; no deletion audit record is created. |
-| Shared photos and files | Preserve photo rows and `FilePath`; clear the uploader reference. The repository has no storage provider, upload/delete service, or verified `FilePath` semantics, so the API does not delete or claim to delete photo files. | Photos remain subject to the community's existing lifecycle. No separate photo expiry or storage-provider cleanup is implemented. |
-| Unknown Guest system identity | Preserve unchanged; it is never eligible for account deletion or used as a replacement identity. | Platform lifetime. |
+These account-linked records are removed in the same relational transaction
+that removes the account:
 
-Shared event, poll, announcement, kickback, assignment, and photo content is
-retained for community use, not as an account record. Existing lifecycle rules
-are the only retention boundaries available in the repository; in particular,
-the API does not define a fixed expiry for photos or events. Free-text content
-is preserved and is not automatically scanned for personal details.
+| Data | Handling and boundary |
+| --- | --- |
+| User account and identifying profile/authentication fields | Delete the user row, including email, password hash, display name, profile fields, profile-picture URL, and any legacy provider IDs on the row. |
+| Password-reset tokens and membership requests | Delete all records belonging to the account. |
+| Group memberships and member role assignments | Delete the user's memberships and role assignments. Preserve community role definitions and all other members. |
+| Event attendance | Delete only this user's attendance and RSVP records. |
+| Poll votes | Delete only votes cast by this user's memberships. Preserve polls, options, and other votes. |
+| Kickback responses | Delete only responses belonging to this user's memberships. |
+| Notifications | Delete only notifications addressed to this user's memberships. |
+
+No separate audit record is retained for denied, invalid-password, last-admin,
+or not-found requests.
+
+## Anonymized or disassociated
+
+These records remain in the database, but account/member attribution is removed:
+
+| Data | Handling |
+| --- | --- |
+| Events created by the account | Preserve the event and its participants; clear the optional creator membership reference. |
+| Polls, announcements, and kickbacks created by the account | Preserve the shared record and clear its optional creator reference. |
+| Activity feed rows created by the account's memberships | Preserve the activity row, clear its actor reference, and clear that row's metadata. Other feed rows are also checked for a JSON `displayName` value exactly matching the user's current display name; matching metadata is cleared. |
+| Event assignments | Preserve the task, clear its assignee, and change `Assigned` status to `Needed`. Never reassign it to another person or to Unknown Guest. |
+| Shared photos | Preserve each photo record, file path, and caption; set the uploader reference to null. The uploader field is nullable after the account-deletion migration. |
+
+The deletion audit table is not linked to the account or membership and does not
+store a user ID, email, display name, IP address, JWT, password, request body, or
+affected-record list. A successful deletion creates one row containing only a
+random audit ID and the UTC completion timestamp. Rows expire after **30 days**
+and are removed by the existing content-expiration processor, which runs every
+15 minutes while the API is healthy. An outage of that processor can extend
+actual removal until processing resumes. The audit is for aggregate evidence
+that deletion completed; it cannot identify which account was deleted.
+
+## Retained shared community content
+
+Communities, their other members and roles, events, polls and options,
+announcements, kickbacks, assignments, photos, and their shared files remain
+available to the community. Existing application lifecycle rules continue to
+apply; account deletion adds no new expiry to those records. A user who is the
+last administrator cannot delete the account until another administrator has
+been assigned. Communities and the reserved Unknown Guest system identity are
+never deleted or repurposed by this workflow.
+
+The repository does not establish a photo storage provider or `FilePath`
+semantics. The API therefore does not delete photo files and does not claim
+that external files have been removed. Backups, external profile-image hosting,
+provider/operational logs, and other copies outside this API database are also
+outside the deletion operation's verified boundary.
+
+## Personal information in shared text and metadata
+
+The API does **not** scan or redact personal information from free-text shared
+content. Event titles/descriptions/locations/notes, assignment titles and
+descriptions, poll questions/options, announcement titles/bodies, kickback
+vibes/notes, and photo captions are retained as community content. Users should
+not include private personal information in shared content they expect to
+remain after account deletion.
+
+Activity-feed sanitization is deliberately limited: it clears all metadata on
+the departing member's own activity rows and clears metadata on other activity
+rows only when a top-level JSON `displayName` value exactly matches the current
+display name. It does not detect aliases, changed former display names,
+identifiers embedded in other metadata values, malformed/non-JSON metadata, or
+personal information embedded in the activity type, linked content, or free
+text. Such information may remain attributable after account deletion.
 
 ## Processing and authentication
 
-- Database changes are performed in one relational transaction. There is no
-  success response until the transaction commits. The operation explicitly
-  removes member-dependent personal rows, clears optional creator/actor
-  relationships, and removes memberships; it does not rely on user-level
-  cascade deletion.
-- A last administrator cannot delete their account until another community
-  administrator exists. Assignment responsibility is left unassigned; it is
-  never silently transferred.
-- Shared photo files are preserved. No file deletion is attempted because the
-  storage provider and path semantics cannot be verified from this repository.
-- JWT authentication checks that its subject still exists in `Users`. Once
-  deletion commits, existing stateless JWTs are rejected on subsequent API
-  requests. Password-reset tokens are deleted in the same transaction.
-- Repeating the service operation after successful deletion returns an
-  account-not-found result; authentication rejects the deleted account's JWT.
-- No deletion audit data is stored. External identity-provider records,
-  profile-image hosting, provider logs, backups, and operational logs are
-  outside this API's verified deletion boundary.
+- Relational deletion, member-dependent cleanup, shared-record disassociation,
+  account removal, and successful-deletion audit insertion are committed in one
+  transaction. A failure before commit does not report success.
+- JWT authentication checks that its subject still exists in `Users`; tokens
+  for a deleted account fail on subsequent requests. Password-reset tokens
+  are removed in the deletion transaction.
+- Repeating deletion after a successful deletion returns not found at the
+  service level; the deleted account's JWT is already invalid.
+- Audit retention is configured by `AccountDeletionAudit:RetentionDays`
+  (default `30`, minimum `1`).

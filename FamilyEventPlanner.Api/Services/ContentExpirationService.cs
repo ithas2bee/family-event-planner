@@ -8,10 +8,15 @@ namespace FamilyEventPlanner.Api.Services;
 public sealed class ContentExpirationProcessor
 {
     private readonly AppDbContext _context;
+    private readonly int _accountDeletionAuditRetentionDays;
 
-    public ContentExpirationProcessor(AppDbContext context)
+    public ContentExpirationProcessor(AppDbContext context, int accountDeletionAuditRetentionDays = 30)
     {
+        if (accountDeletionAuditRetentionDays < 1)
+            throw new ArgumentOutOfRangeException(nameof(accountDeletionAuditRetentionDays));
+
         _context = context;
+        _accountDeletionAuditRetentionDays = accountDeletionAuditRetentionDays;
     }
 
     public async Task ProcessAsync(DateTime utcNow, CancellationToken cancellationToken = default)
@@ -27,6 +32,7 @@ public sealed class ContentExpirationProcessor
         {
             await SendExpirationNotificationsAsync(utcNow, cancellationToken);
             await DeleteExpiredContentAsync(utcNow, cancellationToken);
+            await DeleteExpiredAccountDeletionAuditsAsync(utcNow, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             if (transaction != null)
                 await transaction.CommitAsync(cancellationToken);
@@ -42,6 +48,17 @@ public sealed class ContentExpirationProcessor
             if (transaction != null)
                 await transaction.DisposeAsync();
         }
+    }
+
+    private async Task DeleteExpiredAccountDeletionAuditsAsync(
+        DateTime utcNow,
+        CancellationToken cancellationToken)
+    {
+        var retentionBoundary = utcNow.AddDays(-_accountDeletionAuditRetentionDays);
+        var expiredAudits = await _context.AccountDeletionAudits
+            .Where(audit => audit.CompletedAtUtc <= retentionBoundary)
+            .ToListAsync(cancellationToken);
+        _context.AccountDeletionAudits.RemoveRange(expiredAudits);
     }
 
     private async Task SendExpirationNotificationsAsync(DateTime utcNow, CancellationToken cancellationToken)

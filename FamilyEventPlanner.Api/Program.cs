@@ -67,11 +67,20 @@ namespace FamilyEventPlanner.Api
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
+            var accountDeletionAuditRetentionDays =
+                builder.Configuration.GetValue<int?>("AccountDeletionAudit:RetentionDays") ?? 30;
+            if (accountDeletionAuditRetentionDays < 1)
+            {
+                throw new InvalidOperationException("AccountDeletionAudit:RetentionDays must be greater than zero.");
+            }
+
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
             builder.Services.AddScoped<ActiveAccountTokenValidator>();
             builder.Services.AddScoped<IAccountDeletionService, AccountDeletionService>();
-            builder.Services.AddScoped<ContentExpirationProcessor>();
+            builder.Services.AddScoped(provider => new ContentExpirationProcessor(
+                provider.GetRequiredService<AppDbContext>(),
+                accountDeletionAuditRetentionDays));
             builder.Services.AddHostedService<ContentExpirationHostedService>();
             builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
             builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();

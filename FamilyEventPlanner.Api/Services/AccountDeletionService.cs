@@ -160,6 +160,11 @@ public sealed class AccountDeletionService : IAccountDeletionService
 
         _context.GroupMembers.RemoveRange(memberships);
         _context.Users.Remove(user);
+        _context.AccountDeletionAudits.Add(new AccountDeletionAudit
+        {
+            Id = Guid.NewGuid(),
+            CompletedAtUtc = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync(cancellationToken);
         if (transaction is not null)
             await transaction.CommitAsync(cancellationToken);

@@ -35,6 +35,7 @@ namespace FamilyEventPlanner.Api.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<AccountDeletionAudit> AccountDeletionAudits { get; set; }
 
         // Activity feed
         public DbSet<ActivityFeed> ActivityFeed { get; set; }
@@ -65,6 +66,9 @@ namespace FamilyEventPlanner.Api.Data
                 .HasIndex(token => token.UserId)
                 .HasFilter("[UsedAtUtc] IS NULL")
                 .IsUnique();
+
+            modelBuilder.Entity<AccountDeletionAudit>()
+                .HasIndex(audit => audit.CompletedAtUtc);
 
             modelBuilder.Entity<Poll>()
                 .HasIndex(poll => poll.ExpiresAt);

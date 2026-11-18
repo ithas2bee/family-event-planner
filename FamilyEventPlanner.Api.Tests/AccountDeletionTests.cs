@@ -145,6 +145,8 @@ public sealed class AccountDeletionTests
             .DeleteAsync(target.Id, "current-password", CancellationToken.None);
 
         Assert.Equal(AccountDeletionResult.Deleted, result);
+        Assert.Single(await context.AccountDeletionAudits.ToListAsync());
+        Assert.Null(typeof(AccountDeletionAudit).GetProperty("UserId"));
         Assert.False(await context.Users.AnyAsync(user => user.Id == target.Id));
         Assert.False(await context.GroupMembers.AnyAsync(member => member.Id == targetMember.Id));
         Assert.Empty(await context.PasswordResetTokens.ToListAsync());
@@ -186,6 +188,7 @@ public sealed class AccountDeletionTests
 
         Assert.Equal(AccountDeletionResult.InvalidPassword, wrongPassword);
         Assert.Equal(AccountDeletionResult.LastAdministrator, lastAdmin);
+        Assert.Empty(await context.AccountDeletionAudits.ToListAsync());
         Assert.True(await context.Users.AnyAsync(user => user.Id == target.Id));
         Assert.True(await context.GroupMembers.AnyAsync(member => member.Id == admin.Id));
     }
@@ -342,6 +345,28 @@ public sealed class AccountDeletionTests
         await using var verifyContext = new AppDbContext(options);
         Assert.True(await verifyContext.Users.AnyAsync(user => user.Id == target.Id));
         Assert.True(await verifyContext.GroupMembers.AnyAsync(groupMember => groupMember.Id == member.Id));
+        Assert.Empty(await verifyContext.AccountDeletionAudits.ToListAsync());
+    }
+
+    [Fact]
+    public async Task ExpirationProcessorDeletesOnlyAuditRecordsPastTheRetentionBoundary()
+    {
+        await using var context = CreateContext();
+        var now = new DateTime(2026, 11, 18, 12, 0, 0, DateTimeKind.Utc);
+        context.AccountDeletionAudits.AddRange(
+            new AccountDeletionAudit { Id = Guid.NewGuid(), CompletedAtUtc = now.AddDays(-31) },
+            new AccountDeletionAudit { Id = Guid.NewGuid(), CompletedAtUtc = now.AddDays(-30) },
+            new AccountDeletionAudit { Id = Guid.NewGuid(), CompletedAtUtc = now.AddDays(-29) });
+        await context.SaveChangesAsync();
+
+        await new ContentExpirationProcessor(context, accountDeletionAuditRetentionDays: 30)
+            .ProcessAsync(now);
+
+        Assert.Equal(
+            new[] { now.AddDays(-29) },
+            (await context.AccountDeletionAudits.OrderBy(audit => audit.CompletedAtUtc)
+                .Select(audit => audit.CompletedAtUtc)
+                .ToArrayAsync()));
     }
 
     private static AppDbContext CreateContext()
