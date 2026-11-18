@@ -243,6 +243,54 @@ public sealed class AccountDeletionTests
     }
 
     [Fact]
+    public async Task UpdatingAnUnassignedEventAssignmentDoesNotAssignItToUnknownGuest()
+    {
+        await using var context = CreateContext();
+        var user = CreateUser("member@example.com");
+        var group = new FamilyGroup { Id = Guid.NewGuid(), Name = "Community", CreatedAt = DateTime.UtcNow };
+        var member = CreateMember(user, group.Id);
+        var familyEvent = new FamilyEvent
+        {
+            Id = Guid.NewGuid(),
+            FamilyGroupId = group.Id,
+            Title = "Event",
+            StartDate = DateTime.UtcNow
+        };
+        var assignment = new EventAssignment
+        {
+            Id = Guid.NewGuid(),
+            FamilyEventId = familyEvent.Id,
+            Title = "Unassigned task"
+        };
+        context.Users.Add(user);
+        context.FamilyGroups.Add(group);
+        context.GroupMembers.Add(member);
+        context.FamilyEvents.Add(familyEvent);
+        context.EventAssignments.Add(assignment);
+        await context.SaveChangesAsync();
+
+        var controller = new EventAssignmentsController(context);
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [new Claim("memberId", member.Id.ToString())],
+                    "MemberId"))
+            }
+        };
+        var result = await controller.Update(assignment.Id, new UpdateAssignmentRequest
+        {
+            Title = "Updated task",
+            Status = AssignmentStatus.Needed
+        });
+
+        Assert.IsType<NoContentResult>(result);
+        Assert.Null((await context.EventAssignments.SingleAsync()).AssignedToId);
+        Assert.Equal("Updated task", (await context.EventAssignments.SingleAsync()).Title);
+    }
+
+    [Fact]
     public async Task DeletedAccountsNoLongerPassJwtAccountValidationAndDeletionCanBeRetried()
     {
         await using var context = CreateContext();

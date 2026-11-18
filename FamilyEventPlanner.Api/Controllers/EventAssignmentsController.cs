@@ -189,30 +189,17 @@ namespace FamilyEventPlanner.Api.Controllers
                     return Forbid();
             }
 
-            // Resolve AssignedToId if updating
-            Guid? resolvedMemberId = null;
             if (request.AssignedToId.HasValue)
             {
                 var assignedOk = await _context.GroupMembers.AnyAsync(m => m.Id == request.AssignedToId.Value && m.FamilyGroupId == assignment.FamilyEvent.FamilyGroupId);
                 if (!assignedOk)
                     return BadRequest(new { message = "AssignedTo member does not belong to the event's family group." });
-                resolvedMemberId = request.AssignedToId.Value;
-            }
-            else
-            {
-                // Use Unknown Guest if no memberId provided
-                var unknownGuest = await _context.GroupMembers
-                    .FirstOrDefaultAsync(m => m.FamilyGroupId == assignment.FamilyEvent.FamilyGroupId && 
-                                            m.User.Id == FamilyEventPlanner.Api.Constants.SystemConstants.UnknownGuestUserId);
-                if (unknownGuest != null)
-                    resolvedMemberId = unknownGuest.Id;
+                assignment.AssignedToId = request.AssignedToId.Value;
             }
 
             assignment.Title = request.Title;
             assignment.Description = request.Description;
             assignment.QuantityNeeded = request.QuantityNeeded;
-            if (resolvedMemberId.HasValue)
-                assignment.AssignedToId = resolvedMemberId.Value;
             assignment.Status = request.Status;
             assignment.Category = request.Category;
 
