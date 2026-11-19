@@ -35,6 +35,7 @@ namespace FamilyEventPlanner.Api.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
+        public DbSet<AccountDeletionAudit> AccountDeletionAudits { get; set; }
 
         // Activity feed
         public DbSet<ActivityFeed> ActivityFeed { get; set; }
@@ -65,6 +66,9 @@ namespace FamilyEventPlanner.Api.Data
                 .HasIndex(token => token.UserId)
                 .HasFilter("[UsedAtUtc] IS NULL")
                 .IsUnique();
+
+            modelBuilder.Entity<AccountDeletionAudit>()
+                .HasIndex(audit => audit.CompletedAtUtc);
 
             modelBuilder.Entity<Poll>()
                 .HasIndex(poll => poll.ExpiresAt);
@@ -132,13 +136,6 @@ namespace FamilyEventPlanner.Api.Data
                 .WithMany()
                 .HasForeignKey(kr => kr.MemberId)
                 .OnDelete(DeleteBehavior.NoAction);
-
-            // Align naming conventions for foreign keys if necessary
-            modelBuilder.Entity<EventAssignment>()
-                .Property<Guid>("AssignedToId");  // Changed to required (not nullable)
-
-            modelBuilder.Entity<Photo>()
-                .Property<Guid>("UploadedById");
 
             // Unique constraints to enforce business rules at DB level
             modelBuilder.Entity<FamilyGroup>()

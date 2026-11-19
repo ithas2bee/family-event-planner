@@ -67,9 +67,20 @@ namespace FamilyEventPlanner.Api
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
+            var accountDeletionAuditRetentionDays =
+                builder.Configuration.GetValue<int?>("AccountDeletionAudit:RetentionDays") ?? 30;
+            if (accountDeletionAuditRetentionDays < 1)
+            {
+                throw new InvalidOperationException("AccountDeletionAudit:RetentionDays must be greater than zero.");
+            }
+
             // Register token service
             builder.Services.AddScoped<ITokenService, JwtTokenService>();
-            builder.Services.AddScoped<ContentExpirationProcessor>();
+            builder.Services.AddScoped<ActiveAccountTokenValidator>();
+            builder.Services.AddScoped<IAccountDeletionService, AccountDeletionService>();
+            builder.Services.AddScoped(provider => new ContentExpirationProcessor(
+                provider.GetRequiredService<AppDbContext>(),
+                accountDeletionAuditRetentionDays));
             builder.Services.AddHostedService<ContentExpirationHostedService>();
             builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
             builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();
@@ -121,10 +132,17 @@ namespace FamilyEventPlanner.Api
                         System.Diagnostics.Debug.WriteLine($"[JWT] Authentication failed: {context.Exception.Message}");
                         return Task.CompletedTask;
                     },
-                    OnTokenValidated = context =>
+                    OnTokenValidated = async context =>
                     {
-                        System.Diagnostics.Debug.WriteLine($"[JWT] Token validated for user: {context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value}");
-                        return Task.CompletedTask;
+                        var rawUserId = context.Principal?
+                            .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                        if (!Guid.TryParse(rawUserId, out var userId) ||
+                            !await context.HttpContext.RequestServices
+                                .GetRequiredService<ActiveAccountTokenValidator>()
+                                .IsActiveAsync(userId, context.HttpContext.RequestAborted))
+                        {
+                            context.Fail("The account is no longer active.");
+                        }
                     }
                 };
             })

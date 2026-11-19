@@ -22,6 +22,22 @@ namespace FamilyEventPlanner.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.AccountDeletionAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedAtUtc");
+
+                    b.ToTable("AccountDeletionAudits");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.ActivityFeed", b =>
                 {
                     b.Property<Guid>("Id")
@@ -170,7 +186,7 @@ namespace FamilyEventPlanner.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("AssignedToId")
+                    b.Property<Guid?>("AssignedToId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Category")
@@ -576,7 +592,7 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UploadedById")
+                    b.Property<Guid?>("UploadedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
@@ -805,8 +821,7 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasOne("FamilyEventPlanner.Api.Models.GroupMember", "AssignedTo")
                         .WithMany()
                         .HasForeignKey("AssignedToId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("FamilyEventPlanner.Api.Models.FamilyEvent", "FamilyEvent")
                         .WithMany("Assignments")
@@ -973,8 +988,7 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasOne("FamilyEventPlanner.Api.Models.GroupMember", "UploadedBy")
                         .WithMany()
                         .HasForeignKey("UploadedById")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("FamilyEvent");
 
