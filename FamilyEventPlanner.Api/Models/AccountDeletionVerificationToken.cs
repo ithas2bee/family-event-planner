@@ -15,5 +15,7 @@ public sealed class AccountDeletionVerificationToken
 
     public DateTime ExpiresAtUtc { get; set; }
 
+    public DateTime? EmailSentAtUtc { get; set; }
+
     public DateTime? UsedAtUtc { get; set; }
 }

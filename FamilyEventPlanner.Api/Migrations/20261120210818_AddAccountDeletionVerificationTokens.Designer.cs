@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyEventPlanner.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261120204216_AddAccountDeletionVerificationTokens")]
+    [Migration("20261120210818_AddAccountDeletionVerificationTokens")]
     partial class AddAccountDeletionVerificationTokens
     {
         /// <inheritdoc />
@@ -48,6 +48,9 @@ namespace FamilyEventPlanner.Api.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EmailSentAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("ExpiresAtUtc")

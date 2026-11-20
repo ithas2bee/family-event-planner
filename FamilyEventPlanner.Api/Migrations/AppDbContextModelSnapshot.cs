@@ -47,6 +47,9 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("EmailSentAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("ExpiresAtUtc")
                         .HasColumnType("datetime2");
 

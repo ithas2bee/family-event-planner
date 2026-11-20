@@ -24,6 +24,8 @@ public interface IExternalAccountDeletionService
 {
     Task<ExternalAccountDeletionRequestResult> RequestAsync(string email, CancellationToken cancellationToken);
 
+    Task ProcessQueuedRequestAsync(string email, CancellationToken cancellationToken);
+
     Task<ExternalAccountDeletionVerificationResult> VerifyAsync(string token, CancellationToken cancellationToken);
 }
 
@@ -68,27 +70,42 @@ public sealed class ExternalAccountDeletionService : IExternalAccountDeletionSer
         }
     }
 
-    public async Task<ExternalAccountDeletionRequestResult> RequestAsync(
+    public Task<ExternalAccountDeletionRequestResult> RequestAsync(
         string email,
         CancellationToken cancellationToken)
     {
         if (!_emailSender.IsConfigured || _verificationUrl is null)
-            return ExternalAccountDeletionRequestResult.Unavailable;
+        {
+            return Task.FromResult(ExternalAccountDeletionRequestResult.Unavailable);
+        }
 
+        var result = _emailQueue.TryQueue(new ExternalAccountDeletionEmailRequest(
+            email.Trim().ToLowerInvariant()))
+            ? ExternalAccountDeletionRequestResult.Accepted
+            : ExternalAccountDeletionRequestResult.Unavailable;
+        return Task.FromResult(result);
+    }
+
+    public async Task ProcessQueuedRequestAsync(string email, CancellationToken cancellationToken)
+    {
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var user = await _context.Users.SingleOrDefaultAsync(
             candidate => candidate.Email == normalizedEmail,
             cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
-            return ExternalAccountDeletionRequestResult.Accepted;
+            return;
 
         var now = DateTime.UtcNow;
         var existingToken = await _context.AccountDeletionVerificationTokens
             .SingleOrDefaultAsync(
                 token => token.UserId == user.Id && token.UsedAtUtc == null,
                 cancellationToken);
-        if (existingToken is not null && existingToken.ExpiresAtUtc > now)
-            return ExternalAccountDeletionRequestResult.Accepted;
+        if (existingToken is not null &&
+            existingToken.ExpiresAtUtc > now &&
+            existingToken.EmailSentAtUtc.HasValue)
+        {
+            return;
+        }
 
         if (existingToken is not null)
         {
@@ -100,7 +117,7 @@ public sealed class ExternalAccountDeletionService : IExternalAccountDeletionSer
             catch (DbUpdateException)
             {
                 _logger.LogWarning("An expired external account deletion token could not be replaced.");
-                return ExternalAccountDeletionRequestResult.Accepted;
+                return;
             }
         }
 
@@ -122,7 +139,7 @@ public sealed class ExternalAccountDeletionService : IExternalAccountDeletionSer
         catch (DbUpdateException)
         {
             _logger.LogWarning("An external account deletion verification request could not be recorded.");
-            return ExternalAccountDeletionRequestResult.Accepted;
+            return;
         }
 
         var link = new UriBuilder(_verificationUrl)
@@ -134,11 +151,16 @@ public sealed class ExternalAccountDeletionService : IExternalAccountDeletionSer
             $"{link.AbsoluteUri}\n\n" +
             "If you did not request account deletion, you can ignore this email.";
 
-        if (!_emailQueue.TryQueue(new ExternalAccountDeletionEmail(
-                verificationToken.Id,
+        try
+        {
+            await _emailSender.SendAsync(
                 user.Email,
                 "Confirm Huddle Up account deletion",
-                body)))
+                body);
+            verificationToken.EmailSentAtUtc = DateTime.UtcNow;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
             verificationToken.UsedAtUtc = DateTime.UtcNow;
             try
@@ -147,13 +169,13 @@ public sealed class ExternalAccountDeletionService : IExternalAccountDeletionSer
             }
             catch (DbUpdateException)
             {
-                _logger.LogWarning("A queued external account deletion email could not invalidate its token.");
+                _logger.LogWarning("A failed external account deletion email could not invalidate its token.");
             }
 
-            _logger.LogWarning("An external account deletion verification email could not be queued.");
+            _logger.LogWarning(
+                "An external account deletion verification email could not be delivered ({FailureType}).",
+                exception.GetType().Name);
         }
-
-        return ExternalAccountDeletionRequestResult.Accepted;
     }
 
     public async Task<ExternalAccountDeletionVerificationResult> VerifyAsync(

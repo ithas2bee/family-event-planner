@@ -20,6 +20,7 @@ namespace FamilyEventPlanner.Api.Migrations
                     TokenHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ExpiresAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EmailSentAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UsedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
