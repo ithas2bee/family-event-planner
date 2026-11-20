@@ -22,6 +22,8 @@ public enum AccountDeletionResult
 public interface IAccountDeletionService
 {
     Task<AccountDeletionResult> DeleteAsync(Guid userId, string password, CancellationToken cancellationToken);
+
+    Task<AccountDeletionResult> DeleteVerifiedAsync(Guid userId, CancellationToken cancellationToken);
 }
 
 public sealed class AccountDeletionService : IAccountDeletionService
@@ -39,6 +41,22 @@ public sealed class AccountDeletionService : IAccountDeletionService
         string password,
         CancellationToken cancellationToken)
     {
+        return await DeleteCoreAsync(userId, password, emailOwnershipVerified: false, cancellationToken);
+    }
+
+    public async Task<AccountDeletionResult> DeleteVerifiedAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        return await DeleteCoreAsync(userId, password: null, emailOwnershipVerified: true, cancellationToken);
+    }
+
+    private async Task<AccountDeletionResult> DeleteCoreAsync(
+        Guid userId,
+        string? password,
+        bool emailOwnershipVerified,
+        CancellationToken cancellationToken)
+    {
         if (userId == SystemConstants.UnknownGuestUserId)
             return AccountDeletionResult.SystemAccount;
 
@@ -51,7 +69,7 @@ public sealed class AccountDeletionService : IAccountDeletionService
             cancellationToken);
         if (user is null)
             return AccountDeletionResult.AccountNotFound;
-        if (!VerifyPassword(user, password))
+        if (!emailOwnershipVerified && !VerifyPassword(user, password ?? string.Empty))
             return AccountDeletionResult.InvalidPassword;
 
         var memberships = await _context.GroupMembers

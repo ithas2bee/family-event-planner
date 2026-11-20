@@ -38,6 +38,44 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.ToTable("AccountDeletionAudits");
                 });
 
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.AccountDeletionVerificationToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime?>("UsedAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[UsedAtUtc] IS NULL");
+
+                    b.ToTable("AccountDeletionVerificationTokens");
+                });
+
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.ActivityFeed", b =>
                 {
                     b.Property<Guid>("Id")
@@ -747,6 +785,15 @@ namespace FamilyEventPlanner.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("FamilyEventPlanner.Api.Models.AccountDeletionVerificationToken", b =>
+                {
+                    b.HasOne("FamilyEventPlanner.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("FamilyEventPlanner.Api.Models.ActivityFeed", b =>

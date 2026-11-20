@@ -86,7 +86,7 @@ public sealed class ResendEmailSender : IEmailSender
                     !string.IsNullOrWhiteSpace(uri.Host))
                 {
                     var encodedUrl = WebUtility.HtmlEncode(uri.AbsoluteUri);
-                    return $"<a href=\"{encodedUrl}\" style=\"display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;\">Reset Password</a>";
+                    return $"<a href=\"{encodedUrl}\" style=\"display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;\">Open secure link</a>";
                 }
 
                 return WebUtility.HtmlEncode(line);
