@@ -88,6 +88,10 @@ public sealed class ExternalAccountDeletionService : IExternalAccountDeletionSer
 
     public async Task ProcessQueuedRequestAsync(string email, CancellationToken cancellationToken)
     {
+        var verificationUrl = _verificationUrl;
+        if (verificationUrl is null || !_emailSender.IsConfigured)
+            return;
+
         var normalizedEmail = email.Trim().ToLowerInvariant();
         var user = await _context.Users.SingleOrDefaultAsync(
             candidate => candidate.Email == normalizedEmail,
@@ -142,7 +146,7 @@ public sealed class ExternalAccountDeletionService : IExternalAccountDeletionSer
             return;
         }
 
-        var link = new UriBuilder(_verificationUrl)
+        var link = new UriBuilder(verificationUrl)
         {
             Fragment = $"token={Uri.EscapeDataString(rawToken)}"
         }.Uri;
