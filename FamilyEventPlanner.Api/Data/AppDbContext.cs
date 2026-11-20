@@ -36,6 +36,7 @@ namespace FamilyEventPlanner.Api.Data
         public DbSet<User> Users { get; set; }
         public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
         public DbSet<AccountDeletionAudit> AccountDeletionAudits { get; set; }
+        public DbSet<AccountDeletionVerificationToken> AccountDeletionVerificationTokens { get; set; }
 
         // Activity feed
         public DbSet<ActivityFeed> ActivityFeed { get; set; }
@@ -69,6 +70,28 @@ namespace FamilyEventPlanner.Api.Data
 
             modelBuilder.Entity<AccountDeletionAudit>()
                 .HasIndex(audit => audit.CompletedAtUtc);
+
+            modelBuilder.Entity<AccountDeletionVerificationToken>()
+                .Property(token => token.UsedAtUtc)
+                .IsConcurrencyToken();
+
+            modelBuilder.Entity<AccountDeletionVerificationToken>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(token => token.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<AccountDeletionVerificationToken>()
+                .HasIndex(token => token.TokenHash)
+                .IsUnique();
+
+            modelBuilder.Entity<AccountDeletionVerificationToken>()
+                .HasIndex(token => token.UserId)
+                .HasFilter("[UsedAtUtc] IS NULL")
+                .IsUnique();
+
+            modelBuilder.Entity<AccountDeletionVerificationToken>()
+                .HasIndex(token => token.ExpiresAtUtc);
 
             modelBuilder.Entity<Poll>()
                 .HasIndex(poll => poll.ExpiresAt);

@@ -47,7 +47,7 @@ public class ResendEmailSenderTests
         Assert.Contains("https://api-dev.huddleupmobileapp.com/reset-password?token=reset-token", text);
 
         var html = payload.RootElement.GetProperty("html").GetString();
-        Assert.Contains("Reset Password</a>", html);
+        Assert.Contains("Open secure link</a>", html);
         var hrefs = Regex.Matches(html!, "<a\\b[^>]*\\bhref=\"([^\"]*)\"")
             .Select(match => WebUtility.HtmlDecode(match.Groups[1].Value))
             .ToArray();

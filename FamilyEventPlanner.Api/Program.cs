@@ -82,6 +82,11 @@ namespace FamilyEventPlanner.Api
                 provider.GetRequiredService<AppDbContext>(),
                 accountDeletionAuditRetentionDays));
             builder.Services.AddHostedService<ContentExpirationHostedService>();
+            builder.Services.AddScoped<IExternalAccountDeletionService, ExternalAccountDeletionService>();
+            builder.Services.AddSingleton<ExternalAccountDeletionEmailQueue>();
+            builder.Services.AddSingleton<IExternalAccountDeletionEmailQueue>(provider =>
+                provider.GetRequiredService<ExternalAccountDeletionEmailQueue>());
+            builder.Services.AddHostedService<ExternalAccountDeletionEmailDispatcher>();
             builder.Services.AddHttpClient<IEmailSender, ResendEmailSender>();
             builder.Services.AddHttpClient<IGooglePlacesService, GooglePlacesService>();
             builder.Services.AddRateLimiter(options =>
@@ -224,6 +229,11 @@ namespace FamilyEventPlanner.Api
                     context.Request.Path == "/reset-password")
                 {
                     context.Request.Path = "/index.html";
+                }
+                else if (HttpMethods.IsGet(context.Request.Method) &&
+                         context.Request.Path == "/delete-account")
+                {
+                    context.Request.Path = "/delete-account/index.html";
                 }
 
                 await next();

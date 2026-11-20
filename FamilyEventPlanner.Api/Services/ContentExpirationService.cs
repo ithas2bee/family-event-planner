@@ -32,6 +32,7 @@ public sealed class ContentExpirationProcessor
         {
             await SendExpirationNotificationsAsync(utcNow, cancellationToken);
             await DeleteExpiredContentAsync(utcNow, cancellationToken);
+            await DeleteExpiredAccountDeletionVerificationTokensAsync(utcNow, cancellationToken);
             await DeleteExpiredAccountDeletionAuditsAsync(utcNow, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
             if (transaction != null)
@@ -48,6 +49,16 @@ public sealed class ContentExpirationProcessor
             if (transaction != null)
                 await transaction.DisposeAsync();
         }
+    }
+
+    private async Task DeleteExpiredAccountDeletionVerificationTokensAsync(
+        DateTime utcNow,
+        CancellationToken cancellationToken)
+    {
+        var expiredTokens = await _context.AccountDeletionVerificationTokens
+            .Where(token => token.ExpiresAtUtc <= utcNow)
+            .ToListAsync(cancellationToken);
+        _context.AccountDeletionVerificationTokens.RemoveRange(expiredTokens);
     }
 
     private async Task DeleteExpiredAccountDeletionAuditsAsync(

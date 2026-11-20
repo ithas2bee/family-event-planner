@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Delete your Huddle Up account</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #172033;
+      background: #f4f7fb;
+    }
+
+    body { margin: 0; line-height: 1.6; }
+    main { box-sizing: border-box; max-width: 760px; margin: 0 auto; padding: 32px 20px 56px; }
+    header, section { background: #fff; border: 1px solid #dce3ed; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+    h1 { margin-top: 0; font-size: clamp(1.7rem, 5vw, 2.4rem); line-height: 1.2; }
+    h2 { font-size: 1.25rem; margin-top: 0; }
+    label { display: block; font-weight: 650; margin-bottom: 8px; }
+    input[type="email"] { box-sizing: border-box; width: 100%; max-width: 460px; min-height: 48px; padding: 10px 12px; border: 1px solid #78869b; border-radius: 8px; font: inherit; }
+    button { min-height: 48px; margin-top: 14px; padding: 10px 18px; border: 0; border-radius: 8px; background: #2257a5; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #f0ad32; outline-offset: 3px; }
+    button:disabled { cursor: wait; opacity: .7; }
+    .notice { min-height: 1.6em; margin-bottom: 0; }
+    .muted { color: #475569; }
+    [hidden] { display: none !important; }
+    @media (max-width: 480px) {
+      main { padding: 16px 12px 32px; }
+      header, section { border-radius: 12px; padding: 18px; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Delete your Huddle Up account</h1>
+      <p>You can request account deletion here without signing in or installing the app. Enter the email address on your account. We will send a confirmation link if it matches an account. If you do not receive one, try again later.</p>
+      <p class="muted">Your account is not deleted until you open the email link and confirm. The link expires after the time stated in the email and can be used once.</p>
+    </header>
+
+    <section id="request-section">
+      <h2>Request deletion</h2>
+      <form id="request-form">
+        <label for="email">Account email address</label>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="254" required>
+        <button type="submit">Send verification email</button>
+        <p id="request-status" class="notice" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section>
+      <h2>What happens to your information</h2>
+      <ul>
+        <li>Your account, identifying profile and authentication details, memberships, password-reset tokens, and account-linked private records are deleted.</li>
+        <li>Shared communities, events, polls, announcements, kickbacks, assignments, photos, and shared files are retained. Your creator, uploader, or member attribution is removed where supported. An assignment left without an assignee is marked as needed.</li>
+        <li>Shared text and captions are not scanned for personal information. Information included in shared content may remain visible to the community.</li>
+        <li>Photo files, backups, externally hosted profile images, provider logs, and other copies outside the API database are not deleted by this workflow. A minimal, non-identifying deletion audit record is retained for up to 30 days.</li>
+      </ul>
+      <p class="muted">An account that is the only administrator of a community cannot be deleted until another administrator is assigned. If a verified request cannot be completed, contact Huddle Up support.</p>
+    </section>
+
+    <section id="verify-section" hidden>
+      <h2>Confirm account deletion</h2>
+      <p>Confirm only if you asked to delete your Huddle Up account. This action is permanent and cannot be undone.</p>
+      <button id="verify-button" type="button">Confirm deletion</button>
+      <p id="verify-status" class="notice" role="status" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script>
+    const requestForm = document.getElementById("request-form");
+    const requestStatus = document.getElementById("request-status");
+    const verifySection = document.getElementById("verify-section");
+    const verifyButton = document.getElementById("verify-button");
+    const verifyStatus = document.getElementById("verify-status");
+    const verificationToken = new URLSearchParams(location.hash.slice(1)).get("token");
+
+    if (verificationToken) {
+      document.getElementById("request-section").hidden = true;
+      verifySection.hidden = false;
+      history.replaceState(null, "", location.pathname);
+    }
+
+    requestForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = requestForm.querySelector("button");
+      button.disabled = true;
+      requestStatus.textContent = "";
+      try {
+        const response = await fetch("/api/account-deletion/requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: document.getElementById("email").value })
+        });
+        const result = await response.json();
+        requestStatus.textContent = result.message || "We could not submit your request. Please try again later.";
+      } catch {
+        requestStatus.textContent = "We could not submit your request. Please try again later.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    verifyButton.addEventListener("click", async () => {
+      if (!verificationToken) return;
+      verifyButton.disabled = true;
+      verifyStatus.textContent = "";
+      try {
+        const response = await fetch("/api/account-deletion/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: verificationToken })
+        });
+        const result = await response.json();
+        verifyStatus.textContent = result.message || "We could not process this link. Submit a new request.";
+      } catch {
+        verifyStatus.textContent = "We could not process this link. Submit a new request.";
+        verifyButton.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
