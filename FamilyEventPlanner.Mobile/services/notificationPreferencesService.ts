@@ -64,6 +64,19 @@ async function setPreferenceValue(key: string, value: string): Promise<void> {
   await SecureStore.setItemAsync(key, value);
 }
 
+async function removePreferenceValue(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    localStorage.removeItem(key);
+    return;
+  }
+
+  await SecureStore.deleteItemAsync(key);
+}
+
+export async function clearNotificationPreferences(userId: string): Promise<void> {
+  await removePreferenceValue(getStorageKey(userId));
+}
+
 export function getNotificationPreferenceCategory(
   activityType: string,
 ): NotificationPreferenceCategory | null {
