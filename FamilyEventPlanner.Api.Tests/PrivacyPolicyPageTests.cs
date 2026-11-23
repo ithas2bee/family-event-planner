@@ -17,8 +17,8 @@ public sealed class PrivacyPolicyPageTests
         Assert.Contains("Resend", page);
         Assert.Contains("Settings &gt; Delete Account", page);
         Assert.Contains("href=\"/delete-account\"", page);
-        Assert.Contains("up to 30 days", page);
+        Assert.Contains("scheduled for removal after 30 days", page);
         Assert.Contains("mailto:lencrerotl0@gmail.com", page);
-        Assert.Contains("does not include an advertising, analytics, or crash-reporting SDK", page);
+        Assert.Contains("do not include an advertising, analytics, or crash-reporting SDK", page);
     }
 }
