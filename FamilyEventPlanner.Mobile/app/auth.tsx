@@ -1,8 +1,10 @@
 import { router } from 'expo-router';
 import { Pressable, SafeAreaView, StyleSheet } from 'react-native';
 
+import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { PRIVACY_POLICY_URL } from '@/constants/privacyPolicy';
 
 export default function AuthScreen() {
   return (
@@ -27,6 +29,9 @@ export default function AuthScreen() {
           Create Account
         </ThemedText>
       </Pressable>
+      <ExternalLink href={PRIVACY_POLICY_URL} accessibilityRole="link" style={styles.privacyPolicyLink}>
+        <ThemedText style={styles.privacyPolicyText}>Privacy Policy</ThemedText>
+      </ExternalLink>
       </ThemedView>
     </SafeAreaView>
   );
@@ -72,5 +77,14 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#1677E8',
     fontSize: 16,
+  },
+  privacyPolicyLink: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+  },
+  privacyPolicyText: {
+    color: '#1677E8',
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });

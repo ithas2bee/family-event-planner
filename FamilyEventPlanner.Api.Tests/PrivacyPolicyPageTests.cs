@@ -21,4 +21,19 @@ public sealed class PrivacyPolicyPageTests
         Assert.Contains("mailto:lencrerotl0@gmail.com", page);
         Assert.Contains("do not include an advertising, analytics, or crash-reporting SDK", page);
     }
+
+    [Fact]
+    public void PrivacyRouteServesStaticPolicyBeforeAuthentication()
+    {
+        var programPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "../../../../FamilyEventPlanner.Api/Program.cs"));
+        var program = File.ReadAllText(programPath);
+
+        Assert.Contains("context.Request.Path == \"/privacy\"", program);
+        Assert.Contains("context.Request.Path = \"/privacy/index.html\"", program);
+        Assert.Contains("app.UseAuthentication()", program);
+        Assert.True(program.IndexOf("app.UseStaticFiles()", StringComparison.Ordinal) <
+                    program.IndexOf("app.UseAuthentication()", StringComparison.Ordinal));
+    }
 }

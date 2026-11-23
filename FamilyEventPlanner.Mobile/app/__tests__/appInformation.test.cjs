@@ -8,6 +8,7 @@ const settingsSource = read('app/settings.tsx');
 const screenSource = read('app/app-information.tsx');
 const detailSource = read('app/app-information/[section].tsx');
 const layoutSource = read('app/_layout.tsx');
+const privacyPolicySource = read('constants/privacyPolicy.ts');
 
 test('Settings navigates to the App Information page and registers its detail route', () => {
   assert.match(settingsSource, /title: 'App Information', icon: 'info-outline', route: '\/app-information'/);
@@ -24,13 +25,15 @@ test('App Information shows the project logo and version/build metadata from Exp
   assert.match(screenSource, /Build number \{buildNumber\}/);
 });
 
-test('information rows open about, legal, and dependency license details without inventing legal copy', () => {
+test('information rows open about, legal, and dependency license details', () => {
   for (const title of ['About Huddle Up', 'Terms of Service', 'Privacy Policy', 'Open Source Licenses']) {
     assert.ok(screenSource.includes(title), `Missing App Information row: ${title}`);
   }
   assert.match(detailSource, /Huddle Up brings communities together/);
   assert.match(detailSource, /Terms of Service are not available in the app yet/);
-  assert.match(detailSource, /Privacy Policy is not available in the app yet/);
+  assert.match(detailSource, /Read Huddle Up’s legal Privacy Policy on our public website/);
+  assert.match(detailSource, /ExternalLink href=\{PRIVACY_POLICY_URL\}/);
+  assert.match(privacyPolicySource, /https:\/\/api-dev\.huddleupmobileapp\.com\/privacy/);
   assert.match(detailSource, /package-lock\.json/);
   assert.match(detailSource, /dependency\.license/);
 });

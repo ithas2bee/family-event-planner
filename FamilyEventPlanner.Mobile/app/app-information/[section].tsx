@@ -3,8 +3,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { PRIVACY_POLICY_URL } from '@/constants/privacyPolicy';
 import packageLock from '../../package-lock.json';
 
 const sections = {
@@ -18,7 +20,7 @@ const sections = {
   },
   privacy: {
     title: 'Privacy Policy',
-    content: 'The Privacy Policy is not available in the app yet.',
+    content: 'Read Huddle Up’s legal Privacy Policy on our public website.',
   },
 } as const;
 
@@ -67,6 +69,11 @@ export default function AppInformationDetailScreen() {
       ) : (
         <View style={styles.detailCard}>
           <ThemedText style={styles.body}>{detail?.content ?? 'This information is not available in the app yet.'}</ThemedText>
+          {section === 'privacy' ? (
+            <ExternalLink href={PRIVACY_POLICY_URL} accessibilityRole="link" style={styles.policyLink}>
+              <ThemedText style={styles.policyLinkText}>Open Privacy Policy</ThemedText>
+            </ExternalLink>
+          ) : null}
         </View>
       )}
     </ThemedView>
@@ -80,6 +87,8 @@ const styles = StyleSheet.create({
   title: { flex: 1, color: '#10264C', fontSize: 26, lineHeight: 32 },
   detailCard: { marginHorizontal: 20, borderRadius: 18, backgroundColor: '#FFFFFF', padding: 20, shadowColor: '#17345D', shadowOpacity: 0.06, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   body: { color: '#58708B', fontSize: 16, lineHeight: 24 },
+  policyLink: { alignSelf: 'flex-start', marginTop: 16 },
+  policyLinkText: { color: '#0879F9', fontSize: 16, fontWeight: '600', textDecorationLine: 'underline' },
   licenseContent: { paddingHorizontal: 20, paddingBottom: 32 },
   note: { marginBottom: 12, color: '#71819A', fontSize: 14, lineHeight: 21 },
   licenseRow: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E3EAF0', paddingVertical: 12 },
