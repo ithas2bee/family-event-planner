@@ -36,14 +36,22 @@ test('deletion screen explains actual retained and deleted data and last-admin r
   }
 });
 
-test('deletion requires current password and exact confirmation, and offers cancellation', () => {
+test('deletion requires current password and exact confirmation', () => {
   assert.match(deletionScreen, /accessibilityLabel="Current password"/);
   assert.match(deletionScreen, /secureTextEntry/);
   assert.match(deletionScreen, /accessibilityLabel="Type DELETE to confirm"/);
   assert.match(deletionScreen, /confirmation !== 'DELETE'/);
-  assert.match(deletionScreen, /router\.back\(\)/);
   assert.match(deletionScreen, /onPress=\{handleDelete\}/);
   assert.match(deletionScreen, /disabled=\{isProcessing \|\| !password \|\| confirmation !== 'DELETE'\}/);
+});
+
+test('canceling returns without invoking the deletion handler', () => {
+  const cancelButton = deletionScreen.match(
+    /accessibilityLabel="Cancel account deletion"[\s\S]*?<\/Pressable>/,
+  )?.[0];
+  assert.ok(cancelButton);
+  assert.match(cancelButton, /onPress=\{\(\) => router\.back\(\)\}/);
+  assert.doesNotMatch(cancelButton, /handleDelete|deleteCurrentAccount/);
 });
 
 test('successful deletion clears user-scoped preferences and navigates to completion', () => {
