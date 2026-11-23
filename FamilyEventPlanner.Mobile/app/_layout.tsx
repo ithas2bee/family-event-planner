@@ -36,6 +36,9 @@ const unrestrictedRoutes = new Set([
   'forgot-password',
   'forgot-username',
   'reset-password',
+  'settings',
+  'delete-account',
+  'account-deleted',
 ]);
 
 function NavigationGate() {
@@ -85,6 +88,8 @@ function NavigationGate() {
       <Stack.Screen name="kickback/[kickbackId]" options={{ headerShown: false }} />
       <Stack.Screen name="event/[eventId]" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
+      <Stack.Screen name="delete-account" options={{ headerShown: false }} />
+      <Stack.Screen name="account-deleted" options={{ headerShown: false }} />
       <Stack.Screen name="notification-preferences" options={{ headerShown: false }} />
       <Stack.Screen name="privacy" options={{ headerShown: false }} />
       <Stack.Screen name="app-information" options={{ headerShown: false }} />

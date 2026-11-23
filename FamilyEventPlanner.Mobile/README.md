@@ -72,3 +72,30 @@ Finding it in generated Windows `.cxx` files does not establish why the separate
 EAS Gradle build failed. The `preview` EAS profile requests an installable Android
 APK, but the cause of the reported cloud build failure remains unconfirmed without
 its task-level diagnostics.
+
+## Physical Android account-deletion verification
+
+Use a physical Android device and a disposable account on the development API only.
+Do not use a production account: successful deletion is permanent.
+
+1. Install the current development build on the device. Configure
+   `EXPO_PUBLIC_API_BASE_URL` as
+   `https://api-dev.huddleupmobileapp.com` for this verification build; do not
+   change production configuration.
+2. Sign in with an account that has an account password and can be deleted (it
+   must not be the last administrator of any community). Open **Settings >
+   Delete Account** and review the deletion and retention details.
+3. Use **Cancel** or the back button. Confirm the account remains signed in and
+   no `DELETE /api/account` request is made.
+4. Reopen the flow. Submit an incorrect password and verify the password error
+   is shown without signing out. Then disable network access, submit again, and
+   verify a connectivity error is shown while the session remains available.
+5. With network access restored, enter the current password and the exact text
+   `DELETE`. Verify the app reaches **Account deleted**, then **Continue** takes
+   you to the signed-out experience. Restart the app and confirm it remains
+   signed out; the deleted account must not be able to authenticate again.
+6. With a separate disposable account that is the last administrator of a
+   community, confirm submission displays the backend's administrator
+   restriction, does not claim deletion succeeded, and leaves the account
+   signed in. Assign another administrator before testing deletion of that
+   account.

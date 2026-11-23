@@ -16,7 +16,8 @@ type SettingOption = {
     | typeof COMMUNITY_HOME_ROUTES.members
     | '/app-information'
     | '/notification-preferences'
-    | '/privacy';
+    | '/privacy'
+    | '/delete-account';
 };
 
 const sections: { title: string; options: SettingOption[] }[] = [
@@ -25,6 +26,7 @@ const sections: { title: string; options: SettingOption[] }[] = [
     options: [
       { title: 'Profile', icon: 'person-outline', route: '/profile' },
       { title: 'Privacy', icon: 'lock-outline', route: '/privacy' },
+      { title: 'Delete Account', icon: 'delete-outline', route: '/delete-account' },
       {
         title: 'Notification Preferences',
         icon: 'notifications-none',
