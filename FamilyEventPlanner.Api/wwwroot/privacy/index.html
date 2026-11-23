@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Privacy Policy | Huddle Up</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #172033;
+      background: #f4f7fb;
+    }
+
+    body { margin: 0; line-height: 1.65; }
+    main { box-sizing: border-box; max-width: 860px; margin: 0 auto; padding: 32px 20px 56px; }
+    header, article { background: #fff; border: 1px solid #dce3ed; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
+    h1 { margin-top: 0; font-size: clamp(1.8rem, 5vw, 2.5rem); line-height: 1.2; }
+    h2 { margin: 28px 0 8px; font-size: 1.25rem; line-height: 1.35; }
+    h2:first-child { margin-top: 0; }
+    p, ul { margin: 8px 0 14px; }
+    li { margin: 6px 0; }
+    a { color: #174f9b; }
+    a:focus-visible { outline: 3px solid #f0ad32; outline-offset: 3px; }
+    .muted { color: #475569; }
+    @media (max-width: 480px) {
+      main { padding: 16px 12px 32px; }
+      header, article { border-radius: 12px; padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Huddle Up Privacy Policy</h1>
+      <p><strong>Last updated: November 23, 2026</strong></p>
+      <p>This policy explains how Huddle Up collects, uses, shares, and retains information when you use the app and its related services. It reflects the app behavior and integrations reviewed for this version.</p>
+    </header>
+
+    <article>
+      <h2>Information we handle</h2>
+      <ul>
+        <li><strong>Account and profile information:</strong> email address, display name, password hash, internal account and membership identifiers, and information you choose to add to your profile, such as age, location, biography, profile-picture link, and community roles. Your date of birth is used to check registration age eligibility and is not saved. Age may separately be entered in your profile.</li>
+        <li><strong>Community and planning content:</strong> community names and settings, memberships and roles, events and their descriptions, dates, places and notes, attendance and RSVPs, assignments, polls and votes, announcements, kickbacks and responses, photos and captions, activity-feed entries, and in-app notifications.</li>
+        <li><strong>App and service information:</strong> authentication/session information, notification preferences, and technical information needed to operate requests. The device keeps the signed-in session using platform secure storage.</li>
+      </ul>
+
+      <h2>Location</h2>
+      <p>You can enter a profile location or search for and select a place for an event. When you use event place search, the app sends your search text and a temporary search-session identifier to our API, which requests suggestions from Google Places. A selected place identifier is used to retrieve its name, address, and coordinates; the selected place details may be saved with the event. The app code reviewed for this policy does not collect device GPS location or track your location in the background.</p>
+
+      <h2>How we use information</h2>
+      <p>We use information to create and secure accounts, provide profiles and communities, coordinate events and group activities, show relevant community content, deliver in-app notifications, respond to support requests, send account-related email, prevent abuse, and maintain the service.</p>
+
+      <h2>Who can see information and service providers</h2>
+      <p>Information shared within a community is available to members who have access to that community. Community members may see profile details exposed by the app. A community marked searchable may appear in group search. Content you contribute to a community can remain visible to its members after you leave or delete your account, as described below.</p>
+      <ul>
+        <li><strong>Google Places:</strong> receives event-place search text, temporary session identifiers, and place identifiers when you use place search.</li>
+        <li><strong>Maps:</strong> event map displays use MapLibre with an OpenFreeMap map style on Android; the app also has Google Maps integration configured for iOS. Map services may receive network/device information and the map area being displayed. See the relevant provider privacy information for its handling of those requests.</li>
+        <li><strong>Resend:</strong> when email delivery is configured, it sends password-reset and account-deletion messages and receives the recipient address and message/link contents.</li>
+        <li><strong>Hosting and database:</strong> account and community data are stored by the API in SQL Server. Requests to the current development endpoint pass through Cloudflare Tunnel, which may process connection information. The production hosting operator, hosting region, backup practices, and infrastructure log retention depend on the deployment.</li>
+      </ul>
+      <p>The app code and dependencies reviewed for this policy do not include an advertising, analytics, or crash-reporting SDK. We do not describe advertising as an active feature. Infrastructure operators may process connection and diagnostic information to run and protect the service.</p>
+
+      <h2>Retention and account deletion</h2>
+      <p>We keep account and community information while needed to provide the service. Most content has no fixed retention period in the app; polls and announcements with no expiry or an elapsed expiry are removed by the service's periodic cleanup. Technical and infrastructure copies, including backups and provider logs, may remain for periods determined by the relevant deployment or provider.</p>
+      <p>You can delete your account in the app from <strong>Settings &gt; Delete Account</strong>. The in-app flow requires your password and typing <strong>DELETE</strong>. You can also request deletion without signing in on <a href="/delete-account">the account deletion page</a> by entering your account email and confirming the verification link we email you. A request is not complete until you confirm the link.</p>
+      <p>Deletion removes your account and account-linked private records, including memberships, attendance, votes, responses, and notifications. Shared communities and content such as events, polls, announcements, assignments, photos, and captions are generally retained; supported creator, uploader, and member links are removed or disassociated. Shared text is not scanned for personal information. Photo files, backups, externally hosted profile images, and provider or infrastructure logs are outside the verified database-deletion workflow and may remain. An account that is the only administrator of a community cannot be deleted until another administrator is assigned.</p>
+      <p>A successful deletion leaves a non-identifying audit record containing only a random identifier and completion time. It is scheduled for removal after 30 days; if the cleanup service is unavailable, removal may be delayed. Account-deletion verification links expire after 30 minutes. The service does not specify a general retention period for other account or community data.</p>
+
+      <h2>Your choices and privacy rights</h2>
+      <p>You can edit available profile information and manage notification preferences in the app. Community access is managed through each community's settings and administrators; Huddle Up does not currently offer account-level switches to hide individual profile fields. Depending on where you live, you may have rights to request access to, correction of, or deletion of personal information. Contact us to make a request; we may need to verify your identity and will respond as required by applicable law.</p>
+
+      <h2>Security</h2>
+      <p>Passwords are stored as hashes rather than readable passwords, and the service uses authenticated access controls. The app stores its signed-in session using platform secure storage. No method of transmission or storage is completely secure. Use the official HTTPS service address and contact us if you believe your account has been accessed without permission.</p>
+
+      <h2>Contact</h2>
+      <p>For privacy questions or requests, email <a href="mailto:lencrerotl0@gmail.com">lencrerotl0@gmail.com</a>.</p>
+    </article>
+  </main>
+</body>
+</html>
