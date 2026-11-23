@@ -235,6 +235,11 @@ namespace FamilyEventPlanner.Api
                 {
                     context.Request.Path = "/delete-account/index.html";
                 }
+                else if (HttpMethods.IsGet(context.Request.Method) &&
+                         context.Request.Path == "/privacy")
+                {
+                    context.Request.Path = "/privacy/index.html";
+                }
 
                 await next();
             });
